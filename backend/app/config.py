@@ -18,6 +18,11 @@ class Settings(BaseSettings):
     openai_model_fast: str = ""
     openai_model_smart: str = ""
     sarvam_api_key: str = ""
+    # Shared team keys for live feeds (B8, maps). All optional: everything works on mock data without them.
+    railradar_api_key: str = ""     # RailRadar.in — live train running status
+    tomtom_api_key: str = ""        # TomTom — road traffic / incidents
+    newsapi_key: str = ""           # newsapi.org — news search (B8)
+    mapbox_token: str = ""          # Mapbox — map tiles / directions
 
     demo_date: str = "2026-10-20"
     scenario_file: str = "scenarios/demo.json"
