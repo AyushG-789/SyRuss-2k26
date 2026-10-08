@@ -33,8 +33,15 @@ def summarize_legs(legs: list[Leg]) -> str:
 def plan_baseline(
     traveller: Traveller,
     departure_time: str | None = None,
+    *,
+    effects=None,
 ) -> PlanResponse:
-    """Generate baseline (schedule-only) route cards for a traveller."""
+    """Generate route cards for a traveller.
+
+    Schedule-only (baseline) by default. `effects` (see routing/aware.py) turns it into the
+    disruption-aware planner: it edits the graph before the search (confirmed closures removed,
+    confirmed delays added) and adjusts each candidate afterwards (times, risk, reliability).
+    """
     if not traveller.destination:
         return PlanResponse(
             cards=[],
@@ -46,6 +53,8 @@ def plan_baseline(
     stations, lines, transfers, fares = load_typed_network()
 
     G = build_multimodal_graph(stations, lines, transfers, fares, traveller, dep_time)
+    if effects is not None:
+        effects.edit_graph(G)
 
     # 1. Search candidate paths under 4 weightings
     weightings = ("weight_time", "weight_cost", "weight_transfers", "weight_walk")
@@ -76,6 +85,10 @@ def plan_baseline(
         sig = tuple((leg.mode, leg.line_id, leg.from_id, leg.to_id) for leg in legs)
         if sig in seen_signatures:
             continue
+        # Getting off and back onto the same line is never a real option ("WR_SLOW -> WR_SLOW").
+        rides = [leg.line_id for leg in legs if leg.line_id]
+        if any(a == b for a, b in zip(rides, rides[1:])):
+            continue
         seen_signatures.add(sig)
         unique_candidates.append(legs)
 
@@ -85,6 +98,13 @@ def plan_baseline(
 
     for idx, legs in enumerate(unique_candidates):
         summary = summarize_legs(legs)
+        risk_delay = 0.0
+        reliability = 1.0  # schedule-only: nothing is known to go wrong
+        if effects is not None:
+            legs, reliability, risk_delay, blocked_by = effects.apply(legs)
+            if blocked_by:
+                rejected.append(RejectedOption(summary=summary, reason=f"Uses {blocked_by} (confirmed by Pakka Check)"))
+                continue
 
         # Calculate metrics
         dur = diff_minutes_hhmm(legs[0].depart, legs[-1].arrive)
@@ -133,8 +153,8 @@ def plan_baseline(
                 cost_inr=cost,
                 transfers=num_transfers,
                 walk_min=walk_min,
-                reliability=1.0,  # Schedule-only baseline has 100% baseline reliability
-                risk_delay_min=0.0,
+                reliability=reliability,
+                risk_delay_min=risk_delay,
             )
         )
 

@@ -1,19 +1,22 @@
 "use client";
 
 // Journey Planner — built from the team's design (stitch: mobilink_web_journey_planner).
-// The form is live: it builds a real trip and opens Route Results. Side panels (recommended
-// options, advisories, spotlights, congestion) are sample data from lib/mockPlanner.ts.
+// Everything is live: the form (places, time, modes, priority, trip limits) builds a real trip for
+// Route Results; the side panels show Pakka Check's live problems and a live preview of the top
+// routes for the places typed. Only the saved-place shortcuts are sample data (lib/mockPlanner.ts).
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useId, useState } from "react";
-import {
-  activePath, advisories, congestion, defaults, engine, legend, mapLayers, quickChips, recommended, savedPlaces, spotlights,
-} from "@/lib/mockPlanner";
+import { useEffect, useId, useMemo, useState } from "react";
+import { getPlan } from "@/lib/api";
+import { eventTitle, evidenceSummary, lineShortName, MODE_LABEL, pct, PLAN_LABEL, STATUS_STYLE } from "@/lib/format";
+import { defaults, quickChips, savedPlaces } from "@/lib/mockPlanner";
+import { activeEvents } from "@/lib/network";
+import { useLiveEvents } from "@/lib/useLiveEvents";
 import { findPlace, PLACE_OPTIONS } from "@/lib/places";
 import { EMPTY_FORM, type FormState, NOW, travellerFromForm, validateForm } from "@/lib/tripForm";
 import { tripHref } from "@/lib/tripUrl";
-import type { Mode } from "@/lib/types";
+import type { Mode, PlanResponse, RouteCard } from "@/lib/types";
 import Icon from "./Icon";
 import MapView from "./MapView";
 
@@ -54,12 +57,14 @@ export default function JourneyPlanner() {
   const [via, setVia] = useState<string | null>(null);
   const [departure, setDeparture] = useState<Departure>("now");
   const [editTime, setEditTime] = useState(false);
-  const [layers, setLayers] = useState<string[]>(["metro"]);
   const [errors, setErrors] = useState<string[]>([]);
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) => setForm((f) => ({ ...f, [key]: value }));
 
   const origin = findPlace(form.from) ?? null;
   const destination = findPlace(form.to) ?? null;
+  const live = useLiveEvents();
+  const problems = useMemo(() => activeEvents(live?.events).sort((a, b) => b.confidence - a.confidence), [live]);
+  const preview = usePreview(departure === "now" ? { ...form, timeMode: "leave", time: NOW } : form);
 
   function modalityOn(m: (typeof MODALITIES)[number]): boolean {
     if (m.id === "walk") return true;
@@ -91,13 +96,17 @@ export default function JourneyPlanner() {
       <section className="flex flex-col gap-2 rounded-2xl bg-container-low/70 px-5 py-3">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <span className="flex items-center gap-1 text-base font-medium uppercase tracking-wide text-primary">
-            <Icon name="alt_route" /> {engine.title}
+            <Icon name="alt_route" /> TravelBuddy Journey Engine
           </span>
           <span className="hidden text-outline md:inline">•</span>
-          <span className="text-sm text-on-surface-variant">{engine.feeds}</span>
+          <span className="text-sm text-on-surface-variant">Local · Metro · BEST · Auto/Taxi — every route checked against Pakka Check before you see it</span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-lg bg-secondary-container px-2 py-0.5 text-sm text-on-secondary-container">{engine.reliability}</span>
+          <span className="rounded-lg bg-secondary-container px-2 py-0.5 text-sm text-on-secondary-container">
+            {live?.source === "backend"
+              ? `Live at ${live.asOf}: ${problems.filter((e) => e.status === "confirmed").length} confirmed · ${problems.filter((e) => e.status === "possible").length} possible problems`
+              : "Server offline — sample data"}
+          </span>
           <button type="button" onClick={() => { setForm((f) => ({ ...f, from: defaults.from, to: defaults.to })); setErrors([]); }}
             className="flex items-center gap-1 rounded-lg bg-container-lowest px-2 py-0.5 text-sm hover:bg-container">
             <Icon name="history" className="text-[18px]" /> Restore Last Search
@@ -128,8 +137,9 @@ export default function JourneyPlanner() {
             <div className="flex flex-col gap-2">
               <div className="flex items-center justify-between text-[13px]">
                 <span className="font-semibold text-slate">Point of Departure</span>
-                <button type="button" onClick={() => set("from", "Andheri station")} className="flex items-center gap-1 font-semibold text-primary">
-                  <Icon name="my_location" className="text-[16px]" /> Current GPS
+                <button type="button" onClick={() => set("from", "Andheri station")} title="No GPS in the prototype — uses Andheri as your location"
+                  className="flex items-center gap-1 font-semibold text-primary">
+                  <Icon name="my_location" className="text-[16px]" /> My location (demo)
                 </button>
               </div>
               <PlaceInput listId={listId} value={form.from} onChange={(v) => set("from", v)} dot="bg-primary"
@@ -259,6 +269,28 @@ export default function JourneyPlanner() {
               </label>
             </div>
 
+            {/* Trip limits (PS: budget, walking, changes, deadline, luggage, crowds, language) */}
+            <div className="flex flex-col gap-2">
+              <span className="text-[13px] font-semibold text-slate">Trip Limits</span>
+              <div className="grid grid-cols-3 gap-2">
+                <NumberBox label="Budget ₹" value={form.budget} onChange={(v) => set("budget", v)} placeholder="any" />
+                <NumberBox label="Max walk (min)" value={form.maxWalk} onChange={(v) => set("maxWalk", v)} placeholder="15" />
+                <NumberBox label="Max changes" value={form.maxTransfers} onChange={(v) => set("maxTransfers", v)} placeholder="2" />
+              </div>
+              {departure === "by" && (
+                <Toggle icon="flag" label="Hard deadline — never suggest a route that arrives late" checked={form.hardDeadline} onChange={(v) => set("hardDeadline", v)} />
+              )}
+              <Toggle icon="luggage" label="Heavy luggage (slower walking, prefers lifts)" checked={form.heavyLuggage} onChange={(v) => set("heavyLuggage", v)} />
+              <Toggle icon="groups" label="Avoid crowded trains" checked={form.avoidCrowds} onChange={(v) => set("avoidCrowds", v)} />
+              <label className="flex items-center justify-between rounded-xl bg-container-low px-3 py-2.5 text-[15px]">
+                <span className="flex items-center gap-2"><Icon name="translate" className="text-primary" /> Language for explanations</span>
+                <select value={form.language} onChange={(e) => set("language", e.target.value as FormState["language"])}
+                  className="rounded-lg bg-container-lowest px-2 py-1 text-[14px] focus:outline-none">
+                  <option value="en">English</option><option value="hi">हिंदी</option><option value="mr">मराठी</option>
+                </select>
+              </label>
+            </div>
+
             {errors.length > 0 && (
               <ul role="alert" className="rounded-xl bg-error-container p-3 text-sm text-on-error-container">
                 {errors.map((e) => <li key={e}>{e}</li>)}
@@ -269,37 +301,25 @@ export default function JourneyPlanner() {
             </button>
           </form>
 
-          {/* Advisories */}
+          {/* Live advisories (Pakka Check) */}
           <section className="flex flex-col gap-3 rounded-2xl bg-container-lowest p-5 shadow-sm">
             <div className="flex items-center justify-between">
               <h2 className="flex items-center gap-2 text-base font-semibold"><Icon name="campaign" className="text-tertiary" /> Live Transit Advisories</h2>
-              <span className="rounded-full bg-tertiary-fixed px-2.5 py-0.5 text-[13px] font-semibold text-tertiary">ACTIVE ({advisories.count})</span>
+              <span className="rounded-full bg-tertiary-fixed px-2.5 py-0.5 text-[13px] font-semibold text-tertiary">ACTIVE ({problems.length})</span>
             </div>
-            {advisories.items.map((a) => (
-              <div key={a.title} className="flex gap-3 rounded-xl bg-container-low p-3">
-                <Icon name={a.icon} className={a.iconClass} />
-                <div>
-                  <p className="text-[15px] font-medium">{a.title}</p>
-                  <p className="text-[14px] text-on-surface-variant">{a.text}</p>
+            {problems.length === 0 && <p className="text-[14px] text-on-surface-variant">No confirmed or possible problems right now.</p>}
+            {problems.slice(0, 4).map((e) => (
+              <Link key={e.event_id} href={`/events/${e.event_id}`} className="flex gap-3 rounded-xl bg-container-low p-3 hover:bg-container">
+                <Icon name={e.status === "confirmed" ? "error" : "info"} className={e.status === "confirmed" ? "text-error" : "text-tertiary"} />
+                <div className="min-w-0">
+                  <p className="text-[15px] font-medium">{eventTitle(e)}</p>
+                  <p className="text-[13px] text-on-surface-variant">{STATUS_STYLE[e.status].label} {pct(e.confidence)} · {evidenceSummary(e)}</p>
                 </div>
-              </div>
+              </Link>
             ))}
             <div className="flex items-center justify-between text-[14px]">
-              <span className="text-on-surface-variant">{advisories.source}</span>
-              <Link href="/admin" className="font-semibold text-primary">View All Alerts</Link>
-            </div>
-          </section>
-
-          {/* Congestion */}
-          <section className="flex items-center gap-4 rounded-2xl bg-container-lowest p-5 shadow-sm">
-            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-secondary-container text-on-secondary-container"><Icon name="groups" /></span>
-            <div className="min-w-0 flex-1">
-              <p className="text-[15px]">{congestion.title}</p>
-              <p className="text-[14px] text-on-surface-variant">{congestion.text}</p>
-            </div>
-            <div className="text-right">
-              <p className="text-lg font-bold text-tertiary">{congestion.value}</p>
-              <p className="text-[13px] text-on-surface-variant">{congestion.sub}</p>
+              <span className="text-on-surface-variant">Source: Pakka Check (commuters + news + official)</span>
+              <Link href="/report" className="font-semibold text-primary">View All Alerts</Link>
             </div>
           </section>
         </div>
@@ -315,97 +335,116 @@ export default function JourneyPlanner() {
                   <p className="text-[13px] text-on-surface-variant">Scale: 1:25,000 MMR Corridors</p>
                 </div>
               </div>
-              <div className="flex flex-wrap gap-2">
-                {mapLayers.map((l) => {
-                  const on = layers.includes(l.id);
-                  return (
-                    <button key={l.id} type="button" aria-pressed={on}
-                      onClick={() => setLayers((ls) => (on ? ls.filter((x) => x !== l.id) : [...ls, l.id]))}
-                      className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-[15px] transition ${on ? "bg-primary text-on-primary" : "bg-container-low text-on-surface-variant hover:bg-container"}`}>
-                      <span className={`h-2 w-2 rounded-full ${on ? "bg-white" : l.dot}`} /> {l.label}
-                    </button>
-                  );
-                })}
-              </div>
+              <p className="text-[13px] text-on-surface-variant">Rail &amp; metro lines in their colours, your start and end, and live problems (red = confirmed, amber = possible).</p>
             </div>
 
             <div className="relative h-[560px] bg-container-low">
-              <MapView showNetwork origin={origin} destination={destination} />
-              <div className="absolute left-1/2 top-4 z-[500] flex -translate-x-1/2 items-center gap-3 rounded-2xl bg-container-lowest px-4 py-2 shadow-float">
-                <span className="text-[15px] font-medium leading-tight">{activePath.label}</span>
-                <span className="rounded-xl bg-primary-fixed px-2 py-1 text-[15px] font-semibold leading-tight text-on-primary-fixed">
-                  {activePath.time}<br />• {activePath.fare}
-                </span>
-              </div>
-              <div className="absolute bottom-4 left-4 z-[500] rounded-xl bg-container-lowest p-4 shadow-float">
-                <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">Cartographic Legend</p>
-                <div className="grid grid-cols-2 gap-x-6 gap-y-1.5">
-                  {legend.map((l) => (
-                    <span key={l.label} className="flex items-center gap-2 text-[14px]">
-                      <span className="h-1 w-4 rounded-full" style={{ backgroundColor: l.color }} /> {l.label}
-                    </span>
-                  ))}
-                </div>
-              </div>
+              <MapView showNetwork origin={origin} destination={destination} events={problems} card={preview.cards[0] ?? null} />
             </div>
 
             <div className="flex flex-col gap-3 bg-container-low/50 p-5">
               <div className="flex items-center justify-between">
                 <span className="text-[13px] font-semibold uppercase tracking-wider text-on-surface-variant">Top Recommended Route Options</span>
-                <Link href="/routes/TR3" className="text-[15px] text-primary">Compare 4 Alternate Paths</Link>
+                {preview.cards.length > 0 && <span className="text-[13px] text-on-surface-variant">Live preview · press Find to see all</span>}
               </div>
-              {recommended.map((r) => (
-                <div key={r.id} className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-4 rounded-2xl bg-container-lowest p-5 shadow-sm sm:grid-cols-[auto_minmax(0,1fr)_auto]">
-                  <span className={`flex h-14 w-14 flex-col items-center justify-center rounded-xl ${r.minutesClass}`}>
-                    <span className="text-xl font-bold leading-none">{r.minutes}</span>
-                    <span className="text-[11px] font-semibold">MIN</span>
-                  </span>
-                  <div className="min-w-0">
-                    <span className={`rounded-md px-2 py-0.5 text-[15px] font-semibold ${r.badgeClass}`}>{r.badge}</span>
-                    <p className="mt-1.5 flex flex-wrap items-baseline gap-x-2 text-[17px] font-semibold">
-                      {r.title} <span className="font-medium text-primary">· {r.fare}</span>
-                    </p>
-                    <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[15px] text-on-surface-variant">
-                      {r.steps.map((s, i) => (
-                        <span key={s} className="flex items-center gap-2">
-                          {i > 0 && <Icon name="arrow_forward" className="text-[16px]" />} {s}
-                        </span>
-                      ))}
-                    </p>
-                  </div>
-                  <div className="col-span-2 flex items-center justify-between gap-3 sm:col-span-1 sm:flex-col sm:items-end">
-                    <span className={`flex items-center gap-1 text-[13px] font-semibold ${r.tag.cls}`}>
-                      <Icon name={r.tag.icon} className="text-[16px]" /> {r.tag.text}
-                    </span>
-                    <Link href="/routes/TR3"
-                      className={`flex items-center gap-1 whitespace-nowrap rounded-xl px-4 py-2.5 text-[15px] font-semibold ${r.primary ? "bg-primary text-on-primary hover:bg-primary-container" : "bg-container-low hover:bg-container"}`}>
-                      {r.cta} <Icon name="chevron_right" />
-                    </Link>
-                  </div>
-                </div>
-              ))}
+              {preview.state === "idle" && <p className="text-[14px] text-on-surface-variant">Pick a start and destination from the list to preview routes.</p>}
+              {preview.state === "loading" && <p className="text-[14px] text-on-surface-variant">Checking routes…</p>}
+              {preview.state === "error" && <p className="text-[14px] text-on-surface-variant">Can&apos;t reach the TravelBuddy server for a preview.</p>}
+              {preview.cards.slice(0, 2).map((c) => <PreviewCard key={c.plan_id} card={c} />)}
             </div>
           </section>
 
-          {/* Spotlights */}
+          {/* More ways to plan */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {spotlights.map((s) => (
-              <div key={s.title} className="flex items-center gap-4 rounded-2xl bg-container-lowest p-4 shadow-sm">
-                <div className={`grid h-20 w-20 shrink-0 place-items-center rounded-xl bg-gradient-to-br text-white ${s.artClass}`}>
-                  <Icon name={s.art} className="text-[36px]" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[12px] font-bold uppercase tracking-wide text-on-surface-variant">{s.kicker}</p>
-                  <p className="truncate text-[16px] font-bold">{s.title}</p>
-                  <p className="line-clamp-2 text-[14px] text-on-surface-variant">{s.text}</p>
-                  <p className="mt-1 flex items-center gap-1 text-[14px] text-primary"><Icon name={s.foot.icon} className="text-[16px]" /> {s.foot.text}</p>
-                </div>
+            <Link href="/itinerary" className="flex items-center gap-4 rounded-2xl bg-container-lowest p-4 shadow-sm hover:shadow-md">
+              <div className="grid h-20 w-20 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-tertiary-container to-tertiary text-white"><Icon name="event_note" className="text-[36px]" /></div>
+              <div className="min-w-0">
+                <p className="text-[12px] font-bold uppercase tracking-wide text-on-surface-variant">Several stops?</p>
+                <p className="text-[16px] font-bold">Day Itinerary</p>
+                <p className="line-clamp-2 text-[14px] text-on-surface-variant">Best order for up to 5 places, inside opening hours.</p>
               </div>
-            ))}
+            </Link>
+            <Link href="/compare" className="flex items-center gap-4 rounded-2xl bg-container-lowest p-4 shadow-sm hover:shadow-md">
+              <div className="grid h-20 w-20 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-primary to-primary-container text-white"><Icon name="compare_arrows" className="text-[36px]" /></div>
+              <div className="min-w-0">
+                <p className="text-[12px] font-bold uppercase tracking-wide text-on-surface-variant">Why TravelBuddy?</p>
+                <p className="text-[16px] font-bold">Normal app vs us</p>
+                <p className="line-clamp-2 text-[14px] text-on-surface-variant">The same evening, travelled twice, scored on what really happened.</p>
+              </div>
+            </Link>
           </div>
         </div>
       </div>
     </main>
+  );
+}
+
+/** Live preview: the real disruption-aware plan for the places typed (debounced). */
+function usePreview(form: FormState): { state: "idle" | "loading" | "error" | "ready"; cards: RouteCard[] } {
+  const key = validateForm(form).length === 0 ? JSON.stringify(travellerFromForm(form)) : null;
+  const [result, setResult] = useState<{ key: string; plan: PlanResponse | null; failed: boolean } | null>(null);
+  useEffect(() => {
+    if (!key) return;
+    let alive = true;
+    const t = setTimeout(() => {
+      getPlan(JSON.parse(key)).then((plan) => alive && setResult({ key, plan, failed: false }))
+        .catch(() => alive && setResult({ key, plan: null, failed: true }));
+    }, 500);
+    return () => { alive = false; clearTimeout(t); };
+  }, [key]);
+  if (!key) return { state: "idle", cards: [] };
+  if (!result || result.key !== key) return { state: "loading", cards: [] };
+  if (result.failed || !result.plan) return { state: "error", cards: [] };
+  const order = (c: RouteCard) => (c.recommended ? 0 : 1);
+  return { state: "ready", cards: [...result.plan.cards].sort((a, b) => order(a) - order(b)) };
+}
+
+function PreviewCard({ card }: { card: RouteCard }) {
+  const parts: string[] = [];
+  for (const l of card.legs) {
+    const n = l.line_id ? lineShortName(l.line_id) : MODE_LABEL[l.mode];
+    if (l.mode !== "walk" && parts[parts.length - 1] !== n) parts.push(n);
+  }
+  const risky = card.legs.some((l) => l.event_ids.length > 0 && l.risk >= 0.3);
+  return (
+    <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-4 rounded-2xl bg-container-lowest p-4 shadow-sm">
+      <span className={`flex h-14 w-14 flex-col items-center justify-center rounded-xl ${card.recommended ? "bg-primary text-on-primary" : "bg-container-high text-on-surface"}`}>
+        <span className="text-xl font-bold leading-none">{card.duration_min}</span>
+        <span className="text-[11px] font-semibold">MIN</span>
+      </span>
+      <div className="min-w-0">
+        <span className="flex flex-wrap items-center gap-1.5">
+          <span className={`rounded-md px-2 py-0.5 text-[13px] font-semibold ${card.recommended ? "bg-primary-fixed text-on-primary-fixed" : "bg-secondary-container text-on-secondary-container"}`}>
+            {PLAN_LABEL[card.label]}{card.recommended ? " · recommended" : ""}
+          </span>
+          <span className={`rounded-md px-2 py-0.5 text-[12px] font-bold ${card.reliability_colour === "green" ? "bg-primary-soft text-primary-ink" : card.reliability_colour === "yellow" ? "bg-amber-soft text-amber-ink" : "bg-error-container text-on-error-container"}`}>
+            {pct(card.reliability)} reliable
+          </span>
+          {risky && <span className="text-[12px] font-bold text-error">⚠ live problem</span>}
+        </span>
+        <p className="mt-1 truncate text-[16px] font-semibold">{parts.join(" → ") || "Walk"} <span className="font-medium text-primary">· ₹{card.cost_inr}</span></p>
+        <p className="text-[13px] text-on-surface-variant">{card.legs[0].depart} → {card.legs[card.legs.length - 1].arrive} · {card.transfers} change{card.transfers === 1 ? "" : "s"} · {card.walk_min} min walk</p>
+      </div>
+    </div>
+  );
+}
+
+function NumberBox({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (v: string) => void; placeholder: string }) {
+  return (
+    <label className="flex flex-col gap-1 rounded-xl bg-container-low px-3 py-2">
+      <span className="text-[11px] font-bold uppercase text-on-surface-variant">{label}</span>
+      <input inputMode="numeric" value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value.replace(/\D/g, ""))}
+        className="w-full bg-transparent text-[15px] tabular-nums focus:outline-none" />
+    </label>
+  );
+}
+
+function Toggle({ icon, label, checked, onChange }: { icon: string; label: string; checked: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <label className="flex cursor-pointer items-center justify-between gap-2 rounded-xl bg-container-low px-3 py-2.5 text-[15px]">
+      <span className="flex items-center gap-2"><Icon name={icon} className="text-primary" /> {label}</span>
+      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="h-5 w-5 accent-[var(--primary)]" />
+    </label>
   );
 }
 

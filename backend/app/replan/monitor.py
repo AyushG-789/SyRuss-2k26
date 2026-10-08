@@ -220,7 +220,8 @@ class JourneyStore:
 
         old_arrive = add_minutes_hhmm(j.card.legs[-1].arrive, old_delay)
         best: tuple[str, int, RouteCard] | None = None
-        for card in plan_baseline(here, departure_time=depart).cards:
+        from ..routing.aware import plan_aware  # local: aware imports this module's helpers
+        for card in plan_aware(here, departure_time=depart, now=now).cards:
             if _signature(card.legs) == _signature(open_legs):
                 continue
             blocked, delay = summarize(route_hits(card.legs, confirmed, here, lines, transfers))

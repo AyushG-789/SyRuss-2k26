@@ -60,7 +60,7 @@ export const radarLayers = ["Traffic Layer", "Metro 1 & 3 Lines", "Flooding Hots
 export const reputation = {
   tier: "Level 4 Transit Pathfinder",
   badge: "Top 5% Commuter",
-  reward: "+50 Unified NCMC Pts",
+  reward: "+0.1 reputation when confirmed",
   accuracy: "Accuracy Score: 98.4%",
   reports: "84 Verified Reports Made",
 };

@@ -12,7 +12,7 @@ from ..data_loader import load_typed_network
 from ..places import resolve_lines, resolve_place, stop_ids_for
 from ..replan.impact import route_hits, summarize
 from ..replan.monitor import event_title, journeys
-from ..routing.baseline import plan_baseline
+from ..routing.aware import plan_aware
 from ..routing.text import route_text
 from ..schemas import Event, Traveller
 from ..verify.store import store
@@ -76,7 +76,7 @@ def plan_trip(origin: str, destination: str, leave_at: str | None = None, arrive
         modes_allowed=["walk", *allowed], step_free=step_free, heavy_luggage=heavy_luggage, avoid_crowds=avoid_crowds,
         language=language if language in ("en", "hi", "mr") else "en",
     )
-    plan = plan_baseline(traveller)
+    plan = plan_aware(traveller)
     net = load_typed_network()
     _, lines, transfers, _ = net
     live = [e for e in store.events(clock.now()) if e.status in ("confirmed", "possible")]

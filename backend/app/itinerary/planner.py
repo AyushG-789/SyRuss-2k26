@@ -1,0 +1,183 @@
+"""Day planner (A9): best order for up to 5 stops in one day. SPEC.md §9.
+
+- Try every order of the chosen stops (≤ 120) and every choice of optional stops.
+- Travel time/cost between places come from the router (schedule-only estimate for the search,
+  then the real disruption-aware route for the chosen order).
+- Each visit must fit the place's opening hours and not fall on a closed day; a stop with
+  `fixed_time` (e.g. Marine Drive at sunset) must be reached by then and starts then.
+- Objective: travel minutes + 0.2 × cost(₹) − 10 × optional stops kept; ties → more slack.
+"""
+from __future__ import annotations
+
+from datetime import date
+from functools import lru_cache
+from itertools import combinations, permutations
+
+from app.clock import clock
+from app.config import settings
+from app.data_loader import load_seed
+from app.routing.aware import plan_aware
+from app.routing.baseline import plan_baseline
+from app.routing.text import route_text
+from app.schemas import Place, RouteCard, Traveller
+
+DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+TIGHT_SLACK_MIN = 10
+
+
+def _m(hhmm: str) -> int:
+    h, m = hhmm.split(":")
+    return int(h) * 60 + int(m)
+
+
+def _t(minutes: int) -> str:
+    return f"{(minutes // 60) % 24:02d}:{minutes % 60:02d}"
+
+
+def _hours(poi: dict, weekday: str) -> tuple[int, int] | None:
+    """Opening window in minutes for the day, or None if closed."""
+    if weekday in [d.lower() for d in poi.get("closed_on", [])]:
+        return None
+    spec = poi.get("hours", {})
+    value = spec.get(weekday) or spec.get(weekday[:3]) or spec.get("all") or "24h"
+    if value in ("24h", "open"):
+        return 0, 24 * 60
+    if value == "closed":
+        return None
+    a, b = value.split("-")
+    return _m(a), _m(b)
+
+
+def _place(poi_id: str, poi: dict) -> Place:
+    return Place(label=poi["name"], lat=poi["lat"], lon=poi["lon"], poi_id=poi_id)
+
+
+def _best_card(cards: list[RouteCard]) -> RouteCard | None:
+    return next((c for c in cards if c.recommended), cards[0] if cards else None)
+
+
+def _hop(traveller: Traveller, a: Place, b: Place, depart: str, aware: bool) -> RouteCard | None:
+    t = traveller.model_copy(update={"origin": a, "destination": b, "leave_at": depart, "arrive_by": None,
+                                     "hard_deadline": False, "itinerary": None})
+    plan = plan_aware(t, depart) if aware else plan_baseline(t, depart)
+    return _best_card(plan.cards)
+
+
+@lru_cache(maxsize=512)
+def _estimate(key: str, a: tuple, b: tuple, depart: str) -> tuple[int, int] | None:
+    """(minutes, ₹) between two places — schedule-only, cached for the order search."""
+    traveller = Traveller.model_validate_json(key)
+    card = _hop(traveller, Place(label=a[0], lat=a[1], lon=a[2]), Place(label=b[0], lat=b[1], lon=b[2]), depart, aware=False)
+    return (card.duration_min, card.cost_inr) if card else None
+
+
+def plan_itinerary(traveller: Traveller, on: date | None = None) -> dict:
+    it = traveller.itinerary
+    if not it or not it.stops:
+        return {"feasible": False, "error": "No stops in the itinerary."}
+    pois = load_seed().pois
+    unknown = [s.poi_id for s in it.stops if s.poi_id not in pois]
+    if unknown:
+        return {"feasible": False, "error": f"Unknown places: {', '.join(unknown)}"}
+    weekday = DAYS[(on or date.fromisoformat(settings.demo_date)).weekday()]
+    day_start, day_end = _m(it.day_start), _m(it.day_end)
+    search_key = traveller.model_copy(update={"itinerary": None}).model_dump_json()
+    start_place = traveller.origin
+    as_tuple = lambda p: (p.label, p.lat, p.lon)  # noqa: E731
+
+    stops = {s.poi_id: s for s in it.stops}
+    must = [s.poi_id for s in it.stops if s.must_visit]
+    optional = [s.poi_id for s in it.stops if not s.must_visit]
+    closed = [pid for pid in stops if _hours(pois[pid], weekday) is None]
+
+    def simulate(order: tuple[str, ...]):
+        """Walk the order with estimated hops. Returns (objective, slack_min, rows) or None."""
+        now, here, travel, cost, rows, min_slack = day_start, start_place, 0, 0, [], 10_000
+        for pid in order:
+            poi, s = pois[pid], stops[pid]
+            hours = _hours(poi, weekday)
+            if hours is None:
+                return None
+            dest = _place(pid, poi)
+            est = _estimate(search_key, as_tuple(here), as_tuple(dest), _t(now))
+            if est is None:
+                return None
+            arrive = now + est[0]
+            start = max(arrive, hours[0])
+            if s.fixed_time:
+                if arrive > _m(s.fixed_time):
+                    return None
+                start = _m(s.fixed_time)
+            visit = s.visit_min or poi.get("visit_min", 30)
+            leave = start + visit
+            if leave > hours[1] or leave > day_end:
+                return None
+            slack = min(hours[1] - leave, day_end - leave, (_m(s.fixed_time) - arrive) if s.fixed_time else 10_000)
+            min_slack = min(min_slack, slack)
+            rows.append((pid, arrive, start, leave, slack))
+            travel, cost, now, here = travel + est[0], cost + est[1], leave, dest
+        if traveller.max_budget_inr is not None and cost > traveller.max_budget_inr:
+            return None
+        kept_optional = sum(1 for pid in order if pid in optional)
+        return travel + 0.2 * cost - 10 * kept_optional, min_slack, rows
+
+    best = None
+    for k in range(len(optional), -1, -1):
+        for extra in combinations(optional, k):
+            chosen = [*must, *extra]
+            if any(pid in closed for pid in chosen):
+                continue
+            for order in permutations(chosen):
+                r = simulate(order)
+                if r and (best is None or (r[0], -r[1]) < (best[0], -best[1])):
+                    best = (*r, order)
+        if best:
+            break  # keeping more optional stops is always better (−10 each), so stop at the first k that fits
+
+    if best is None:
+        return {"feasible": False, "error": "These must-visit stops don't fit the day (opening hours / time window).",
+                "closed_today": closed}
+
+    # Real, disruption-aware routes for the chosen order, at their real departure times.
+    _, _, rows, order = best
+    out, now, here, total_travel, total_cost, warnings = [], day_start, start_place, 0, 0, []
+    for pid, *_ in rows:
+        poi, s = pois[pid], stops[pid]
+        hours = _hours(poi, weekday)
+        dest = _place(pid, poi)
+        card = _hop(traveller, here, dest, _t(now), aware=True)
+        if card is None:
+            return {"feasible": False, "error": f"No route to {poi['name']}."}
+        arrive = _m(card.legs[-1].arrive)
+        start = max(arrive, hours[0])
+        if s.fixed_time:
+            start = max(start, _m(s.fixed_time))
+        visit = s.visit_min or poi.get("visit_min", 30)
+        leave = start + visit
+        slack = min(hours[1] - leave, day_end - leave, (_m(s.fixed_time) - arrive) if s.fixed_time else 10_000)
+        problems = sorted({i for l in card.legs for i in l.event_ids})
+        if problems:
+            warnings.append(f"Route to {poi['name']}: live problems {', '.join(problems)} (reliability {round(card.reliability * 100)}%)")
+        out.append({
+            "poi_id": pid, "name": poi["name"], "must_visit": s.must_visit, "fixed_time": s.fixed_time,
+            "opens": _t(hours[0]) if hours[1] - hours[0] < 1440 else None,
+            "closes": _t(hours[1]) if hours[1] - hours[0] < 1440 else None,
+            "arrive": _t(arrive), "visit_start": _t(start), "leave": _t(leave), "wait_min": start - arrive,
+            "visit_min": visit, "slack_min": min(slack, 999), "tight": slack < TIGHT_SLACK_MIN,
+            "leg": {"route": route_text(card.legs), "depart": card.legs[0].depart, "arrive": card.legs[-1].arrive,
+                    "duration_min": card.duration_min, "cost_inr": card.cost_inr, "reliability": card.reliability,
+                    "event_ids": problems, "card": card.model_dump()},
+        })
+        total_travel += card.duration_min
+        total_cost += card.cost_inr
+        now, here = leave, dest
+
+    dropped = [{"poi_id": pid, "name": pois[pid]["name"],
+                "reason": "closed today" if pid in closed else "doesn't fit the day with the must-visit stops"}
+               for pid in optional if pid not in order]
+    return {
+        "feasible": True, "weekday": weekday, "day_start": it.day_start, "day_end": it.day_end,
+        "stops": out, "dropped": dropped, "total_travel_min": total_travel, "total_cost_inr": total_cost,
+        "ends_at": out[-1]["leave"], "orders_tried": "every order of the chosen stops (≤ 120)",
+        "warnings": warnings, "as_of": clock.now().strftime("%H:%M"),
+    }

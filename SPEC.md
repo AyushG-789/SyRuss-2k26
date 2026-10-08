@@ -299,7 +299,7 @@ transfers > `max_transfers` · touches a **confirmed** closure.
 
 ### 5.4 Disruption-aware vs baseline
 - `baseline.py`: same pipeline, events ignored ("schedule-only").
-- `aware.py`: applies §4.6 effects; `leg.risk` = max over events touching the leg of
+- `aware.py` (**built**): confirmed closures / mega blocks (and lift outages for step-free or heavy-luggage travellers) are removed from the graph **before** the search; confirmed delays raise the boarding cost of that line and are added to the hit leg (later legs shift); candidates still touching a confirmed closure are rejected with the reason; plan `notes` say what was avoided vs the schedule-only plan. Getting off and back on the same line is never a candidate. `leg.risk` = max over events touching the leg of
   `confidence × impact` (impact: closure 1.0, delay 0.6, lift_out 1.0 if step_free else 0.1,
   waterlogging 0.5 on walk/road legs, crowding 0.2).
 - `reliability = Π(1 − leg.risk)` → colour: green ≥ 0.90, yellow 0.70–0.89, red < 0.70.
@@ -425,14 +425,14 @@ plan_itinerary(traveller) -> ItineraryPlan
 | POST | `/chat` | `{messages, journey_id?}` → `{reply, source, tools_used, trip, problems, note}` (§6.0) |
 | POST | `/parse-request` | `{text, language}` → `{traveller: partial Traveller, missing: [field]}` |
 | POST | `/plan` | `{traveller, mode:"aware"|"baseline"}` → `{cards: RouteCard[3], rejected: [{legs, reason}]}` |
-| POST | `/itinerary` | `{traveller}` → `ItineraryPlan` |
+| POST | `/itinerary` | `{traveller}` (with `itinerary`) → `{feasible, stops[{arrive, visit_start, leave, slack_min, tight, leg{route, card}}], dropped[], total_travel_min, total_cost_inr, warnings[]}` |
 | POST | `/journeys` | `{traveller, card}` → `Journey` (`journey_id`, status `upcoming\|active\|completed`, card, proposal, notice, log) |
 | GET | `/journeys` | → all saved journeys |
 | GET | `/journeys/{id}` | → journey + current card + pending proposal (polling fallback for the socket) |
 | POST | `/journeys/{id}/replan/accept` · `/reject` | → updated journey (409 if nothing pending) |
 | POST | `/voice/stt` | audio → `{text, language}` |
 | POST | `/voice/tts` | `{text, language}` → `{audio_base64, mime}` |
-| GET | `/eval` | → metrics table (§12) |
+| GET | `/eval?refresh=` | → §12 results: `schedule_only` vs `travelbuddy` totals, `classification`, `trips[]` (cached; computed on a fresh scripted copy of the scenario) |
 | GET | `/transparency` | → sources, weights, thresholds, lifetimes, assumptions, event log |
 | GET/POST | `/admin/clock` | `{set?: "HH:MM", advance_min?: int, speed?: float}` → `{now, speed, mode}` |
 | POST | `/admin/reset` | `{mode?: "scripted"\|"manual"}` → reload seed, clock to scenario start, paused. **scripted**: seed items arrive at their scheduled times as the clock moves. **manual**: only pre-start history is loaded; the presenter injects the rest |
@@ -454,15 +454,19 @@ left sidebar + top bar (latest confirmed Pakka Check alert, live/sample feed sta
 
 | Route | Content |
 |---|---|
-| `/` | Home & Transit Hub — design-faithful copy of the team design (welcome + quick route finder, daily frequent trips, 5 transport modes, network pulse table, live transit map, NCMC card, recent journeys). **Frontend-only: all content is sample data from `frontend/lib/mockHome.ts`**; each block notes the backend call that will replace it |
-| `/plan` | Journey Planner — design-faithful copy of the team design. **The form is live** (departure/destination with suggestions, via stop, swap/reset, saved-place shortcuts, Depart now/at/Arrive by, modality tiles, priority strategy, step-free) and opens `/routes?t=`. Engine strip, map overlays, recommended options, advisories, spotlights and congestion are **sample data from `frontend/lib/mockPlanner.ts`**. `?from=&to=` prefill |
-| `/routes/[TR1..TR5]`, `/routes?t=<json>` | Route results: Optimal / Fastest / Cheapest cards (time, fare, changes, walk, reliability, reason, steps), map with selected route, trade-off matrix, rejected options. Custom trips show a "routing not connected" panel until `POST /plan` exists |
+| `/` | Home & Transit Hub (team design): quick route finder → straight to results, quick trips, **live** Pakka Check stats (confirmed / reports checked / fakes rejected), 5 transport modes + network pulse per line from `/events` (transfer closures don't mark train lines), live problems map, **5 one-click demo travellers** (TR4 → Day Itinerary) |
+| `/plan` | Journey Planner (team design), all live: places with suggestions, via, Depart now/at/Arrive by, modes, priority, step-free, **trip limits** (budget, max walk, max changes, hard deadline, heavy luggage, avoid crowds, language), live Pakka Check advisories (→ `/events/{id}`), **live preview** of the top routes (`POST /plan`, debounced), map with network + problems. `?from=&to=` prefill. Only saved-place shortcuts are sample |
+| `/routes/[TR1..TR5]`, `/routes?t=<json>` | Route Results (team design `route_results_comparison`): **aware** plans (A5) with score, reliability, live problems per leg, fare breakdown, interchanges; mode filter + sort; map with active selection; trade-off matrix; **"What Pakka Check changed"** notes (e.g. *Avoided: Dadar FOB closure*); **Normal app vs TravelBuddy** for the same trip (`mode: baseline`); rejected options (deduped). Sample plans only if the backend is down |
 | `/track` | Live Trip Tracking (team design) on **real data**: the trip from *Start trip* (saved via `POST /journeys`, id in localStorage for the chatbot), moved by the **demo clock** — phase (not started / on the way / arrived), time left, ETA (+ confirmed delays), fare paid so far, current leg + next stop, milestones per leg with Pakka Check problems (`journey.live_hits`), map with route + "you" marker. **Replan banner** with Switch / Keep (`/replan/accept|reject`). Report Issue → `POST /reports` at the next stop. No trip → empty state with a one-click demo trip (TR3 via the Dadar FOB). Share link + SOS are labelled samples |
 | `/admin` | Demo control (presenter): demo clock + slider, scripted ↔ manual, inject presets, live disruptions, story timeline |
 | `/report` | Report Incident — design-faithful copy of the team design (citizen incident console). **Real:** category → disruption type, description, linked station, corridor + direction → `POST /reports` with the verdict shown; live header counts; Nearby Active Feed from `/events` with "I see this too" (a crowd confirmation — same reporter counts once). **Sample:** voice memo/transcript, media (previewed locally, not uploaded), reputation card (`frontend/lib/mockReport.ts`) |
-| `/stations` | Station Explorer & Nearby — design-faithful copy of the team design (breadcrumb, search + radius, mode filter chips that filter the station cards, departures, amenities, real map centred on the searched station, gate guide, facilities). **Sample data from `frontend/lib/mockStations.ts`** |
-| `/dashboard` | "Coming soon" placeholder for Commuter Dashboard & Passes (no design yet) |
-| `/radar`, `/itinerary`, `/eval`, `/transparency` | Not built yet |
+| `/stations` | Station Explorer & Nearby (team design): search, radius, mode chips, station cards, real map. Departures, gates and facilities are **labelled sample** (`frontend/lib/mockStations.ts`) |
+| `/events/[id]` | Disruption detail: verdict + trust gauge, every evidence item (source, time, reporter, weight, note, burst coverage), the confidence maths (support × freshness, contradiction), thresholds, expiry, map. Linked from Report feed, Home, Planner, Tracking, Transparency |
+| `/transparency` | Transparency (B10): sources + weights + live/mock mode, formula, thresholds, anti-gaming, lifetimes, routing rules, AI + number check, assumptions & limits, network counts, **live event log** (incl. ignored / fake bursts), replan decisions |
+| `/compare` | Compare + evaluation (A10): headline numbers (late trips, minutes lost, fake-report reroutes, report accuracy), extra cost/walk, trip-by-trip table with real arrival vs plan |
+| `/itinerary` | Day Itinerary (A9): start, day window, budget, up to 5 stops (must/optional, fixed time) → best order with arrive/visit/leave, slack, tight flags, each hop's live route on the map, dropped stops, warnings |
+| `/dashboard` | Placeholder (removed from the menu) |
+
 
 Only real data is shown — panels in the design with no data source (card balance, vehicle speed,
 carbon, CCTV crowding, station gates) were intentionally left out.
@@ -482,7 +486,9 @@ a leg on a really-delayed line → + true delay.
 | Average arrival delay (min) | | |
 | False reroutes caused by fake reports | n/a | |
 | Extra cost (₹) / extra walking (min) vs baseline plan | | |
-| Report classification accuracy vs `expected.status` (of 30) | n/a | |
+| Report classification accuracy vs `expected.status` | n/a | |
+
+**Results (12 trips = TR1, TR2, TR3, TR5 × fastest/optimal/cheapest; `python -m app.eval.run_eval`):** late 3 → **1**, average minutes lost to problems 9.2 → **4.6**, replans 3 with **0 caused by fake reports**, reports judged correctly **24 / 24**, cost +₹111 and walking −23 min in total. A closure only counts if you reach it after it started; TR2's optimal route crossed the Dadar FOB before Pakka Check could confirm it, so both lose 25 min there — shown honestly.
 
 ---
 
