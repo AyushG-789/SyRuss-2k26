@@ -14,7 +14,6 @@ from .config import settings
 from .data_loader import load_seed
 
 
-
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     # Live alerts: watch the clock, events and saved journeys; push changes over /ws/alerts.
@@ -25,13 +24,19 @@ async def lifespan(_: FastAPI):
         await task
 
 
-app = FastAPI(title="TravelBuddy API", version="0.1.0", lifespan=lifespan)
+app = FastAPI(
+    title="TravelBuddy API",
+    version="0.1.0",
+    lifespan=lifespan,
+)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 app.include_router(admin.router)
 app.include_router(chat.router)
 app.include_router(events.router)

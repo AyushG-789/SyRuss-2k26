@@ -5,7 +5,14 @@ import eventsMock from "@/mocks/events.json";
 import linesMock from "@/mocks/lines.json";
 import stationsMock from "@/mocks/stations.json";
 import travellersMock from "@/mocks/travellers.json";
-import type { DisruptionEvent, LineInfo, PlanResponse, RouteCard, StationInfo, Traveller } from "./types";
+import type {
+  DisruptionEvent,
+  LineInfo,
+  PlanResponse,
+  RouteCard,
+  StationInfo,
+  Traveller,
+} from "./types";
 
 export const USE_MOCKS = process.env.NEXT_PUBLIC_USE_MOCKS !== "false";
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -35,7 +42,11 @@ async function post<T>(path: string, body: unknown): Promise<T> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(`${path} failed: ${res.status} ${await res.text()}`);
+
+  if (!res.ok) {
+    throw new Error(`${path} failed: ${res.status} ${await res.text()}`);
+  }
+
   return res.json() as Promise<T>;
 }
 
@@ -55,6 +66,7 @@ export async function getPlan(traveller: Traveller): Promise<PlanResponse> {
     const load = mockPlans[traveller.traveller_id];
     return (await load()).default as PlanResponse;
   }
+
   return post<PlanResponse>("/plan", planRequest(traveller));
 }
 
@@ -78,9 +90,17 @@ export interface LiveEvents {
 async function fetchJson<T>(path: string, timeoutMs: number): Promise<T> {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+
   try {
-    const res = await fetch(`${API_URL}${path}`, { signal: ctrl.signal, cache: "no-store" });
-    if (!res.ok) throw new Error(`${path} failed: ${res.status}`);
+    const res = await fetch(`${API_URL}${path}`, {
+      signal: ctrl.signal,
+      cache: "no-store",
+    });
+
+    if (!res.ok) {
+      throw new Error(`${path} failed: ${res.status}`);
+    }
+
     return (await res.json()) as T;
   } finally {
     clearTimeout(timer);
@@ -88,21 +108,37 @@ async function fetchJson<T>(path: string, timeoutMs: number): Promise<T> {
 }
 
 export async function getLiveEvents(): Promise<LiveEvents> {
-  const mock: LiveEvents = { events: eventsMock.events as unknown as DisruptionEvent[], source: "mock" };
-  if (EVENTS_SOURCE === "mock") return mock;
+  const mock: LiveEvents = {
+    events: eventsMock.events as unknown as DisruptionEvent[],
+    source: "mock",
+  };
+
+  if (EVENTS_SOURCE === "mock") {
+    return mock;
+  }
+
   try {
     const [events, clockState] = await Promise.all([
       fetchJson<DisruptionEvent[]>("/events", 2000),
       fetchJson<{ now: string }>("/admin/clock", 2000),
     ]);
-    return { events, source: "backend", asOf: clockState.now };
+
+    return {
+      events,
+      source: "backend",
+      asOf: clockState.now,
+    };
   } catch (err) {
-    if (EVENTS_SOURCE === "backend") throw err;
+    if (EVENTS_SOURCE === "backend") {
+      throw err;
+    }
+
     return mock;
   }
 }
 
 // ---- Demo controls (Person B, SPEC.md §10) --------------------------------------------------
+
 export interface ClockState {
   now: string;
   iso: string;
@@ -134,22 +170,40 @@ export interface Timeline extends ClockState {
 }
 
 export const getClock = () => fetchJson<ClockState>("/admin/clock", 2000);
-export const getTimeline = () => fetchJson<Timeline>("/admin/timeline", 2000);
-export const getPresets = () => fetchJson<Preset[]>("/admin/presets", 2000);
-export const getBackendEvents = () => fetchJson<DisruptionEvent[]>("/events", 2000);
 
-export const updateClock = (body: { set?: string; advance_min?: number; speed?: number }) =>
-  post<ClockState>("/admin/clock", body);
-export const resetDemo = (mode: ClockState["mode"]) => post<ClockState>("/admin/reset", { mode });
-export const injectPreset = (preset: string) => post<ClockState>("/admin/inject", { preset });
+export const getTimeline = () =>
+  fetchJson<Timeline>("/admin/timeline", 2000);
+
+export const getPresets = () =>
+  fetchJson<Preset[]>("/admin/presets", 2000);
+
+export const getBackendEvents = () =>
+  fetchJson<DisruptionEvent[]>("/events", 2000);
+
+export const updateClock = (body: {
+  set?: string;
+  advance_min?: number;
+  speed?: number;
+}) => post<ClockState>("/admin/clock", body);
+
+export const resetDemo = (mode: ClockState["mode"]) =>
+  post<ClockState>("/admin/reset", { mode });
+
+export const injectPreset = (preset: string) =>
+  post<ClockState>("/admin/inject", { preset });
 
 // ---- Crowd reports (Person B, SPEC.md §10 POST /reports) ------------------------------------
+
 export interface ReportIn {
   reporter_id: string;
   text: string;
   type: DisruptionEvent["type"];
   severity: DisruptionEvent["severity"];
-  affected: { stop_ids: string[]; line_ids: string[]; transfer_ids: string[] };
+  affected: {
+    stop_ids: string[];
+    line_ids: string[];
+    transfer_ids: string[];
+  };
 }
 
 export interface ReportOut {
@@ -160,9 +214,11 @@ export interface ReportOut {
   reported_at: string;
 }
 
-export const submitReport = (body: ReportIn) => post<ReportOut>("/reports", body);
+export const submitReport = (body: ReportIn) =>
+  post<ReportOut>("/reports", body);
 
 // ---- Chatbot (SPEC.md §6, POST /chat) --------------------------------------------------------
+
 export interface ChatMessage {
   role: "user" | "assistant";
   text: string;
@@ -197,15 +253,27 @@ export interface ChatReply {
   source: "gemini" | "template" | "fallback";
   model: string | null;
   tools_used: string[];
-  trip: { traveller: Traveller; from: string; to: string; options: ChatOption[] } | null;
+  trip: {
+    traveller: Traveller;
+    from: string;
+    to: string;
+    options: ChatOption[];
+  } | null;
   problems: ChatProblem[] | null;
   note: string | null;
 }
 
-export const sendChat = (messages: ChatMessage[], journeyId?: string | null) =>
-  post<ChatReply>("/chat", { messages, journey_id: journeyId ?? null });
+export const sendChat = (
+  messages: ChatMessage[],
+  journeyId?: string | null,
+) =>
+  post<ChatReply>("/chat", {
+    messages,
+    journey_id: journeyId ?? null,
+  });
 
-// ---- Saved journeys + replan (B9, SPEC.md §8) ------------------------------------------------
+// ---- Saved journeys + replan (B9, SPEC.md §8) -----------------------------------------------
+
 export interface LegHit {
   leg_idx: number;
   event_id: string;
@@ -224,7 +292,10 @@ export interface ReplanProposal {
   from_label: string;
   old_card: RouteCard;
   new_card: RouteCard;
-  delta: { min: number; inr: number };
+  delta: {
+    min: number;
+    inr: number;
+  };
   old_blocked: boolean;
   message: string;
 }
@@ -239,10 +310,31 @@ export interface Journey {
   notice: string | null;
   handled_event_ids: string[];
   live_hits: LegHit[];
-  log: { at: string; kind: string; event_ids: string[]; detail: string }[];
+  log: {
+    at: string;
+    kind: string;
+    event_ids: string[];
+    detail: string;
+  }[];
 }
 
-export const saveJourney = (traveller: Traveller, card: RouteCard) => post<Journey>("/journeys", { traveller, card });
-export const getJourney = (id: string) => fetchJson<Journey>(`/journeys/${id}`, 3000);
-export const decideReplan = (id: string, accept: boolean) =>
-  post<Journey>(`/journeys/${id}/replan/${accept ? "accept" : "reject"}`, {});
+export const saveJourney = (
+  traveller: Traveller,
+  card: RouteCard,
+) =>
+  post<Journey>("/journeys", {
+    traveller,
+    card,
+  });
+
+export const getJourney = (id: string) =>
+  fetchJson<Journey>(`/journeys/${id}`, 3000);
+
+export const decideReplan = (
+  id: string,
+  accept: boolean,
+) =>
+  post<Journey>(
+    `/journeys/${id}/replan/${accept ? "accept" : "reject"}`,
+    {},
+  );

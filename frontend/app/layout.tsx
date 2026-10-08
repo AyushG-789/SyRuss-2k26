@@ -15,7 +15,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "TravelBuddy",
-  description: "Crowd-verified journey planner for Mumbai — locals tell you the truth, we fact-check them.",
+  description:
+    "Crowd-verified journey planner for Mumbai — locals tell you the truth, we fact-check them.",
 };
 
 export const viewport: Viewport = {
@@ -23,9 +24,16 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
-    <html lang="en" className={`${jakarta.variable} ${geistMono.variable} h-full antialiased`}>
+    <html
+      lang="en"
+      className={`${jakarta.variable} ${geistMono.variable} h-full antialiased`}
+    >
       <head>
         {/* Icon font used by the design (Material Symbols Outlined) */}
         {/* "block" so icons never flash as their text names while the font loads */}
