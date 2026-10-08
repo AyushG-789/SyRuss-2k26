@@ -137,3 +137,22 @@ class RouteCard(BaseModel):
     score: float = Field(ge=0, le=10)
     reason: str = ""
     facts: dict = {}
+
+
+class RejectedOption(BaseModel):
+    summary: str
+    reason: str
+
+
+class PlanRequest(BaseModel):
+    traveller: Traveller
+    mode: Literal["aware", "baseline"] = "baseline"
+
+
+class PlanResponse(BaseModel):
+    cards: list[RouteCard]
+    rejected: list[RejectedOption] = []
+    as_of: str | None = None
+    destination: Place | None = None
+    notes: list[str] = []
+
