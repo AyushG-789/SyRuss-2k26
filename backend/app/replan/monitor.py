@@ -18,8 +18,9 @@ from datetime import datetime
 from ..clock import clock, fmt_hhmm
 from ..data_loader import load_typed_network
 from ..routing.baseline import plan_baseline, summarize_legs
+from ..routing.text import route_text
 from ..routing.graph import add_minutes_hhmm, diff_minutes_hhmm
-from ..schemas import Event, Journey, JourneyLogEntry, Leg, Place, ReplanProposal, RouteCard, Traveller
+from ..schemas import Event, Journey, JourneyLogEntry, Leg, LegHit, Place, ReplanProposal, RouteCard, Traveller
 from ..verify.store import active_events
 from .impact import Hit, route_hits, summarize
 
@@ -143,18 +144,37 @@ class JourneyStore:
     def check(self, now: datetime | None = None) -> list[Journey]:
         """Re-check every unfinished journey. Returns the journeys that got a NEW proposal or notice."""
         now = now or clock.now()
-        confirmed = [e for e in active_events(now) if e.status == "confirmed"]
+        live = active_events(now)
+        confirmed = [e for e in live if e.status == "confirmed"]
         changed = []
         with self._lock:
             for j in self._journeys.values():
                 at = fmt_hhmm(now)
                 j.status = _status(j.card, at)
+                j.live_hits = self._live_hits(j, live, at)
                 if j.status == "completed":
                     j.proposal = None
                     continue
                 if self._check_one(j, confirmed, now):
                     changed.append(j)
         return changed
+
+    def _live_hits(self, j: Journey, live: list[Event], at: str) -> list[LegHit]:
+        """Every confirmed/possible problem on a leg the traveller hasn't finished (for the UI)."""
+        start = _first_open_leg(j.card, at)
+        if start is None:
+            return []
+        stations, lines, transfers, _ = load_typed_network()
+        by_id = {e.event_id: e for e in live}
+        open_hits = route_hits(j.card.legs[start:], live, j.traveller, lines, transfers)
+        out = []
+        for i, hs in sorted(open_hits.items()):
+            for h in hs:
+                ev = by_id[h.event_id]
+                out.append(LegHit(leg_idx=start + i, event_id=ev.event_id, status=ev.status,
+                                  title=event_title(ev, stations, lines, transfers), confidence=ev.confidence,
+                                  blocked=h.blocked, delay_min=h.delay_min))
+        return out
 
     def _check_one(self, j: Journey, confirmed: list[Event], now: datetime) -> bool:
         at = fmt_hhmm(now)
@@ -229,7 +249,7 @@ class JourneyStore:
         late = j.traveller.arrive_by and arrive > j.traveller.arrive_by
         message = (f"Confirmed {titles}. "
                    + ("Your planned route can't be used. " if old_blocked else f"Your route is about {old_delay} min slower. ")
-                   + f"New route from {origin.label}: {summarize_legs(alt.legs)}, arriving {arrive}"
+                   + f"New route from {origin.label}: {route_text(alt.legs)}, arriving {arrive}"
                    + (f" (after your {j.traveller.arrive_by} target)." if late else "."))
         j.proposal = ReplanProposal(
             proposal_id=f"P_{uuid.uuid4().hex[:8]}",

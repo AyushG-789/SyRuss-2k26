@@ -13,31 +13,15 @@ from ..places import resolve_lines, resolve_place, stop_ids_for
 from ..replan.impact import route_hits, summarize
 from ..replan.monitor import event_title, journeys
 from ..routing.baseline import plan_baseline
-from ..schemas import Event, Leg, Traveller
+from ..routing.text import route_text
+from ..schemas import Event, Traveller
 from ..verify.store import store
 
-SHORT_LINE = {"WR_SLOW": "WR Slow", "WR_FAST": "WR Fast", "CR_SLOW": "CR Slow", "CR_FAST": "CR Fast",
-              "HARBOUR": "Harbour", "METRO1": "Metro 1", "METRO3": "Metro 3"}
-MODE_WORD = {"walk": "Walk", "taxi": "Taxi", "auto": "Auto", "cab": "Cab", "bus": "BEST bus", "ferry": "Ferry"}
 ALL_MODES = ["local", "metro", "bus", "auto", "taxi", "cab"]
 SOURCE_WORD = {"crowd": "commuter", "news": "news report", "official": "official notice", "weather": "weather alert"}
 STATUS_WORD = {"confirmed": "confirmed", "possible": "possible (not yet confirmed)",
                "ignored": "not trusted (too little evidence)", "coordinated": "not trusted (looks like a fake burst of reports)",
                "expired": "over"}
-
-
-def _route_text(legs: list[Leg]) -> str:
-    parts: list[str] = []
-    for leg in legs:
-        if leg.line_id:
-            name = "BEST bus" if leg.line_id.startswith("BEST") else SHORT_LINE.get(leg.line_id, leg.line_id)
-        elif leg.mode == "walk":
-            continue
-        else:
-            name = MODE_WORD.get(leg.mode, leg.mode)
-        if not parts or parts[-1] != name:
-            parts.append(name)
-    return " → ".join(parts) or "Walk"
 
 
 def _sources(ev: Event) -> str:
@@ -103,7 +87,7 @@ def plan_trip(origin: str, destination: str, leave_at: str | None = None, arrive
         blocked, delay = summarize({i: [h for h in hs if by_id[h.event_id].status == "confirmed"] for i, hs in hits.items()})
         ids = sorted({h.event_id for hs in hits.values() for h in hs})
         cards.append({
-            "label": c.label, "recommended": c.recommended, "route": _route_text(c.legs),
+            "label": c.label, "recommended": c.recommended, "route": route_text(c.legs),
             "depart": c.legs[0].depart, "arrive": c.legs[-1].arrive, "duration_min": c.duration_min,
             "cost_inr": c.cost_inr, "changes": c.transfers, "walk_min": c.walk_min,
             "live_problems": [_event_json(by_id[i], net) | {"on_this_route": True} for i in ids],
@@ -164,12 +148,12 @@ def get_my_journey(journey_id: str | None = None) -> dict:
     if not j:
         return {"ok": False, "error": "No saved trip yet. The traveller can press 'Start trip' on a route."}
     journeys.check()
-    out = {"ok": True, "journey_id": j.journey_id, "status": j.status, "route": _route_text(j.card.legs),
+    out = {"ok": True, "journey_id": j.journey_id, "status": j.status, "route": route_text(j.card.legs),
            "depart": j.card.legs[0].depart, "arrive": j.card.legs[-1].arrive, "cost_inr": j.card.cost_inr,
            "notice": j.notice}
     if j.proposal:
         p = j.proposal
-        out["replan_proposal"] = {"message": p.message, "new_route": _route_text(p.new_card.legs),
+        out["replan_proposal"] = {"message": p.message, "new_route": route_text(p.new_card.legs),
                                   "new_arrive": p.new_card.legs[-1].arrive, "change_min": p.delta["min"],
                                   "change_inr": p.delta["inr"]}
     return out

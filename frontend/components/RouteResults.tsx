@@ -5,7 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { getPlan, planRequest, RoutingNotConnected, USE_MOCKS } from "@/lib/api";
 import { legColor, lineShortName, MODE_LABEL, PLAN_LABEL, pct, placeName, readableRoute } from "@/lib/format";
-import { saveTrip } from "@/lib/savedTrip";
+import { startTrip } from "@/lib/savedTrip";
 import type { PlanLabel, PlanResponse, RouteCard, Traveller } from "@/lib/types";
 import { activeEvents } from "@/lib/network";
 import { useLiveEvents } from "@/lib/useLiveEvents";
@@ -60,9 +60,9 @@ export default function RouteResults({ traveller }: { traveller: Traveller | nul
 
   if (!traveller) return <p className="mx-auto w-full max-w-7xl px-6 py-6">This trip link is broken — plan it again.</p>;
 
-  function startTracking(card: RouteCard) {
+  async function startTracking(card: RouteCard) {
     const qs = search.toString();
-    saveTrip({ traveller: traveller!, destination, card, resultsHref: qs ? `${pathname}?${qs}` : pathname, savedAt: new Date().toISOString() });
+    await startTrip({ traveller: traveller!, destination, card, resultsHref: qs ? `${pathname}?${qs}` : pathname, savedAt: new Date().toISOString() });
     router.push("/track");
   }
 

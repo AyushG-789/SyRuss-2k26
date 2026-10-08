@@ -183,6 +183,17 @@ class JourneyLogEntry(BaseModel):
     detail: str = ""
 
 
+class LegHit(BaseModel):
+    """A live Pakka Check problem touching one leg of a saved journey (for the tracking screen)."""
+    leg_idx: int
+    event_id: str
+    title: str
+    status: EventStatus
+    confidence: float
+    blocked: bool
+    delay_min: int
+
+
 class Journey(BaseModel):
     journey_id: str
     traveller: Traveller
@@ -192,6 +203,7 @@ class Journey(BaseModel):
     proposal: ReplanProposal | None = None
     notice: str | None = None            # e.g. "Delay on your route; it is still the best option"
     handled_event_ids: list[str] = []
+    live_hits: list[LegHit] = []         # confirmed + possible problems on legs not finished yet
     log: list[JourneyLogEntry] = []
 
 

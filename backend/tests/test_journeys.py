@@ -177,3 +177,15 @@ def test_hub_tick_emits_proposal_once():
     first = [m for m in hub.tick() if m["type"] == "replan_proposal"]
     assert [m["journey_id"] for m in first] == [j["journey_id"]]
     assert not [m for m in hub.tick() if m["type"] == "replan_proposal"]
+
+
+def test_journey_lists_live_problems_per_leg():
+    _, j = tr3_via_dadar()
+    set_clock("17:14")                       # FOB closure only "possible" (44%)
+    hits = get(j["journey_id"])["live_hits"]
+    fob = [h for h in hits if h["event_id"] == "E_DADAR_FOB"]
+    assert fob and fob[0]["status"] == "possible" and fob[0]["blocked"]
+    assert j["card"]["legs"][fob[0]["leg_idx"]]["mode"] == "walk"
+    set_clock("17:15")
+    fob = [h for h in get(j["journey_id"])["live_hits"] if h["event_id"] == "E_DADAR_FOB"]
+    assert fob[0]["status"] == "confirmed" and "foot-overbridge" in fob[0]["title"]

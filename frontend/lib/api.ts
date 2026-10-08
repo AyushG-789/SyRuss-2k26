@@ -5,7 +5,7 @@ import eventsMock from "@/mocks/events.json";
 import linesMock from "@/mocks/lines.json";
 import stationsMock from "@/mocks/stations.json";
 import travellersMock from "@/mocks/travellers.json";
-import type { DisruptionEvent, LineInfo, PlanResponse, StationInfo, Traveller } from "./types";
+import type { DisruptionEvent, LineInfo, PlanResponse, RouteCard, StationInfo, Traveller } from "./types";
 
 export const USE_MOCKS = process.env.NEXT_PUBLIC_USE_MOCKS !== "false";
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -204,3 +204,45 @@ export interface ChatReply {
 
 export const sendChat = (messages: ChatMessage[], journeyId?: string | null) =>
   post<ChatReply>("/chat", { messages, journey_id: journeyId ?? null });
+
+// ---- Saved journeys + replan (B9, SPEC.md §8) ------------------------------------------------
+export interface LegHit {
+  leg_idx: number;
+  event_id: string;
+  title: string;
+  status: DisruptionEvent["status"];
+  confidence: number;
+  blocked: boolean;
+  delay_min: number;
+}
+
+export interface ReplanProposal {
+  proposal_id: string;
+  created_at: string;
+  event_ids: string[];
+  affected_leg_idx: number[];
+  from_label: string;
+  old_card: RouteCard;
+  new_card: RouteCard;
+  delta: { min: number; inr: number };
+  old_blocked: boolean;
+  message: string;
+}
+
+export interface Journey {
+  journey_id: string;
+  traveller: Traveller;
+  card: RouteCard;
+  status: "upcoming" | "active" | "completed";
+  saved_at: string;
+  proposal: ReplanProposal | null;
+  notice: string | null;
+  handled_event_ids: string[];
+  live_hits: LegHit[];
+  log: { at: string; kind: string; event_ids: string[]; detail: string }[];
+}
+
+export const saveJourney = (traveller: Traveller, card: RouteCard) => post<Journey>("/journeys", { traveller, card });
+export const getJourney = (id: string) => fetchJson<Journey>(`/journeys/${id}`, 3000);
+export const decideReplan = (id: string, accept: boolean) =>
+  post<Journey>(`/journeys/${id}/replan/${accept ? "accept" : "reject"}`, {});

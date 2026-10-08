@@ -1,42 +1,156 @@
 "use client";
 
-// Live Trip Tracking — built from the team's design (stitch: mobilink_web_live_trip_tracking_console).
-// Frontend only: content is sample data from lib/mockTracking.ts. "Dispatch Report" still sends a
-// real crowd report to Pakka Check when the backend is running.
+// Live Trip Tracking — the team's design (stitch: mobilink_web_live_trip_tracking_console), now on
+// REAL data: the trip chosen with "Start trip" (saved as a journey for the replan monitor, B9),
+// moved along by the demo clock, with Pakka Check problems on each leg and replan Accept / Reject.
+// Sample-only parts (Share link, SOS) are clearly labelled.
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { submitReport, type ReportOut } from "@/lib/api";
-import { pct, STATUS_STYLE } from "@/lib/format";
-import { mapInfo, platforms, reportCategories, reportTarget, share, steps, trip, vehicle, velocity, type StepState } from "@/lib/mockTracking";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  decideReplan, getClock, getJourney, getPlan, lines, stations, submitReport, travellers,
+  type ClockState, type Journey, type LegHit, type ReportOut,
+} from "@/lib/api";
+import { lineShortName, pct, placeName, STATUS_STYLE } from "@/lib/format";
+import { positionAt, toMin } from "@/lib/geo";
+import { reportCategories, share } from "@/lib/mockTracking";
 import { reporterId } from "@/lib/reporter";
-import { useRefreshLiveEvents } from "@/lib/useLiveEvents";
+import { clearTrip, loadTrip, type SavedTrip, saveTrip, startTrip } from "@/lib/savedTrip";
+import type { Leg, RouteCard } from "@/lib/types";
+import { useLiveEvents, useRefreshLiveEvents } from "@/lib/useLiveEvents";
 import Icon from "./Icon";
+import MapView from "./MapView";
 
-type Modal = null | "report" | "share" | "sos" | "qr";
+type Modal = null | "report" | "share" | "sos";
+type LegState = "done" | "now" | "next";
+
+const MODE_ICON: Record<string, string> = {
+  local: "train", metro: "subway", bus: "directions_bus", walk: "directions_walk",
+  taxi: "local_taxi", auto: "electric_rickshaw", cab: "directions_car", ferry: "directions_boat",
+};
+
+const hhmm = (min: number) => `${String(Math.floor(min / 60) % 24).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
+
+/* ---------------------------------------------------------------- data hooks */
+
+/** The demo clock from the backend (moves when the presenter plays it on Demo control). */
+function useDemoClock(): ClockState | null {
+  const [clock, setClock] = useState<ClockState | null>(null);
+  useEffect(() => {
+    let alive = true;
+    const tick = () => getClock().then((c) => alive && setClock(c)).catch(() => alive && setClock(null));
+    tick();
+    const id = setInterval(tick, 2000);
+    return () => { alive = false; clearInterval(id); };
+  }, []);
+  return clock;
+}
+
+/** The saved journey from the backend: status, problems on each leg, replan proposal. */
+function useJourney(id: string | null | undefined): [Journey | null, (j: Journey) => void, boolean] {
+  const [journey, setJourney] = useState<Journey | null>(null);
+  const [lost, setLost] = useState(false); // the server restarted / was reset and no longer knows this trip
+  useEffect(() => {
+    if (!id) return;
+    let alive = true;
+    const tick = () =>
+      getJourney(id)
+        .then((j) => { if (alive) { setJourney(j); setLost(false); } })
+        .catch((e: Error) => { if (alive && e.message.includes("404")) setLost(true); });
+    tick();
+    const t = setInterval(tick, 3000);
+    return () => { alive = false; clearInterval(t); };
+  }, [id]);
+  return [id && !lost ? journey : null, setJourney, lost];
+}
+
+/* ---------------------------------------------------------------- page */
 
 export default function TrackView() {
+  const [trip, setTrip] = useState<SavedTrip | null | undefined>(undefined); // undefined = loading
+  useEffect(() => {
+    Promise.resolve().then(() => setTrip(loadTrip()));
+  }, []);
+
+  if (trip === undefined) return <main className="px-6 py-10 text-sm text-on-surface-variant">Loading your trip…</main>;
+  if (!trip) return <NoTrip onStarted={setTrip} />;
+  return <LiveTrip trip={trip} onTrip={setTrip} />;
+}
+
+function LiveTrip({ trip, onTrip }: { trip: SavedTrip; onTrip: (t: SavedTrip | null) => void }) {
   const [modal, setModal] = useState<Modal>(null);
-  const [alarm, setAlarm] = useState(true);
-  const speed = useWobblingSpeed(vehicle.speed);
+  const clock = useDemoClock();
+  const [journey, setJourney, lost] = useJourney(trip.journeyId);
+  const live = useLiveEvents();
+
+  // The backend's copy wins: after an accepted replan the card changes there.
+  const card: RouteCard = journey?.card ?? trip.card;
+  useEffect(() => {
+    if (journey && journey.card.plan_id !== trip.card.plan_id) {
+      const next = { ...trip, card: journey.card };
+      saveTrip(next);
+      onTrip(next);
+    }
+  }, [journey, trip, onTrip]);
+
+  const { traveller } = trip;
+  const destination = trip.destination ?? traveller.destination ?? null;
+  const destLabel = destination?.label ?? "Destination";
+  const legs = card.legs;
+  const startMin = toMin(legs[0].depart);
+  const endMin = toMin(legs[legs.length - 1].arrive);
+  const nowMin = clock ? toMin(clock.now) : startMin;
+
+  const states: LegState[] = legs.map((l) => (toMin(l.arrive) <= nowMin ? "done" : toMin(l.depart) <= nowMin ? "now" : "next"));
+  const phase = nowMin < startMin ? "upcoming" : nowMin >= endMin ? "arrived" : "moving";
+  const currentIdx = states.indexOf("now");
+  const nextIdx = states.findIndex((s) => s !== "done");
+
+  const hits = useMemo(() => journey?.live_hits ?? [], [journey]);
+  const confirmedDelay = useMemo(() => {
+    const perEvent = new Map<string, number>();
+    for (const h of hits) if (h.status === "confirmed") perEvent.set(h.event_id, Math.max(perEvent.get(h.event_id) ?? 0, h.delay_min));
+    return [...perEvent.values()].reduce((a, b) => a + b, 0);
+  }, [hits]);
+  const blocked = hits.some((h) => h.status === "confirmed" && h.blocked);
+
+  const eta = endMin + confirmedDelay;
+  const remaining = Math.max(0, eta - Math.max(nowMin, startMin));
+  const paid = legs.filter((l, i) => states[i] !== "next" || toMin(l.depart) <= nowMin).reduce((a, l) => a + l.cost_inr, 0);
+
+  const here = phase === "moving" ? positionAt(card, nowMin, traveller.origin, destination) : null;
+  const hitIds = new Set(hits.map((h) => h.event_id));
+  const mapEvents = (live?.events ?? []).filter((e) => hitIds.has(e.event_id));
+
+  const name = (id: string) => placeName(id, traveller, destLabel);
+  const current = currentIdx >= 0 ? legs[currentIdx] : nextIdx >= 0 ? legs[nextIdx] : null;
+  const target = reportTargetFor(legs, Math.max(0, currentIdx >= 0 ? currentIdx : nextIdx), nowMin);
+
+  function endTrip() {
+    clearTrip();
+    onTrip(null);
+  }
 
   return (
     <main className="flex w-full flex-col px-4 pb-6 md:px-6">
       {/* ---- Top control bar ---- */}
       <div className="flex flex-col justify-between gap-4 py-4 lg:flex-row lg:items-center">
-        <div className="flex items-center gap-4">
+        <div className="flex min-w-0 items-center gap-4">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary text-on-primary shadow-sm">
-            <Icon name="directions_subway" className="text-[26px]" />
+            <Icon name={MODE_ICON[current?.mode ?? "local"] ?? "route"} className="text-[26px]" />
           </div>
-          <div className="flex flex-col">
+          <div className="flex min-w-0 flex-col">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-lg font-semibold">Live Mission Console</span>
-              <span className="flex items-center gap-1 rounded-full bg-primary-fixed px-1 py-0.5 text-[11px] font-bold uppercase text-on-primary-fixed">
-                <span className="h-1.5 w-1.5 animate-ping rounded-full bg-primary" /> Telemetry Stream Active
-              </span>
-              <span className="font-mono text-[13px] text-on-surface-variant">{trip.id}</span>
+              <span className="text-lg font-semibold">Live Trip</span>
+              <PhasePill phase={phase} />
+              <Link href="/admin" title="The demo runs on a simulated clock — move it on Demo control"
+                className="flex items-center gap-1 rounded-full bg-container px-2 py-0.5 font-mono text-[11px] font-bold text-on-surface-variant hover:bg-container-high">
+                <Icon name="schedule" className="text-[14px]" /> {clock ? `Demo time ${clock.now}${clock.speed ? ` · ${clock.speed}×` : ""}` : "Demo clock offline"}
+              </Link>
             </div>
-            <p className="text-[13px] text-on-surface-variant">{trip.corridor}</p>
+            <p className="truncate text-[13px] text-on-surface-variant">
+              {traveller.origin.label} → {destLabel} · {card.label} route · {routeText(legs)}
+            </p>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -46,31 +160,55 @@ export default function TrackView() {
           <button onClick={() => setModal("share")} className="flex items-center gap-1 rounded-xl bg-container-lowest px-4 py-2.5 text-xs font-semibold shadow-sm transition-colors hover:bg-container">
             <Icon name="share" className="text-[18px] text-primary" /> Share Live Link
           </button>
-          <button onClick={() => setModal("qr")} className="flex items-center gap-1 rounded-xl bg-primary px-4 py-2.5 text-xs font-semibold text-on-primary shadow-sm transition-colors hover:bg-primary-container">
-            <Icon name="qr_code_2" className="text-[18px]" /> NCMC QR Ticket
+          <button onClick={endTrip} className="flex items-center gap-1 rounded-xl bg-container-lowest px-4 py-2.5 text-xs font-semibold shadow-sm transition-colors hover:bg-container">
+            <Icon name="stop_circle" className="text-[18px] text-outline" /> End trip
           </button>
         </div>
       </div>
 
+      {/* ---- Replan proposal / notice ---- */}
+      {journey?.proposal && (
+        <ReplanBanner journey={journey} name={name} onDecided={setJourney} />
+      )}
+      {!journey?.proposal && journey?.notice && (
+        <div className="mb-2 flex items-start gap-2 rounded-xl bg-tertiary-fixed p-3 text-[13px] text-tertiary">
+          <Icon name="info" className="text-[18px]" /> {journey.notice}
+        </div>
+      )}
+      {lost && (
+        <div className="mb-2 flex items-start gap-2 rounded-xl bg-amber-soft p-3 text-[13px] text-amber-ink">
+          <Icon name="sync_problem" className="text-[18px]" />
+          The demo was reset, so the server no longer knows this trip (no replan alerts). End it and start again to watch it live.
+        </div>
+      )}
+      {!trip.journeyId && (
+        <div className="mb-2 flex items-start gap-2 rounded-xl bg-amber-soft p-3 text-[13px] text-amber-ink">
+          <Icon name="cloud_off" className="text-[18px]" />
+          The TravelBuddy server wasn&apos;t reachable when this trip started, so it is tracked on this device only (no replan alerts).
+        </div>
+      )}
+
       {/* ---- 4 metric cards ---- */}
       <div className="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard label="Remaining Time" icon="schedule" iconCls="bg-primary-fixed/40 text-primary"
-          value={<><span className="text-[32px] font-bold leading-10 tracking-tight">{trip.remainingMin}</span><span className="text-lg font-bold text-primary">mins</span></>}
-          footLeft={<span className="flex items-center gap-1 text-primary"><Icon name="trending_flat" className="text-[16px]" /> Continuous recalculation</span>}
-          footRight={<span className="font-mono text-[11px] font-bold text-outline">{trip.tripNo}</span>} />
+        <MetricCard label={phase === "upcoming" ? "Starts In" : "Remaining Time"} icon="schedule" iconCls="bg-primary-fixed/40 text-primary"
+          value={<><span className="text-[32px] font-bold leading-10 tracking-tight">{phase === "upcoming" ? startMin - nowMin : remaining}</span><span className="text-lg font-bold text-primary">mins</span></>}
+          footLeft={<span className="flex items-center gap-1 text-primary"><Icon name="update" className="text-[16px]" /> Follows the demo clock</span>}
+          footRight={<span className="font-mono text-[11px] font-bold text-outline">{card.duration_min} min trip</span>} />
         <MetricCard label="Est. Arrival" icon="sports_score" iconCls="bg-secondary-container text-on-secondary-container"
-          value={<><span className="text-[32px] font-bold leading-10 tracking-tight">{trip.arrival.time}</span><span className="text-lg font-bold text-on-surface-variant">{trip.arrival.ampm}</span></>}
-          footLeft={<span className="flex items-center gap-1 font-semibold text-primary"><Icon name="check_circle" className="text-[16px]" /> {trip.arrival.status}</span>}
-          footRight={<span className="text-[11px] font-bold">{trip.arrival.where}</span>} />
-        <MetricCard label="Left to Pay / Fare Due" icon="contactless" iconCls="bg-tertiary-fixed text-tertiary"
-          value={<><span className="text-[32px] font-bold leading-10 tracking-tight">{trip.fare.due}</span><span className="text-xs font-semibold text-on-surface-variant">{trip.fare.total}</span></>}
-          footLeft={<span className="flex items-center gap-1 text-on-surface-variant"><span className="h-2 w-2 rounded-full bg-primary" /> {trip.fare.note}</span>}
-          footRight={<span className="text-[11px] font-bold text-tertiary">{trip.fare.tag}</span>} />
-        <button onClick={() => setModal("report")}
-          className="group flex flex-col justify-between rounded-xl bg-gradient-to-br from-tertiary-fixed to-container p-5 text-left shadow-sm transition-all hover:shadow-md">
+          value={<span className="text-[32px] font-bold leading-10 tracking-tight">{hhmm(eta)}</span>}
+          footLeft={confirmedDelay > 0 || blocked
+            ? <span className="flex items-center gap-1 font-semibold text-error"><Icon name="warning" className="text-[16px]" /> {blocked ? "Route blocked" : `+${confirmedDelay} min (confirmed)`}</span>
+            : <span className="flex items-center gap-1 font-semibold text-primary"><Icon name="check_circle" className="text-[16px]" /> On schedule</span>}
+          footRight={<span className="max-w-[9rem] truncate text-[11px] font-bold">{destLabel}</span>} />
+        <MetricCard label="Fare" icon="payments" iconCls="bg-tertiary-fixed text-tertiary"
+          value={<><span className="text-[32px] font-bold leading-10 tracking-tight">₹{card.cost_inr}</span><span className="text-xs font-semibold text-on-surface-variant">total</span></>}
+          footLeft={<span className="flex items-center gap-1 text-on-surface-variant"><span className="h-2 w-2 rounded-full bg-primary" /> ₹{paid} so far</span>}
+          footRight={<span className="text-[11px] font-bold text-tertiary">{card.transfers} change{card.transfers === 1 ? "" : "s"}</span>} />
+        <button onClick={() => setModal("report")} disabled={!target}
+          className="group flex flex-col justify-between rounded-xl bg-gradient-to-br from-tertiary-fixed to-container p-5 text-left shadow-sm transition-all hover:shadow-md disabled:opacity-50">
           <div className="flex w-full items-start justify-between">
             <div className="flex flex-col">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-tertiary">Transit Copilot</span>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-tertiary">Pakka Check</span>
               <span className="mt-1 text-xl font-semibold transition-colors group-hover:text-tertiary">Report Issue</span>
             </div>
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-tertiary text-white transition-transform group-hover:scale-105">
@@ -78,188 +216,249 @@ export default function TrackView() {
             </div>
           </div>
           <div className="mt-4 flex w-full items-center justify-between pt-1">
-            <span className="text-[13px] text-tertiary">Crowd • Delay • Escalator Defect</span>
+            <span className="truncate text-[13px] text-tertiary">{target ? `At ${target.label}` : "Delay • Crowding • Lift out"}</span>
             <Icon name="arrow_forward" className="text-[18px] text-tertiary transition-transform group-hover:translate-x-1" />
           </div>
         </button>
       </div>
 
-      {/* ---- Vehicle sensor strip ---- */}
-      <div className="mt-4 flex flex-col items-start justify-between gap-4 rounded-xl bg-container-lowest p-4 shadow-sm lg:flex-row lg:items-center">
-        <div className="flex min-w-0 flex-1 items-center gap-4">
-          <div className="flex shrink-0 items-center gap-1 rounded-lg bg-primary px-2 py-1 text-[11px] font-bold uppercase text-on-primary">
-            <Icon name="subway" className="text-[16px]" /> {vehicle.line}
-          </div>
-          <div className="flex min-w-0 flex-col">
-            <div className="flex flex-wrap items-center gap-1">
-              <span className="truncate text-sm font-semibold">{vehicle.title}</span>
-              <span className="text-outline">•</span>
-              <span className="text-xs font-bold text-primary">{vehicle.platform}</span>
-              <span className="text-outline">•</span>
-              <span className="font-mono text-[13px] text-on-surface-variant">{vehicle.train}</span>
-            </div>
-            <div className="mt-0.5 flex flex-wrap items-center gap-1 text-[13px] text-on-surface-variant">
-              <span className="font-semibold text-on-surface">Next Station:</span>
-              <span className="font-bold text-primary">{vehicle.next}</span>
-              <span>{vehicle.nextEta}</span>
-            </div>
-          </div>
-        </div>
-        <div className="grid w-full shrink-0 grid-cols-2 gap-4 sm:grid-cols-4 lg:flex lg:w-auto lg:items-center lg:gap-5">
-          <Sensor icon="speed" iconCls="bg-container text-primary" value={<><span className="font-mono">{speed}</span> <span className="text-[11px] font-bold text-on-surface-variant">km/h</span></>} label="Speed" />
-          <Sensor icon="timer" iconCls="bg-primary-fixed/40 text-primary" value={<span className="font-bold text-primary">{vehicle.variance}</span>} label="Ahead of Sched" />
-          <Sensor icon="ac_unit" iconCls="bg-container text-secondary" value={<span className="font-mono">{vehicle.temp}</span>} label={vehicle.coach} />
-          <Sensor icon="groups" iconCls="bg-tertiary-fixed text-tertiary" value={<span className="font-bold text-tertiary">{vehicle.seatsFree}</span>} label="Seats Free" />
-        </div>
-      </div>
+      {/* ---- Current leg strip ---- */}
+      <CurrentLeg phase={phase} leg={current} nowMin={nowMin} name={name} destLabel={destLabel} />
 
       {/* ---- Split panes ---- */}
       <div className="mt-4 grid grid-cols-[minmax(0,1fr)] items-start gap-4 lg:grid-cols-12">
-        {/* Left: milestones + platform conditions */}
+        {/* Left: milestones + problems */}
         <div className="flex flex-col gap-4 lg:col-span-5">
           <div className="flex flex-col rounded-xl bg-container-lowest p-5 shadow-sm">
             <div className="flex items-center justify-between pb-2">
               <div className="flex flex-col">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">Dynamic Multi-Hop Ledger</span>
+                <span className="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">Your route, step by step</span>
                 <span className="text-lg font-semibold">Journey Milestones</span>
               </div>
-              <span className="rounded-full bg-container px-2 py-1 font-mono text-[11px] font-bold text-on-surface-variant">{steps.length} Steps Total</span>
+              <span className="rounded-full bg-container px-2 py-1 font-mono text-[11px] font-bold text-on-surface-variant">{legs.length} legs</span>
             </div>
-
             <div className="relative mt-4 flex flex-col">
-              {steps.map((s, i) => <Milestone key={s.title} step={s} last={i === steps.length - 1} />)}
-            </div>
-
-            <div className="mt-5 flex flex-col gap-2 pt-4">
-              <div className="flex items-center justify-between rounded-xl bg-container p-4">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-container-lowest text-primary shadow-sm">
-                    <Icon name="notifications_active" className="text-[20px]" />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-xs font-semibold">Station Proximity Alarms</span>
-                    <span className="text-[13px] text-on-surface-variant">Alert 1 station prior to transfer (Goregaon)</span>
-                  </div>
-                </div>
-                <button type="button" role="switch" aria-checked={alarm} aria-label="Station proximity alarms" onClick={() => setAlarm((v) => !v)}
-                  className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${alarm ? "bg-primary" : "bg-container-highest"}`}>
-                  <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${alarm ? "left-[22px]" : "left-0.5"}`} />
-                </button>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <button type="button" className="flex items-center justify-center gap-1.5 rounded-xl bg-container px-2 py-2.5 text-xs font-semibold shadow-sm transition-colors hover:bg-container-high">
-                  <Icon name="download" className="text-[18px]" /> Save Offline Pass
-                </button>
-                <Link href="/routes/TR3" className="flex items-center justify-center gap-1.5 rounded-xl bg-container px-2 py-2.5 text-xs font-semibold shadow-sm transition-colors hover:bg-container-high">
-                  <Icon name="alt_route" className="text-[18px]" /> Find Alt Route
-                </Link>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-col rounded-xl bg-container-lowest p-5 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1">
-                <Icon name="density_medium" className="text-[20px] text-primary" />
-                <span className="text-sm font-semibold">Upcoming Platform Conditions</span>
-              </div>
-              <span className="text-[11px] font-bold text-primary">CCTV AI Verified</span>
-            </div>
-            <div className="mt-4 grid grid-cols-3 gap-2">
-              {platforms.map((p) => (
-                <div key={p.where} className="flex flex-col items-center rounded-lg bg-container-low p-2 text-center">
-                  <span className="text-[11px] font-bold text-on-surface-variant">{p.where}</span>
-                  <span className={`mt-1 text-sm font-bold ${p.cls}`}>{p.level}</span>
-                  <span className="mt-0.5 text-[13px] text-outline">{p.sub}</span>
-                </div>
+              {legs.map((leg, i) => (
+                <Milestone key={`${card.plan_id}-${i}`} leg={leg} state={states[i]} name={name}
+                  hits={hits.filter((h) => h.leg_idx === i)} nowMin={nowMin} />
               ))}
+              <Arrival label={destLabel} time={hhmm(eta)} reached={phase === "arrived"} delayed={confirmedDelay > 0} />
+            </div>
+            <div className="mt-5 grid grid-cols-2 gap-2 pt-2">
+              <Link href={trip.resultsHref} className="flex items-center justify-center gap-1.5 rounded-xl bg-container px-2 py-2.5 text-xs font-semibold shadow-sm transition-colors hover:bg-container-high">
+                <Icon name="alt_route" className="text-[18px]" /> Other routes
+              </Link>
+              <Link href="/report" className="flex items-center justify-center gap-1.5 rounded-xl bg-container px-2 py-2.5 text-xs font-semibold shadow-sm transition-colors hover:bg-container-high">
+                <Icon name="campaign" className="text-[18px]" /> Live reports
+              </Link>
             </div>
           </div>
+
+          <RouteProblems hits={hits} connected={Boolean(journey)} journeyId={trip.journeyId} />
         </div>
 
-        {/* Right: live map + velocity */}
+        {/* Right: live map */}
         <div className="flex flex-col gap-4 lg:col-span-7">
           <div className="relative flex flex-col overflow-hidden rounded-xl bg-container-lowest shadow-sm">
             <div className="z-20 flex items-center justify-between bg-container-lowest p-4 shadow-sm">
               <div className="flex items-center gap-2">
                 <div className="flex items-center gap-1.5 rounded-full bg-primary-fixed px-2 py-1 text-[11px] font-bold text-on-primary-fixed">
-                  <span className="h-2 w-2 animate-ping rounded-full bg-primary" /> {mapInfo.beacon}
+                  <span className={`h-2 w-2 rounded-full bg-primary ${phase === "moving" ? "animate-ping" : ""}`} />
+                  {phase === "moving" ? "Your position (from the timetable)" : phase === "upcoming" ? "Not started yet" : "Arrived"}
                 </div>
-                <span className="hidden text-[13px] text-on-surface-variant sm:inline">{mapInfo.accuracy}</span>
               </div>
-              <div className="flex items-center gap-1">
-                {[["my_location", "Center on vehicle"], ["layers", "Toggle layers"], ["fullscreen", "Fullscreen map"]].map(([icon, title]) => (
-                  <button key={icon} type="button" title={title} aria-label={title}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg bg-container transition-colors hover:bg-container-high">
-                    <Icon name={icon} className="text-[18px]" />
-                  </button>
-                ))}
-              </div>
+              <span className="text-[13px] text-on-surface-variant">{mapEvents.length ? `${mapEvents.length} problem${mapEvents.length === 1 ? "" : "s"} on route` : "No problems on route"}</span>
             </div>
-
-            <CorridorMap />
-
-            <div className="flex flex-wrap items-center justify-between gap-2 bg-container-lowest p-4">
-              <div className="flex flex-wrap items-center gap-4">
-                {mapInfo.legend.map((l) => (
-                  <div key={l.label} className="flex items-center gap-1">
-                    <span className={l.cls} /> <span className="text-[13px]">{l.label}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="flex items-center gap-1 text-[13px] text-on-surface-variant">
-                <Icon name="satellite_alt" className="text-[16px] text-primary" /> {mapInfo.feed}
-              </div>
+            <div className="h-[520px] w-full">
+              <MapView card={card} origin={traveller.origin} destination={destination} events={mapEvents} here={here} />
             </div>
-          </div>
-
-          <div className="flex flex-col rounded-xl bg-container-lowest p-5 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div className="flex flex-col">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">Trip Velocity Profile</span>
-                <span className="text-lg font-semibold">Speed &amp; Elevation Telemetry</span>
-              </div>
-              <span className="rounded bg-container px-1 py-0.5 font-mono text-[11px] font-bold text-on-surface-variant">{velocity.window}</span>
-            </div>
-            <div className="relative mt-4 flex h-28 w-full items-end">
-              <svg className="h-full w-full" fill="none" preserveAspectRatio="none" viewBox="0 0 500 100" aria-label="Speed over the last 12 minutes" role="img">
-                <defs>
-                  <linearGradient id="speedGrad" x1="0" x2="0" y1="0" y2="1">
-                    <stop offset="0%" stopColor="#006948" stopOpacity="0.3" />
-                    <stop offset="100%" stopColor="#006948" stopOpacity="0" />
-                  </linearGradient>
-                </defs>
-                <path d="M 0,90 Q 50,40 100,50 T 200,30 T 300,35 T 400,20 L 400,100 L 0,100 Z" fill="url(#speedGrad)" />
-                <path d="M 0,90 Q 50,40 100,50 T 200,30 T 300,35 T 400,20" stroke="#006948" strokeLinecap="round" strokeWidth="3" />
-                <path d="M 400,20 Q 450,50 500,85" stroke="#6d7a72" strokeDasharray="4 4" strokeLinecap="round" strokeWidth="2" />
-                <circle cx="400" cy="20" fill="#006948" r="5" stroke="#ffffff" strokeWidth="2" />
-              </svg>
-            </div>
-            <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-[11px] font-bold text-on-surface-variant">
-              {velocity.labels.map((l, i) => <span key={l} className={i === 2 ? "text-primary" : ""}>{l}</span>)}
+            <div className="flex flex-wrap items-center gap-4 bg-container-lowest p-4 text-[13px]">
+              {legendFor(legs).map((l) => (
+                <span key={l.label} className="flex items-center gap-1"><span className="h-1.5 w-4 rounded-full" style={{ background: l.color }} /> {l.label}</span>
+              ))}
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full border-2 border-white bg-primary shadow" /> You</span>
             </div>
           </div>
         </div>
       </div>
 
-      {modal === "report" && <ReportModal onClose={() => setModal(null)} />}
-      {modal === "share" && <ShareModal onClose={() => setModal(null)} />}
+      {modal === "report" && target && <ReportModal target={target} onClose={() => setModal(null)} />}
+      {modal === "share" && <ShareModal destLabel={destLabel} eta={hhmm(eta)} onClose={() => setModal(null)} />}
       {modal === "sos" && <SosModal onClose={() => setModal(null)} />}
-      {modal === "qr" && <QrModal onClose={() => setModal(null)} />}
+    </main>
+  );
+}
+
+/* ---------------------------------------------------------------- no trip yet */
+
+function NoTrip({ onStarted }: { onStarted: (t: SavedTrip) => void }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Demo: Arjun (TR3) Thane → Wankhede on the route via the Dadar foot-overbridge, which Pakka Check
+  // confirms closed at 17:15 — so the replan alert shows up on this page.
+  const startDemo = useCallback(async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const tr3 = travellers.find((t) => t.traveller_id === "TR3")!;
+      const traveller = { ...tr3, traveller_id: "CUSTOM" };            // CUSTOM → the real routing engine
+      const plan = await getPlan(traveller);
+      const viaDadar = plan.cards.find((c) => c.legs.some((l) => l.mode === "walk" && [l.from_id, l.to_id].sort().join() === "dadar_cr,dadar_wr"));
+      const card = viaDadar ?? plan.cards[0];
+      if (!card) throw new Error("no route");
+      const saved = await startTrip({ traveller, destination: traveller.destination, card, resultsHref: "/routes/TR3", savedAt: new Date().toISOString() });
+      onStarted(saved);
+    } catch {
+      setError("Couldn't plan the demo trip — is the backend running on port 8000?");
+    } finally {
+      setBusy(false);
+    }
+  }, [onStarted]);
+
+  return (
+    <main className="flex w-full flex-col items-center px-4 py-16 md:px-6">
+      <div className="flex w-full max-w-lg flex-col items-center gap-4 rounded-2xl bg-container-lowest p-8 text-center shadow-sm">
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-fixed text-primary">
+          <Icon name="fmd_good" className="text-[30px]" />
+        </div>
+        <div>
+          <h1 className="text-xl font-semibold">No trip in progress</h1>
+          <p className="mt-1 text-sm text-on-surface-variant">
+            Plan a route and press <b>Start trip</b>. This page then follows you leg by leg and warns you if
+            Pakka Check confirms a problem on the way.
+          </p>
+        </div>
+        <div className="flex w-full flex-col gap-2 sm:flex-row">
+          <Link href="/plan" className="flex flex-1 items-center justify-center gap-1 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-on-primary hover:bg-primary-container">
+            <Icon name="alt_route" className="text-[18px]" /> Plan a trip
+          </Link>
+          <button onClick={startDemo} disabled={busy}
+            className="flex flex-1 items-center justify-center gap-1 rounded-xl bg-container px-4 py-3 text-sm font-semibold hover:bg-container-high disabled:opacity-50">
+            <Icon name="play_circle" className="text-[18px] text-primary" /> {busy ? "Starting…" : "Demo: Thane → Wankhede"}
+          </button>
+        </div>
+        <p className="text-[12px] text-outline">Demo trip: Arjun&apos;s route via the Dadar foot-overbridge (leaves 16:44). Reset and play the clock on Demo control.</p>
+        {error && <p className="rounded-xl bg-amber-soft px-3 py-2 text-[13px] text-amber-ink">{error}</p>}
+      </div>
     </main>
   );
 }
 
 /* ---------------------------------------------------------------- pieces */
 
-/** Small simulated speed wobble, like the design's demo script (42–56 km/h). */
-function useWobblingSpeed(base: number): number {
-  const [speed, setSpeed] = useState(base);
-  useEffect(() => {
-    const id = setInterval(() => setSpeed((s) => Math.min(56, Math.max(42, s + Math.floor(Math.random() * 5) - 2))), 3500);
-    return () => clearInterval(id);
-  }, []);
-  return speed;
+function routeText(legs: Leg[]): string {
+  const parts: string[] = [];
+  for (const l of legs) {
+    const p = l.line_id ? lineShortName(l.line_id) : l.mode === "walk" ? null : l.mode[0].toUpperCase() + l.mode.slice(1);
+    if (p && parts[parts.length - 1] !== p) parts.push(p);
+  }
+  return parts.join(" → ") || "Walk";
+}
+
+function legendFor(legs: Leg[]) {
+  const seen = new Map<string, string>();
+  for (const l of legs) {
+    if (l.line_id && lines[l.line_id]) seen.set(lineShortName(l.line_id), lines[l.line_id].color);
+    else if (l.mode === "walk") seen.set("Walk", "#8a94a6");
+    else seen.set(l.mode[0].toUpperCase() + l.mode.slice(1), "#334155");
+  }
+  return [...seen].map(([label, color]) => ({ label, color }));
+}
+
+/** Stops a ride passes, in travel order. */
+function rideStops(leg: Leg): string[] {
+  const line = leg.line_id ? lines[leg.line_id] : undefined;
+  if (!line) return [leg.from_id, leg.to_id];
+  const a = line.stations.indexOf(leg.from_id);
+  const b = line.stations.indexOf(leg.to_id);
+  if (a < 0 || b < 0) return [leg.from_id, leg.to_id];
+  return a <= b ? line.stations.slice(a, b + 1) : line.stations.slice(b, a + 1).reverse();
+}
+
+/** Next stop on a ride at `nowMin` (stops spread evenly over the ride time). */
+function nextStop(leg: Leg, nowMin: number): { id: string; inMin: number } {
+  const stops = rideStops(leg);
+  const a = toMin(leg.depart);
+  const b = toMin(leg.arrive);
+  const n = stops.length - 1;
+  if (n <= 0 || b <= a) return { id: leg.to_id, inMin: Math.max(0, b - nowMin) };
+  const passed = Math.floor(((nowMin - a) / (b - a)) * n);
+  const idx = Math.min(n, Math.max(1, passed + 1));
+  return { id: stops[idx], inMin: Math.max(0, Math.round(a + ((b - a) * idx) / n - nowMin)) };
+}
+
+/** Where a report from this trip is filed: the next station on the route, with its line. */
+function reportTargetFor(legs: Leg[], from: number, nowMin: number): { stop_id: string; line_id: string | null; label: string } | null {
+  for (let i = from; i < legs.length; i++) {
+    const leg = legs[i];
+    const stop = leg.line_id && toMin(leg.depart) <= nowMin ? nextStop(leg, nowMin).id : leg.line_id ? leg.from_id : leg.to_id;
+    if (stop && stop !== "origin" && stop !== "destination") {
+      const label = `${stations[stop]?.name ?? stop}${leg.line_id ? ` (${lineShortName(leg.line_id)})` : ""}`;
+      return { stop_id: stop, line_id: leg.line_id, label };
+    }
+  }
+  return null;
+}
+
+function PhasePill({ phase }: { phase: "upcoming" | "moving" | "arrived" }) {
+  const map = {
+    upcoming: { text: "Not started", cls: "bg-container-high text-on-surface-variant" },
+    moving: { text: "On the way", cls: "bg-primary-fixed text-on-primary-fixed" },
+    arrived: { text: "Arrived", cls: "bg-secondary-container text-on-secondary-container" },
+  }[phase];
+  return (
+    <span className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold uppercase ${map.cls}`}>
+      {phase === "moving" && <span className="h-1.5 w-1.5 animate-ping rounded-full bg-primary" />} {map.text}
+    </span>
+  );
+}
+
+function CurrentLeg({ phase, leg, nowMin, name, destLabel }: {
+  phase: "upcoming" | "moving" | "arrived"; leg: Leg | null; nowMin: number; name: (id: string) => string; destLabel: string;
+}) {
+  let badge = "";
+  let title = "";
+  let sub: React.ReactNode = null;
+  if (phase === "arrived" || !leg) {
+    badge = "Done";
+    title = `You have arrived at ${destLabel}`;
+    sub = "Trip complete. Thanks for travelling with TravelBuddy.";
+  } else if (phase === "upcoming") {
+    badge = leg.line_id ? lineShortName(leg.line_id) : leg.mode;
+    title = `First: ${legVerb(leg, name)}`;
+    sub = <>Leaves at <b className="text-primary">{leg.depart}</b> ({toMin(leg.depart) - nowMin} min from now)</>;
+  } else if (leg.line_id) {
+    const ns = nextStop(leg, nowMin);
+    badge = lineShortName(leg.line_id);
+    title = `On ${lines[leg.line_id]?.name ?? lineShortName(leg.line_id)} towards ${name(leg.to_id)}`;
+    sub = <>Next stop: <b className="text-primary">{name(ns.id)}</b> in about {ns.inMin} min · get off at {name(leg.to_id)} at {leg.arrive}</>;
+  } else {
+    badge = leg.mode;
+    title = legVerb(leg, name);
+    sub = <>{Math.max(0, toMin(leg.arrive) - nowMin)} min left on this leg · arrive {leg.arrive}</>;
+  }
+  return (
+    <div className="mt-4 flex flex-col items-start gap-2 rounded-xl bg-container-lowest p-4 shadow-sm sm:flex-row sm:items-center">
+      <div className="flex shrink-0 items-center gap-1 rounded-lg bg-primary px-2 py-1 text-[11px] font-bold uppercase text-on-primary">
+        <Icon name={leg ? MODE_ICON[leg.mode] ?? "route" : "flag"} className="text-[16px]" /> {badge}
+      </div>
+      <div className="flex min-w-0 flex-col">
+        <span className="truncate text-sm font-semibold">{title}</span>
+        <span className="text-[13px] text-on-surface-variant">{sub}</span>
+      </div>
+    </div>
+  );
+}
+
+function legVerb(leg: Leg, name: (id: string) => string): string {
+  if (leg.line_id) return `Board ${lineShortName(leg.line_id)} at ${name(leg.from_id)} → ${name(leg.to_id)}`;
+  if (leg.mode === "walk") {
+    const change = leg.from_id !== "origin" && leg.to_id !== "destination";
+    return change ? `Change: walk from ${name(leg.from_id)} to ${name(leg.to_id)}` : `Walk to ${name(leg.to_id)}`;
+  }
+  const word = { taxi: "Taxi", auto: "Auto", cab: "Cab", bus: "Bus", ferry: "Ferry" }[leg.mode as string] ?? leg.mode;
+  return `${word} from ${name(leg.from_id)} to ${name(leg.to_id)}`;
 }
 
 function MetricCard({ label, icon, iconCls, value, footLeft, footRight }: {
@@ -284,157 +483,154 @@ function MetricCard({ label, icon, iconCls, value, footLeft, footRight }: {
   );
 }
 
-function Sensor({ icon, iconCls, value, label }: { icon: string; iconCls: string; value: React.ReactNode; label: string }) {
-  return (
-    <div className="flex items-center gap-1">
-      <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${iconCls}`}>
-        <Icon name={icon} className="text-[18px]" />
-      </div>
-      <div className="flex flex-col">
-        <span className="text-sm font-semibold">{value}</span>
-        <span className="text-[11px] font-bold text-on-surface-variant">{label}</span>
-      </div>
-    </div>
-  );
-}
-
-const NODE: Record<StepState, string> = {
+const NODE: Record<LegState, string> = {
   done: "bg-primary text-on-primary shadow-sm",
   now: "bg-primary-fixed text-primary shadow-sm",
   next: "bg-container-high text-on-surface-variant",
-  final: "bg-container text-on-surface shadow-sm",
 };
-const BOX: Record<StepState, string> = {
-  done: "bg-container-low/70",
-  now: "bg-primary-fixed/20",
-  next: "bg-container-low/40",
-  final: "",
-};
+const BOX: Record<LegState, string> = { done: "bg-container-low/70", now: "bg-primary-fixed/20", next: "bg-container-low/40" };
 
-function Milestone({ step, last }: { step: (typeof steps)[number]; last: boolean }) {
-  const s = step;
+function Milestone({ leg, state, name, hits, nowMin }: {
+  leg: Leg; state: LegState; name: (id: string) => string; hits: LegHit[]; nowMin: number;
+}) {
+  const stops = leg.line_id ? rideStops(leg).length - 1 : 0;
   return (
-    <div className={`relative flex items-start gap-4 ${last ? "" : "pb-5"}`}>
-      {!last && <div className={`absolute bottom-0 left-4 top-8 w-0.5 ${s.state === "done" || s.state === "now" ? "bg-primary" : "bg-container-highest"}`} />}
-      <div className={`relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${NODE[s.state]}`}>
-        {s.state === "now" ? (
+    <div className="relative flex items-start gap-4 pb-5">
+      <div className={`absolute bottom-0 left-4 top-8 w-0.5 ${state === "done" || state === "now" ? "bg-primary" : "bg-container-highest"}`} />
+      <div className={`relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${NODE[state]}`}>
+        {state === "now" ? (
           <>
             <span className="absolute h-3 w-3 animate-ping rounded-full bg-primary" />
             <span className="relative h-3 w-3 rounded-full bg-primary" />
           </>
         ) : (
-          <Icon name={s.icon} className="text-[16px]" />
+          <Icon name={state === "done" ? "check" : MODE_ICON[leg.mode] ?? "route"} className="text-[16px]" />
         )}
       </div>
-      <div className={`flex min-w-0 flex-1 flex-col rounded-xl p-2 ${BOX[s.state]}`}>
+      <div className={`flex min-w-0 flex-1 flex-col rounded-xl p-2 ${BOX[state]}`}>
         <div className="flex flex-wrap items-center justify-between gap-1">
-          <div className="flex items-center gap-1">
-            {s.tagLine && <span className="rounded bg-container-highest px-1.5 py-0.5 text-[11px] font-bold">{s.tagLine}</span>}
-            <span className={`text-sm ${s.state === "now" ? "font-bold text-primary" : s.state === "final" ? "font-bold" : "font-semibold"}`}>{s.title}</span>
-            {s.state === "now" && <span className="rounded-full bg-primary px-1 py-0.5 text-[11px] font-bold uppercase text-on-primary">LIVE</span>}
+          <div className="flex min-w-0 items-center gap-1">
+            {leg.line_id && <span className="rounded bg-container-highest px-1.5 py-0.5 text-[11px] font-bold">{lineShortName(leg.line_id)}</span>}
+            <span className={`text-sm ${state === "now" ? "font-bold text-primary" : "font-semibold"}`}>{legVerb(leg, name)}</span>
+            {state === "now" && <span className="rounded-full bg-primary px-1 py-0.5 text-[11px] font-bold uppercase text-on-primary">Now</span>}
           </div>
-          <span className={`font-mono text-[11px] font-bold ${s.state === "now" ? "text-primary" : "text-on-surface-variant"}`}>{s.time}</span>
+          <span className={`font-mono text-[11px] font-bold ${state === "now" ? "text-primary" : "text-on-surface-variant"}`}>{leg.depart}–{leg.arrive}</span>
         </div>
-        <p className={`mt-0.5 text-[13px] ${s.state === "now" ? "text-on-surface" : "text-on-surface-variant"}`}>{s.text}</p>
-        {(s.tag || s.note) && (
-          <div className="mt-1 flex flex-wrap items-center gap-2">
-            {s.tag && (
-              <span className={`px-2 py-0.5 text-[11px] font-bold ${s.state === "final" ? "rounded-full bg-primary-fixed text-on-primary-fixed" : s.state === "done" ? "rounded bg-container text-primary" : "rounded bg-container"}`}>
-                {s.tag}
-              </span>
-            )}
-            {s.note && (
-              <span className={`flex items-center gap-1 text-[13px] ${s.note.cls}`}>
-                {s.note.icon && <Icon name={s.note.icon} className="text-[16px]" />} {s.note.text}
-              </span>
-            )}
-          </div>
-        )}
-        {s.extra && (
-          <div className="mt-1 flex items-center justify-between gap-2 rounded-lg bg-container p-1.5">
-            <span className="flex items-center gap-1 text-[13px]">
-              <Icon name={s.extra.icon} className="text-[16px] text-primary" /> {s.extra.text}
-            </span>
-            <span className="shrink-0 text-[11px] font-bold">{s.extra.right}</span>
-          </div>
-        )}
+        <p className="mt-0.5 text-[13px] text-on-surface-variant">
+          {leg.duration_min} min{stops > 0 ? ` · ${stops} stop${stops === 1 ? "" : "s"}` : ""}{leg.cost_inr ? ` · ₹${leg.cost_inr}` : ""}
+          {state === "now" && !leg.line_id ? ` · ${Math.max(0, toMin(leg.arrive) - nowMin)} min left` : ""}
+          {!leg.step_free ? " · stairs" : ""}
+        </p>
+        {hits.map((h) => (
+          <span key={h.event_id} className="mt-1 flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold"
+            style={{ background: h.status === "confirmed" ? "var(--error-container)" : "var(--tertiary-fixed)", color: h.status === "confirmed" ? "var(--on-error-container)" : "var(--tertiary)" }}>
+            <Icon name={h.blocked ? "block" : "schedule"} className="text-[14px]" />
+            {h.title} · {STATUS_STYLE[h.status].label} {pct(h.confidence)}{h.blocked ? " · can't be used" : h.delay_min ? ` · +${h.delay_min} min` : ""}
+          </span>
+        ))}
       </div>
     </div>
   );
 }
 
-/** The design's schematic corridor (SVG) with its floating cards. */
-function CorridorMap() {
+function Arrival({ label, time, reached, delayed }: { label: string; time: string; reached: boolean; delayed: boolean }) {
   return (
-    <div className="relative h-[520px] w-full overflow-hidden bg-container">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,var(--primary-soft),transparent_55%),radial-gradient(circle_at_80%_80%,var(--tertiary-fixed),transparent_50%)] opacity-70" />
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-container-lowest/90 via-container-lowest/30 to-container-lowest/80" />
-      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-        <svg className="h-full max-h-[480px] w-full max-w-2xl" fill="none" viewBox="0 0 600 440" aria-hidden>
-          <path d="M 80,70 L 190,130 L 310,210 L 410,280 L 520,380" stroke="#bccac0" strokeLinecap="round" strokeLinejoin="round" strokeWidth="8" />
-          <path d="M 80,70 L 190,130 L 260,175" stroke="#006948" strokeLinecap="round" strokeLinejoin="round" strokeWidth="8" />
-          <path className="animate-pulse" d="M 260,175 L 310,210" stroke="#00855d" strokeDasharray="10 8" strokeLinecap="round" strokeLinejoin="round" strokeWidth="8" />
-          <path d="M 310,210 L 335,235" stroke="#545f73" strokeDasharray="6 4" strokeLinecap="round" strokeWidth="4" />
-          <circle cx="80" cy="70" fill="#006948" r="10" stroke="#ffffff" strokeWidth="3" />
-          <circle cx="190" cy="130" fill="#006948" r="8" stroke="#ffffff" strokeWidth="2.5" />
-          <g transform="translate(260, 175)">
-            <circle className="animate-ping" cx="0" cy="0" fill="#006948" fillOpacity="0.25" r="18" />
-            <circle cx="0" cy="0" fill="#006948" r="12" stroke="#ffffff" strokeWidth="3" />
-            <circle cx="0" cy="0" fill="#ffffff" r="4" />
-          </g>
-          <circle cx="310" cy="210" fill="#191c1e" r="9" stroke="#ffffff" strokeWidth="2.5" />
-          <circle cx="335" cy="235" fill="#545f73" r="7" stroke="#ffffff" strokeWidth="2" />
-          <circle cx="520" cy="380" fill="#8d4b00" r="11" stroke="#ffffff" strokeWidth="3" />
-        </svg>
+    <div className="relative flex items-start gap-4">
+      <div className={`relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${reached ? NODE.done : "bg-container text-on-surface shadow-sm"}`}>
+        <Icon name="flag" className="text-[16px]" />
       </div>
+      <div className="flex min-w-0 flex-1 items-center justify-between gap-2 rounded-xl p-2">
+        <span className="text-sm font-bold">Arrive: {label}</span>
+        <span className={`font-mono text-[11px] font-bold ${delayed ? "text-error" : "text-on-surface-variant"}`}>{time}{delayed ? " (delayed)" : ""}</span>
+      </div>
+    </div>
+  );
+}
 
-      <div className="absolute left-12 top-12 flex items-center gap-1.5 rounded-lg bg-container-lowest/95 px-2 py-1 shadow-sm backdrop-blur-md">
-        <span className="h-2 w-2 rounded-full bg-primary" />
-        <span className="text-[11px] font-bold">{mapInfo.passed}</span>
-      </div>
-      <div className="absolute left-[38%] top-[36%] z-30 flex -translate-x-1/2 -translate-y-full flex-col gap-1 rounded-xl bg-container-lowest/95 p-2 shadow-md backdrop-blur-md">
+function RouteProblems({ hits, connected, journeyId }: { hits: LegHit[]; connected: boolean; journeyId?: string | null }) {
+  const unique = [...new Map(hits.map((h) => [h.event_id, h])).values()];
+  return (
+    <div className="flex flex-col rounded-xl bg-container-lowest p-5 shadow-sm">
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-1">
-          <span className="rounded bg-primary px-1.5 py-0.5 text-[11px] font-bold text-on-primary">{mapInfo.card.train}</span>
-          <span className="text-[11px] font-bold">{mapInfo.card.where}</span>
+          <Icon name="verified_user" className="text-[20px] text-primary" />
+          <span className="text-sm font-semibold">Problems on the rest of your route</span>
         </div>
-        <div className="flex items-center justify-between gap-4 text-[13px] text-on-surface-variant">
-          <span>{mapInfo.card.speed}</span>
-          <span className="font-bold text-primary">{mapInfo.card.eta}</span>
-        </div>
-        <div className="h-1.5 w-full overflow-hidden rounded-full bg-container-high">
-          <div className="h-full rounded-full bg-primary" style={{ width: `${mapInfo.card.progress}%` }} />
+        <span className="text-[11px] font-bold text-primary">Pakka Check</span>
+      </div>
+      {!journeyId ? (
+        <p className="mt-3 text-[13px] text-on-surface-variant">Live checks need the TravelBuddy server.</p>
+      ) : !connected ? (
+        <p className="mt-3 text-[13px] text-on-surface-variant">Checking…</p>
+      ) : unique.length === 0 ? (
+        <p className="mt-3 flex items-center gap-1 text-[13px] text-primary"><Icon name="check_circle" className="text-[16px]" /> Nothing reported on the legs ahead.</p>
+      ) : (
+        <ul className="mt-3 flex flex-col gap-2">
+          {unique.map((h) => (
+            <li key={h.event_id} className="flex items-center justify-between gap-2 rounded-lg bg-container-low p-2">
+              <span className="min-w-0">
+                <span className="block truncate text-[13px] font-semibold">{h.title}</span>
+                <span className="text-[11px] text-on-surface-variant">
+                  {h.blocked ? "Blocks this route" : h.delay_min ? `About +${h.delay_min} min` : "May slow you down"}
+                  {h.status === "possible" ? " · not confirmed yet, no action needed" : ""}
+                </span>
+              </span>
+              <span className="shrink-0 rounded-md px-2 py-0.5 text-[11px] font-bold"
+                style={{ background: h.status === "confirmed" ? "var(--error-container)" : "var(--tertiary-fixed)", color: h.status === "confirmed" ? "var(--on-error-container)" : "var(--tertiary)" }}>
+                {STATUS_STYLE[h.status].label} {pct(h.confidence)}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function ReplanBanner({ journey, name, onDecided }: { journey: Journey; name: (id: string) => string; onDecided: (j: Journey) => void }) {
+  const p = journey.proposal!;
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  // Only the part that changes (legs already done are kept as they were).
+  const firstNew = p.new_card.legs.findIndex((l, k) => JSON.stringify(l) !== JSON.stringify(journey.card.legs[k]));
+  const newLegs = firstNew < 0 ? p.new_card.legs : p.new_card.legs.slice(firstNew);
+  async function decide(accept: boolean) {
+    setBusy(true);
+    setError(null);
+    try {
+      onDecided(await decideReplan(journey.journey_id, accept));
+    } catch {
+      setError("Couldn't reach the server — try again in a moment.");
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <div className="mb-2 flex flex-col gap-3 rounded-xl border-2 border-error bg-container-lowest p-4 shadow-md" role="alert">
+      <div className="flex items-start gap-2">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-error text-white"><Icon name="alt_route" className="text-[20px]" /></span>
+        <div className="min-w-0">
+          <p className="text-sm font-semibold">Better route suggested</p>
+          <p className="text-[13px] text-on-surface-variant">{p.message}</p>
         </div>
       </div>
-      <div className="absolute left-[54%] top-[48%] flex items-center gap-2 rounded-lg bg-container-lowest/95 px-2 py-1 shadow-sm backdrop-blur-md">
-        <div className="h-2.5 w-2.5 animate-pulse rounded-full bg-primary" />
-        <div className="flex flex-col">
-          <span className="text-[11px] font-bold">{mapInfo.transfer.title}</span>
-          <span className="text-[11px] font-bold text-tertiary">{mapInfo.transfer.sub}</span>
-        </div>
+      <div className="flex flex-wrap items-center gap-2 text-[12px]">
+        <span className="rounded-md bg-container px-2 py-1 font-semibold">From {p.from_label}: {newLegs.map((l) => legVerb(l, name)).join(" · ")}</span>
+        <span className="rounded-md bg-container px-2 py-1 font-semibold">Arrive {p.new_card.legs[p.new_card.legs.length - 1].arrive}</span>
+        <span className={`rounded-md px-2 py-1 font-bold ${p.delta.min <= 0 ? "bg-primary-fixed text-on-primary-fixed" : "bg-tertiary-fixed text-tertiary"}`}>
+          {p.delta.min > 0 ? "+" : ""}{p.delta.min} min
+        </span>
+        <span className="rounded-md bg-container px-2 py-1 font-bold">{p.delta.inr >= 0 ? "+" : "−"}₹{Math.abs(p.delta.inr)}</span>
       </div>
-      <div className="absolute bottom-12 right-12 hidden items-center gap-2 rounded-xl bg-container-lowest/95 p-2 shadow-sm backdrop-blur-md sm:flex">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-tertiary-fixed text-tertiary">
-          <Icon name="flag" className="text-[18px]" />
-        </div>
-        <div className="flex flex-col">
-          <span className="text-[11px] font-bold">{mapInfo.destination.title}</span>
-          <span className="text-[13px] text-on-surface-variant">{mapInfo.destination.sub}</span>
-        </div>
+      <div className="flex gap-2">
+        <button onClick={() => decide(true)} disabled={busy} className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-on-primary hover:bg-primary-container disabled:opacity-50">
+          Switch to new route
+        </button>
+        <button onClick={() => decide(false)} disabled={busy} className="rounded-xl bg-container px-4 py-2 text-xs font-semibold hover:bg-container-high disabled:opacity-50">
+          Keep my route
+        </button>
       </div>
-      <div className="absolute bottom-4 left-4 right-4 flex flex-col gap-1 rounded-xl bg-container-lowest/95 p-2 shadow-sm backdrop-blur-md sm:right-auto sm:max-w-xs">
-        <div className="flex items-center justify-between">
-          <span className="text-[11px] font-bold uppercase text-on-surface-variant">{mapInfo.grid.title}</span>
-          <span className="text-[11px] font-bold text-primary">{mapInfo.grid.status}</span>
-        </div>
-        <div className="flex items-center justify-between gap-3 text-[13px]">
-          <span>Headway Interval:</span>
-          <span className="font-mono font-semibold">{mapInfo.grid.headway}</span>
-        </div>
-        <div className="flex items-center justify-between gap-3 text-[13px]">
-          <span>{mapInfo.grid.connecting}</span>
-          <span className="font-bold text-primary">{mapInfo.grid.connectingStatus}</span>
-        </div>
-      </div>
+      {error && <p className="text-[12px] text-error">{error}</p>}
     </div>
   );
 }
@@ -471,7 +667,7 @@ function ModalShell({ title, sub, icon, iconCls, onClose, children }: {
   );
 }
 
-function ReportModal({ onClose }: { onClose: () => void }) {
+function ReportModal({ target, onClose }: { target: { stop_id: string; line_id: string | null; label: string }; onClose: () => void }) {
   const refresh = useRefreshLiveEvents();
   const [cat, setCat] = useState<(typeof reportCategories)[number]["id"]>("delay");
   const [details, setDetails] = useState("");
@@ -485,9 +681,9 @@ function ReportModal({ onClose }: { onClose: () => void }) {
     try {
       const out = await submitReport({
         reporter_id: reporterId(),
-        text: details.trim() || `${c.label} near ${reportTarget.label}`,
+        text: details.trim() || `${c.label} near ${target.label}`,
         type: c.type, severity: "medium",
-        affected: { stop_ids: [reportTarget.stop_id], line_ids: [reportTarget.line_id], transfer_ids: [] },
+        affected: { stop_ids: [target.stop_id], line_ids: target.line_id ? [target.line_id] : [], transfer_ids: [] },
       });
       setResult({ ok: true, out });
       refresh();
@@ -499,7 +695,7 @@ function ReportModal({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <ModalShell title="Submit Transit Report" sub="Live Mumbai Unified Operations Center" icon="flag" iconCls="bg-tertiary-fixed text-tertiary" onClose={onClose}>
+    <ModalShell title="Report a problem" sub="Checked by Pakka Check before it changes anyone's route" icon="flag" iconCls="bg-tertiary-fixed text-tertiary" onClose={onClose}>
       {result ? (
         <div className="flex flex-col gap-3">
           {result.ok ? (
@@ -517,7 +713,7 @@ function ReportModal({ onClose }: { onClose: () => void }) {
       ) : (
         <>
           <p className="text-[13px] text-on-surface-variant">
-            This report is filed against <b>{reportTarget.label}</b>, the next stop on this trip.
+            This report is filed against <b>{target.label}</b>, the next stop on your trip.
           </p>
           <div className="flex flex-col gap-1">
             <span className="text-[11px] font-bold uppercase">Issue Category</span>
@@ -533,13 +729,13 @@ function ReportModal({ onClose }: { onClose: () => void }) {
           <label className="flex flex-col gap-1">
             <span className="text-[11px] font-bold uppercase">Details (Optional)</span>
             <textarea value={details} onChange={(e) => setDetails(e.target.value)} rows={3} maxLength={500}
-              placeholder="e.g. Coach 4 rear air vent blowing warm air, or heavy queue at exit turnstile..."
+              placeholder="e.g. Train stopped between stations for 10 minutes, heavy queue at the exit…"
               className="w-full resize-none rounded-xl bg-container p-2 text-[13px] placeholder:text-outline focus:outline-none focus:ring-2 focus:ring-primary" />
           </label>
           <div className="flex items-center justify-end gap-2 pt-1">
             <button onClick={onClose} className="rounded-xl bg-container px-4 py-2.5 text-xs font-semibold hover:bg-container-high">Cancel</button>
             <button onClick={dispatch} disabled={busy} className="rounded-xl bg-primary px-5 py-2.5 text-xs font-semibold text-on-primary shadow-sm hover:bg-primary-container disabled:opacity-50">
-              {busy ? "Sending…" : "Dispatch Report"}
+              {busy ? "Sending…" : "Send report"}
             </button>
           </div>
         </>
@@ -548,19 +744,18 @@ function ReportModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-function ShareModal({ onClose }: { onClose: () => void }) {
+function ShareModal({ destLabel, eta, onClose }: { destLabel: string; eta: string; onClose: () => void }) {
   const [copied, setCopied] = useState(false);
   return (
-    <ModalShell title="Share Live Tracking" sub="Family & Colleague Safety Link" icon="share_location" iconCls="bg-primary-fixed text-primary" onClose={onClose}>
-      <p className="text-[13px] text-on-surface-variant">{share.note}</p>
+    <ModalShell title="Share Live Tracking" sub="Family & colleague safety link" icon="share_location" iconCls="bg-primary-fixed text-primary" onClose={onClose}>
+      <p className="text-[13px] text-on-surface-variant">Recipients would see your progress and expected {eta} arrival at {destLabel}.</p>
       <div className="flex items-center justify-between gap-2 rounded-xl bg-container p-2">
         <span className="truncate font-mono text-[13px]">{share.link}</span>
         <button onClick={() => { navigator.clipboard?.writeText(share.link).catch(() => undefined); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
           className="shrink-0 rounded-lg bg-primary px-2 py-1.5 text-[11px] font-bold text-on-primary">{copied ? "Copied!" : "Copy Link"}</button>
       </div>
-      <div className="flex items-center justify-between text-[11px] font-bold text-on-surface-variant">
-        <span className="flex items-center gap-1"><Icon name="info" className="text-[16px] text-primary" /> Sample link — sharing isn&apos;t live yet</span>
-        <span className="text-primary">{share.expiry}</span>
+      <div className="flex items-center gap-1 text-[11px] font-bold text-on-surface-variant">
+        <Icon name="info" className="text-[16px] text-primary" /> Sample link — sharing isn&apos;t live yet
       </div>
     </ModalShell>
   );
@@ -580,19 +775,6 @@ function SosModal({ onClose }: { onClose: () => void }) {
           <span className="text-2xl font-bold">139</span><span className="text-[13px]">Railway helpline</span>
         </a>
       </div>
-      <button onClick={onClose} className="self-end rounded-xl bg-container px-4 py-2.5 text-xs font-semibold hover:bg-container-high">Close</button>
-    </ModalShell>
-  );
-}
-
-function QrModal({ onClose }: { onClose: () => void }) {
-  return (
-    <ModalShell title="NCMC QR Ticket" sub="Sample ticket — not valid for travel" icon="qr_code_2" iconCls="bg-primary text-on-primary" onClose={onClose}>
-      <div className="flex flex-col items-center gap-2 rounded-xl bg-container-low p-6">
-        <Icon name="qr_code_2" className="text-[140px] text-slate" />
-        <span className="font-mono text-[13px] text-on-surface-variant">Token #SAMPLE-0000</span>
-      </div>
-      <p className="text-[13px] text-on-surface-variant">Ticketing isn&apos;t part of this prototype; this shows where the pass would appear.</p>
       <button onClick={onClose} className="self-end rounded-xl bg-container px-4 py-2.5 text-xs font-semibold hover:bg-container-high">Close</button>
     </ModalShell>
   );
