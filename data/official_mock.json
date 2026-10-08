@@ -9,7 +9,7 @@
      "expected": {"event": "E_DADAR_FOB", "type": "closure", "affected": {"transfer_ids": ["T_dadar_cr__dadar_wr"], "stop_ids": ["dadar_cr", "dadar_wr"]}}},
     {"alert_id": "O02", "source": "Western Railway (mock)", "source_type": "official", "published_at": "17:22",
      "text": "WR suburban services are running. Slow line services near Andheri are running late due to a signal issue; fast line services are running normally.",
-     "expected": {"event": "E_WR_FALSE", "type": "running_normally", "affected": {"line_ids": ["WR_SLOW", "WR_FAST"]}, "note": "Contradicts line-wide closure claim R23; does NOT contradict E_ANDHERI_DELAY (it confirms it)"}},
+     "expected": {"event": "E_WR_FALSE", "type": "running_normally", "affected": {"line_ids": ["WR_SLOW", "WR_FAST"]}, "also_supports": ["E_ANDHERI_DELAY"], "note": "Contradicts line-wide closure claim R23; supports E_ANDHERI_DELAY (it confirms the slow-line delay)"}},
     {"alert_id": "O03", "source": "Central Railway (mock)", "source_type": "official", "published_at": "17:24",
      "text": "Harbour line services are running normally between CSMT and Vashi/Panvel.",
      "expected": {"event": "E_HARBOUR_FALSE", "type": "running_normally", "affected": {"line_ids": ["HARBOUR"]}}},

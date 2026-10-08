@@ -230,13 +230,16 @@ orange/red alert is active).
 
 ```
 support      = 1 − Π(1 − w_i)                    over independent, non-contradicting evidence
-decay        = exp(−age_min / τ_type)            age = now − last_seen
+decay        = exp(−max(0, age_min − 15) / τ_type)   age = now − last_seen; no fading for 15 min
 contradiction= max weight of contradicting evidence from a source with HIGHER trust
                than the strongest supporting source (official > traffic > news > crowd)
 confidence   = clamp(support × decay − contradiction, 0, 1)
 ```
 `τ_type` (minutes): delay 60 · closure 240 · lift_out 1440 · diversion 120 · crowding 30 ·
 waterlogging 120 · mega_block = until announced end.
+The 15-minute grace period stops a just-confirmed event from slipping back to "possible" while
+nothing has changed. Only evidence with `at ≤ now` is used, so the demo clock can be replayed.
+All weights, τ, lifetimes and thresholds live in `backend/app/verify/policy.py`.
 
 ### 4.6 Thresholds and effect on routing
 | Confidence | Status | Routing effect |
@@ -245,6 +248,11 @@ waterlogging 120 · mega_block = until announced end.
 | 0.40 – 0.69 | `possible` | route unchanged, leg risk = confidence × 0.5, warning shown. **Exception:** `lift_out` is treated as confirmed for `step_free` travellers |
 | < 0.40 | `ignored` | logged on transparency page only |
 | — | `coordinated` | ignored for routing, shown with a "suspicious burst" badge |
+
+### 4.6a Routing contract (`verify/store.py`)
+`active_events(now) -> list[Event]` returns the **confirmed + possible** events at `now`, each with
+`affected` (lines / stops / transfers) and `expected_delay_min` (delay: low 5, medium 15, high 25;
+waterlogging 10; crowding 5). Routing applies §4.6 to these; it never reads raw reports.
 
 ### 4.7 Expire (`expire.py`)
 Event lifetime from `last_seen`: delay 45 min · closure 4 h · lift_out 24 h · diversion 2 h ·
@@ -257,8 +265,10 @@ extends it. Expired events stay visible (greyed) on the transparency page.
 - 1 crowd + rain prior → `1 − 0.75 × 0.8 = 0.40` → **possible**
 - 1 official alone → 0.8 → **confirmed**
 - Crowd "line fully shut" + official "running normally" → **ignored**, flagged `contradicted`
-Every report in `reports_seed.json` has `expected.status`; the test replays
-`scenarios/demo.json` and compares.
+Every report in `reports_seed.json` has `expected.status`; `tests/test_verify_seed.py` scores each
+event at `check_at` and compares. One official notice can contradict one event and support
+another (`expected.also_supports`, e.g. O02 contradicts "WR fully shut" but confirms the Andheri
+delay). See the verdicts with `python scripts/score_seed_reports.py [--at HH:MM | --timeline]`.
 
 ---
 
@@ -374,8 +384,10 @@ plan_itinerary(traveller) -> ItineraryPlan
 | Method | Path | Body → Response |
 |---|---|---|
 | GET | `/health` | → `{status:"ok", clock}` |
-| POST | `/reports` | `RawReport` → `{report_id, structured, event_id, status}` |
-| GET | `/events?status=&line_id=` | → `Event[]` |
+| POST | `/reports` | `{reporter_id, text, type, severity, affected, reported_at?}` → `{event_id, created_event, status, confidence}` (structured fields required until the LLM extractor exists; ids validated; unknown reporter = new account) |
+| GET | `/events?status=&line_id=&stop_id=` | → `Event[]` scored at the demo clock, newest first; events not yet reported are hidden |
+| GET | `/events/{id}` | → `{event, breakdown: {support, decay, contradiction, summary, evidence[]}}` |
+| GET | `/verify/policy` | → all Pakka Check weights, thresholds, lifetimes |
 | POST | `/parse-request` | `{text, language}` → `{traveller: partial Traveller, missing: [field]}` |
 | POST | `/plan` | `{traveller, mode:"aware"|"baseline"}` → `{cards: RouteCard[3], rejected: [{legs, reason}]}` |
 | POST | `/itinerary` | `{traveller}` → `ItineraryPlan` |

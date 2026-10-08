@@ -3,9 +3,9 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { getEvents, getPlan, planRequest, RoutingNotConnected } from "@/lib/api";
+import { getLiveEvents, getPlan, type LiveEvents, planRequest, RoutingNotConnected } from "@/lib/api";
 import { placeName } from "@/lib/format";
-import type { DisruptionEvent, PlanResponse, Traveller } from "@/lib/types";
+import type { PlanResponse, Traveller } from "@/lib/types";
 import RouteCard from "./RouteCard";
 
 const RouteMap = dynamic(() => import("./RouteMap"), {
@@ -16,8 +16,8 @@ const RouteMap = dynamic(() => import("./RouteMap"), {
 type State =
   | { status: "loading" }
   | { status: "error"; message: string }
-  | { status: "not_connected"; events: DisruptionEvent[] }
-  | { status: "ready"; plan: PlanResponse; events: DisruptionEvent[] };
+  | { status: "not_connected"; live: LiveEvents }
+  | { status: "ready"; plan: PlanResponse; live: LiveEvents };
 
 export default function PlanView({ traveller }: { traveller: Traveller | null }) {
   const [state, setState] = useState<State>({ status: "loading" });
@@ -26,16 +26,16 @@ export default function PlanView({ traveller }: { traveller: Traveller | null })
   useEffect(() => {
     if (!traveller) return;
     let cancelled = false;
-    Promise.all([getPlan(traveller), getEvents()])
-      .then(([plan, events]) => {
+    Promise.all([getPlan(traveller), getLiveEvents()])
+      .then(([plan, live]) => {
         if (cancelled) return;
-        setState({ status: "ready", plan, events });
+        setState({ status: "ready", plan, live });
         setSelectedId((plan.cards.find((c) => c.recommended) ?? plan.cards[0])?.plan_id ?? null);
       })
       .catch(async (err: unknown) => {
         if (cancelled) return;
         if (err instanceof RoutingNotConnected) {
-          setState({ status: "not_connected", events: await getEvents() });
+          setState({ status: "not_connected", live: await getLiveEvents() });
         } else {
           setState({ status: "error", message: err instanceof Error ? err.message : String(err) });
         }
@@ -104,8 +104,9 @@ export default function PlanView({ traveller }: { traveller: Traveller | null })
             </details>
           </div>
           <div className="h-[55vh] min-h-80 overflow-hidden rounded-2xl border border-line">
-            <RouteMap card={null} origin={traveller.origin} destination={destination} events={state.events} />
+            <RouteMap card={null} origin={traveller.origin} destination={destination} events={state.live.events} />
           </div>
+          <EventsSource live={state.live} />
         </div>
       )}
 
@@ -152,11 +153,12 @@ export default function PlanView({ traveller }: { traveller: Traveller | null })
                 card={state.plan.cards.find((c) => c.plan_id === selectedId) ?? null}
                 origin={traveller.origin}
                 destination={destination}
-                events={state.events}
+                events={state.live.events}
               />
             </div>
             <SelectedLegs plan={state.plan} selectedId={selectedId} traveller={traveller} />
             <MapLegend />
+            <EventsSource live={state.live} />
           </div>
         </div>
       )}
@@ -187,6 +189,17 @@ function SelectedLegs({ plan, selectedId, traveller }: { plan: PlanResponse; sel
       ))}
     </ol>
   );
+}
+
+function EventsSource({ live }: { live: LiveEvents }) {
+  if (live.source === "backend") {
+    return (
+      <p className="text-xs text-good">
+        ● Disruptions live from Pakka Check at {live.asOf} (demo clock) · {live.events.length} reported
+      </p>
+    );
+  }
+  return <p className="text-xs text-muted">○ Disruptions from sample data — start the backend to see live Pakka Check results.</p>;
 }
 
 function MapLegend() {

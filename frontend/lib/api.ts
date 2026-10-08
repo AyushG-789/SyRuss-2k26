@@ -35,7 +35,11 @@ async function post<T>(path: string, body: unknown): Promise<T> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(`${path} failed: ${res.status} ${await res.text()}`);
+
+  if (!res.ok) {
+    throw new Error(`${path} failed: ${res.status} ${await res.text()}`);
+  }
+
   return res.json() as Promise<T>;
 }
 
@@ -55,17 +59,73 @@ export async function getPlan(traveller: Traveller): Promise<PlanResponse> {
     const load = mockPlans[traveller.traveller_id];
     return (await load()).default as PlanResponse;
   }
+
   return post<PlanResponse>("/plan", planRequest(traveller));
 }
 
 export async function getEvents(): Promise<DisruptionEvent[]> {
-  if (USE_MOCKS) return eventsMock.events as unknown as DisruptionEvent[];
+  return (await getLiveEvents()).events;
+}
+
+// ---- Live disruptions (Person B) ------------------------------------------------------------
+// Map pins come from Pakka Check's GET /events when the backend is reachable, independently of
+// USE_MOCKS (route cards stay on mocks until /plan exists). NEXT_PUBLIC_EVENTS_SOURCE:
+//   "auto" (default) = try the backend, fall back to the mock file · "backend" · "mock"
+const EVENTS_SOURCE = process.env.NEXT_PUBLIC_EVENTS_SOURCE ?? "auto";
+
+export interface LiveEvents {
+  events: DisruptionEvent[];
+  source: "backend" | "mock";
+  /** Demo-clock time the backend scored the events at (backend source only). */
+  asOf?: string;
+}
+
+async function fetchJson<T>(path: string, timeoutMs: number): Promise<T> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+
   try {
-    const res = await fetch(`${API_URL}/events`);
-    if (!res.ok) return eventsMock.events as unknown as DisruptionEvent[];
-    return (await res.json()) as Promise<DisruptionEvent[]>;
-  } catch {
-    return eventsMock.events as unknown as DisruptionEvent[];
+    const res = await fetch(`${API_URL}${path}`, {
+      signal: ctrl.signal,
+      cache: "no-store",
+    });
+
+    if (!res.ok) {
+      throw new Error(`${path} failed: ${res.status}`);
+    }
+
+    return (await res.json()) as T;
+  } finally {
+    clearTimeout(timer);
   }
 }
 
+export async function getLiveEvents(): Promise<LiveEvents> {
+  const mock: LiveEvents = {
+    events: eventsMock.events as unknown as DisruptionEvent[],
+    source: "mock",
+  };
+
+  if (EVENTS_SOURCE === "mock") {
+    return mock;
+  }
+
+  try {
+    const [events, clockState] = await Promise.all([
+      fetchJson<DisruptionEvent[]>("/events", 2000),
+      fetchJson<{ now: string }>("/admin/clock", 2000),
+    ]);
+
+    return {
+      events,
+      source: "backend",
+      asOf: clockState.now,
+    };
+  } catch (err) {
+    if (EVENTS_SOURCE === "backend") {
+      throw err;
+    }
+
+    return mock;
+  }
+}
