@@ -140,13 +140,7 @@ export default function ChatAssistant() {
               ),
             )}
 
-            {busy && (
-              <div className="flex items-center gap-1 self-start rounded-2xl rounded-bl-sm bg-container-lowest px-3 py-3 shadow-card" aria-label="Thinking">
-                {[0, 150, 300].map((d) => (
-                  <span key={d} className="h-1.5 w-1.5 animate-bounce rounded-full bg-outline" style={{ animationDelay: `${d}ms` }} />
-                ))}
-              </div>
-            )}
+            {busy && <Thinking />}
           </div>
 
           <form
@@ -172,6 +166,27 @@ export default function ChatAssistant() {
         </section>
       )}
     </>
+  );
+}
+
+const STEPS = ["Understanding your question…", "Checking routes and live Pakka Check data…", "Writing the answer…"];
+
+/** Typing dots + what the assistant is doing, so a slow answer doesn't look frozen. */
+function Thinking() {
+  const [step, setStep] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setStep((s) => Math.min(s + 1, STEPS.length - 1)), 2500);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <div className="flex items-center gap-2 self-start rounded-2xl rounded-bl-sm bg-container-lowest px-3 py-2.5 shadow-card" role="status">
+      <span className="flex gap-1">
+        {[0, 150, 300].map((d) => (
+          <span key={d} className="h-1.5 w-1.5 animate-bounce rounded-full bg-outline" style={{ animationDelay: `${d}ms` }} />
+        ))}
+      </span>
+      <span className="text-[12px] text-on-surface-variant">{STEPS[step]}</span>
+    </div>
   );
 }
 
@@ -203,7 +218,8 @@ function AssistantBubble({ entry, onClose }: { entry: Extract<Entry, { role: "as
       {r && r.source !== "gemini" && (
         <p className="flex items-center gap-1 px-1 text-[11px] text-outline">
           <Icon name="info" className="text-[14px]" />
-          {r.source === "fallback" ? "AI is busy or offline, so this is a basic answer from live data." : "Answer simplified so every number matches live data."}
+          {r.source === "fallback" ? "AI is busy or offline, so this is a basic answer from live data."
+                : r.note?.includes("slow") ? "AI was slow, so this is a quick answer from live data." : "Answer simplified so every number matches live data."}
         </p>
       )}
     </div>

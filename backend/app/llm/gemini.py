@@ -1,6 +1,8 @@
 """Minimal Gemini REST client (generateContent with function calling). Key: GEMINI_API_KEY in .env."""
 from __future__ import annotations
 
+import time
+
 import httpx
 
 from ..config import settings
@@ -10,6 +12,20 @@ BASE = "https://generativelanguage.googleapis.com/v1beta/models"
 
 class GeminiError(RuntimeError):
     pass
+
+
+# If Gemini was just too slow / over quota, give it a rest instead of making every traveller wait.
+COOLDOWN_S = 120.0
+_resting_until = 0.0
+
+
+def resting() -> bool:
+    return time.monotonic() < _resting_until
+
+
+def _rest() -> None:
+    global _resting_until
+    _resting_until = time.monotonic() + COOLDOWN_S
 
 
 def available() -> bool:
@@ -35,6 +51,10 @@ def generate(contents: list[dict], *, system: str, tools: list[dict] | None = No
         try:
             res = httpx.post(f"{BASE}/{model}:generateContent", json=body, timeout=timeout,
                              headers={"x-goog-api-key": settings.gemini_api_key})
+        except httpx.TimeoutException as exc:
+            # Too slow: don't make the traveller wait for a second model as well.
+            _rest()
+            raise GeminiError(f"{model}: timed out after {timeout:.0f}s") from exc
         except httpx.HTTPError as exc:
             errors.append(f"{model}: network error {exc}")
             continue
@@ -44,6 +64,8 @@ def generate(contents: list[dict], *, system: str, tools: list[dict] | None = No
         if res.status_code != 200:
             raise GeminiError(f"{model}: HTTP {res.status_code}: {res.text[:200]}")
         return _content(res.json())
+    if errors and all("HTTP 429" in e or "HTTP 503" in e for e in errors):
+        _rest()
     raise GeminiError("; ".join(errors) or "no model configured")
 
 

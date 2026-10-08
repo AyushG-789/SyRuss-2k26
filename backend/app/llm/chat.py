@@ -10,15 +10,21 @@ from __future__ import annotations
 
 import json
 import re
+import time
 
 from ..clock import clock, fmt_hhmm
 from ..config import settings
+from ..places import resolve_place
 from . import gemini
 from .check_numbers import allowed_numbers, unsupported
 from .tools import DECLARATIONS, TOOLS, get_live_problems, plan_trip
 
 MAX_TOOL_ROUNDS = 4
 MAX_HISTORY = 10
+# Time limits (seconds). If Gemini is slower than this, answer from the live data instead.
+CALL_TIMEOUT_S = 8.0
+FAST_TIMEOUT_S = 6.0      # the one wording call on the fast path
+TOTAL_BUDGET_S = 14.0
 
 
 def system_prompt(journey_id: str | None) -> str:
@@ -100,32 +106,59 @@ def _template(calls: list[tuple[str, dict]]) -> str:
     return "Sorry, I couldn't answer that. Try “Thane to Wankhede by 18:30” or “Is Metro 1 running?”."
 
 
-_TRIP = re.compile(r"(?:from\s+)?(?P<a>.+?)\s+(?:to|se)\s+(?P<b>.+?)(?:\s+(?:by|before|at)\s+(?P<t>\d{1,2}[:.]\d{2}))?\s*[?.!]*$", re.I)
+
+
+_BUDGET = re.compile(r"(?:under|below|max|within|budget(?: of)?)\s*(?:₹|rs\.?|inr)?\s*(\d{2,4})", re.I)
+_TRIP_WORDS = re.compile(r"\s+(?:under|below|max|within|budget|cheapest|fastest|by|before|at)\b.*$", re.I)
+
+
+_TIME = re.compile(r"\b(?:by|before|till|tak)\s+(\d{1,2}[:.]\d{2})", re.I)
+_STATUS = re.compile(r"\b(running|run|working|problem|problems|issue|delay|delayed|late|closed|close|shut|band|"
+                     r"status|open|kya|hai|update|disruption|crowd)\b", re.I)
+LINE_WORDS = ("metro 1", "metro 3", "western", "central", "harbour", "aqua")
+STATION_WORDS = ("dadar", "andheri", "saki naka", "bandra", "kurla", "ghatkopar", "thane", "csmt", "churchgate")
+
+
+def detect(message: str) -> tuple[str, dict] | None:
+    """Recognise the two most common questions without AI, so they need only one Gemini call:
+    'A to B (by HH:MM, under ₹N, cheapest)' and 'is <line> running / problem at <station>?'."""
+    text = re.sub(r"\s+", " ", message.replace(",", " ")).strip()
+    lowered = text.lower()
+    m = re.match(r"^(?:from\s+)?(?P<a>.+?)\s+(?:to|se)\s+(?P<b>.+)$", text, re.I)
+    if m:
+        a, b = m.group("a").strip(), _TRIP_WORDS.sub("", m.group("b")).strip(" ?.!")
+        if resolve_place(a) and resolve_place(b):
+            args: dict = {"origin": a, "destination": b}
+            if (tm := _TIME.search(text)):
+                args["arrive_by"] = tm.group(1).replace(".", ":").zfill(5)
+            if (bm := _BUDGET.search(text)):
+                args["max_budget_inr"] = int(bm.group(1))
+            if "cheap" in lowered:
+                args["priority"] = "cheapest"
+            elif "fast" in lowered or "quick" in lowered:
+                args["priority"] = "fastest"
+            return "plan_trip", args
+    short = len(text.split()) <= 3
+    if not (short or _STATUS.search(text)):
+        return None
+    for word in LINE_WORDS:
+        if word in lowered:
+            return "get_live_problems", {"line": word}
+    for word in STATION_WORDS:
+        if word in lowered:
+            return "get_live_problems", {"station": word}
+    return None
 
 
 def _fallback(message: str) -> tuple[str, list[tuple[str, dict]]]:
-    """No Gemini: handle 'A to B (by HH:MM)' and 'is <line> running / problem at <station>'."""
-    calls: list[tuple[str, dict]] = []
-    m = _TRIP.search(message.strip())
-    if m:
-        t = m.group("t")
-        r = plan_trip(m.group("a"), m.group("b"), arrive_by=t.replace(".", ":").zfill(5) if t else None)
-        if r.get("ok") or "Unknown place" not in r.get("error", ""):
-            calls.append(("plan_trip", r))
-            return _trip_text(r), calls
-    lowered = message.lower()
-    for word in ("metro 1", "metro 3", "western", "central", "harbour", "aqua"):
-        if word in lowered:
-            r = get_live_problems(line=word)
-            calls.append(("get_live_problems", r))
-            return _problems_text(r), calls
-    for word in ("dadar", "andheri", "saki naka", "bandra", "kurla", "ghatkopar", "thane", "csmt", "churchgate"):
-        if word in lowered:
-            r = get_live_problems(station=word)
-            calls.append(("get_live_problems", r))
-            return _problems_text(r), calls
+    """No Gemini: answer the recognised questions straight from live data."""
+    hit = detect(message)
+    if hit:
+        name, args = hit
+        r = TOOLS[name](**args)
+        return _template([(name, r)]), [(name, r)]
     return ("The AI assistant is offline right now. I can still plan “Thane to Wankhede by 18:30” "
-            "or check “Is Metro 1 running?”."), calls
+            "or check “Is Metro 1 running?”."), []
 
 
 # ---- Main entry ---------------------------------------------------------------------------------
@@ -138,7 +171,12 @@ def chat(messages: list[dict], journey_id: str | None = None) -> dict:
     try:
         if not gemini.available():
             raise gemini.GeminiError("no key")
-        reply, calls = _run(messages, journey_id)
+        deadline = time.monotonic() + TOTAL_BUDGET_S
+        hit = detect(last) if len(messages) == 1 else None   # follow-ups need the full conversation
+        if hit:
+            reply, calls = _fast(messages, journey_id, hit, deadline)
+        else:
+            reply, calls = _run(messages, journey_id, deadline)
         allowed = allowed_numbers(*[m.get("text", "") for m in messages], *[_public(r) for _, r in calls],
                                   fmt_hhmm(clock.now()))
         bad = unsupported(reply, allowed)
@@ -146,13 +184,19 @@ def chat(messages: list[dict], journey_id: str | None = None) -> dict:
             retry = [*messages, {"role": "assistant", "text": reply},
                      {"role": "user", "text": f"(System check: these numbers were not in any tool result: {', '.join(bad)}. "
                                               "Rewrite your last answer using only numbers from the tool results.)"}]
-            reply2, more = _run(retry, journey_id)
+            try:
+                reply2, more = _run(retry, journey_id, deadline)
+            except (_SlowAfterTools, gemini.GeminiError):
+                reply2, more = None, []
             calls += more
             allowed |= allowed_numbers(*[_public(r) for _, r in more])
-            if unsupported(reply2, allowed):
+            if reply2 is None or unsupported(reply2, allowed):
                 reply, source, note = _template(calls), "template", f"number check failed: {bad}"
             else:
                 reply = reply2
+    except _SlowAfterTools as slow:
+        calls = slow.calls
+        reply, source, note = _template(calls), "template", "Gemini too slow; answered from live data"
     except gemini.GeminiError as exc:
         reply, calls = _fallback(last)
         source, note = "fallback", str(exc)
@@ -171,12 +215,50 @@ def chat(messages: list[dict], journey_id: str | None = None) -> dict:
     }
 
 
-def _run(messages: list[dict], journey_id: str | None) -> tuple[str, list[tuple[str, dict]]]:
+def _fast(messages: list[dict], journey_id: str | None, hit: tuple[str, dict], deadline: float):
+    """Common question: look the data up ourselves, then ONE Gemini call (no tools) to word it.
+    Half the waiting of the full tool loop."""
+    name, args = hit
+    result = TOOLS[name](**args)
+    calls = [(name, result)]
+    if gemini.resting():  # Gemini was just slow: answer instantly from the live data
+        raise _SlowAfterTools(calls)
+    data = json.dumps(_public(result), ensure_ascii=False, default=str)
+    contents = _history(messages)
+    contents[-1]["parts"].append({"text": f"\n\n[Live TravelBuddy data from {name} — answer using only this]\n{data}"})
+    try:
+        content = gemini.generate(contents, system=system_prompt(journey_id),
+                                  timeout=min(FAST_TIMEOUT_S, max(2.0, deadline - time.monotonic())))
+    except gemini.GeminiError:
+        raise _SlowAfterTools(calls) from None
+    return _text(content) or _template(calls), calls
+
+
+class _SlowAfterTools(Exception):
+    """Gemini got too slow after the tools already ran: answer from their results."""
+
+    def __init__(self, calls):
+        super().__init__("slow")
+        self.calls = calls
+
+
+def _run(messages: list[dict], journey_id: str | None, deadline: float | None = None) -> tuple[str, list[tuple[str, dict]]]:
     contents = _history(messages)
     calls: list[tuple[str, dict]] = []
     system = system_prompt(journey_id)
+    deadline = deadline or time.monotonic() + TOTAL_BUDGET_S
     for _ in range(MAX_TOOL_ROUNDS):
-        content = gemini.generate(contents, system=system, tools=DECLARATIONS)
+        left = deadline - time.monotonic()
+        if left < 2:
+            if calls:
+                raise _SlowAfterTools(calls)
+            raise gemini.GeminiError("out of time")
+        try:
+            content = gemini.generate(contents, system=system, tools=DECLARATIONS, timeout=min(CALL_TIMEOUT_S, left))
+        except gemini.GeminiError:
+            if calls:
+                raise _SlowAfterTools(calls) from None
+            raise
         contents.append(content)
         fcalls = [p["functionCall"] for p in content.get("parts", []) if "functionCall" in p]
         if not fcalls:
