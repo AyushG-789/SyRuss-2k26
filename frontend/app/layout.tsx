@@ -36,7 +36,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               </span>
               <span className="text-lg">TravelBuddy</span>
             </Link>
-            <span className="hidden text-sm text-muted sm:block">Mumbai · crowd-verified routes</span>
+            <nav className="flex items-center gap-4 text-sm text-muted" aria-label="Main">
+              <Link href="/" className="hover:text-text">Plan a trip</Link>
+              <Link href="/admin" className="hover:text-text">Demo control</Link>
+            </nav>
           </div>
         </header>
         {children}

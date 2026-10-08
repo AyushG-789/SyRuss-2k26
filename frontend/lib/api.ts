@@ -102,3 +102,44 @@ export async function getLiveEvents(): Promise<LiveEvents> {
     return mock;
   }
 }
+
+// ---- Demo controls (Person B, SPEC.md §10) --------------------------------------------------
+export interface ClockState {
+  now: string;
+  iso: string;
+  speed: number;
+  mode: "scripted" | "manual";
+}
+
+export interface Preset {
+  id: string;
+  label: string;
+  refs: string[];
+  expect: string;
+}
+
+export interface TimelineItem {
+  t: string;
+  kind: "report" | "news" | "official" | "action";
+  ref: string | null;
+  label: string;
+  state: "history" | "done" | "upcoming" | "not_injected" | "other_day";
+  traveller_id: string | null;
+}
+
+export interface Timeline extends ClockState {
+  start: string;
+  end: string;
+  items: TimelineItem[];
+  injected: { ref_id: string; at: string }[];
+}
+
+export const getClock = () => fetchJson<ClockState>("/admin/clock", 2000);
+export const getTimeline = () => fetchJson<Timeline>("/admin/timeline", 2000);
+export const getPresets = () => fetchJson<Preset[]>("/admin/presets", 2000);
+export const getBackendEvents = () => fetchJson<DisruptionEvent[]>("/events", 2000);
+
+export const updateClock = (body: { set?: string; advance_min?: number; speed?: number }) =>
+  post<ClockState>("/admin/clock", body);
+export const resetDemo = (mode: ClockState["mode"]) => post<ClockState>("/admin/reset", { mode });
+export const injectPreset = (preset: string) => post<ClockState>("/admin/inject", { preset });

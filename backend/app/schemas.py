@@ -51,6 +51,7 @@ class Evidence(BaseModel):
     weight: float
     at: str
     contradicts: bool = False
+    covers: list[str] = []          # ref_ids folded into this one (repeat reporter / coordinated burst)
 
 
 class Event(BaseModel):

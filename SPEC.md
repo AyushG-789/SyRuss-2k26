@@ -398,9 +398,11 @@ plan_itinerary(traveller) -> ItineraryPlan
 | POST | `/voice/tts` | `{text, language}` → `{audio_base64, mime}` |
 | GET | `/eval` | → metrics table (§12) |
 | GET | `/transparency` | → sources, weights, thresholds, lifetimes, assumptions, event log |
-| GET/POST | `/admin/clock` | `{set?: "HH:MM", advance_min?: int, speed?: float}` → `{now}` |
-| POST | `/admin/inject` | `{ref_ids: ["R01","N02"]}` → pushes seed items now |
-| POST | `/admin/reset` | → reload seed data, clock to scenario start |
+| GET/POST | `/admin/clock` | `{set?: "HH:MM", advance_min?: int, speed?: float}` → `{now, speed, mode}` |
+| POST | `/admin/reset` | `{mode?: "scripted"\|"manual"}` → reload seed, clock to scenario start, paused. **scripted**: seed items arrive at their scheduled times as the clock moves. **manual**: only pre-start history is loaded; the presenter injects the rest |
+| POST | `/admin/inject` | `{ref_ids?: ["R04","N01"], preset?: "fake_burst"}` → copies of seed items arrive *now* on the demo clock, joining their seed event |
+| GET | `/admin/presets` | → one-click inject buttons `[{id, label, refs, expect}]` |
+| GET | `/admin/timeline` | → scenario items with state `history \| done \| upcoming \| not_injected \| other_day` |
 | WS | `/ws/alerts` | server → client: `event_update`, `replan_proposal`, `clock` |
 
 Backend runs on `:8000`, frontend on `:3000`, CORS allows `http://localhost:3000`.
@@ -419,7 +421,7 @@ Frontend reads `NEXT_PUBLIC_API_URL`.
 | `/itinerary` | Day plan timeline, slack warnings, aware vs baseline toggle |
 | `/eval` | Metrics table + bar chart (baseline vs ours) |
 | `/transparency` | Sources, weights, thresholds, lifetimes, assumptions, full event log incl. ignored |
-| `/admin` | Clock slider (play/pause/speed), inject buttons ("Fake Metro 1 burst", …), reset |
+| `/admin` | Demo clock + slider (play/pause/speed/+5/reset), scripted ↔ manual mode, inject preset buttons, live disruptions with confidence bars, story timeline (polls the backend every 1 s) |
 
 Until the backend exists, the frontend uses `frontend/mocks/*.json` with exactly the shapes above.
 

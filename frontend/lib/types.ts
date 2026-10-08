@@ -21,6 +21,8 @@ export interface Evidence {
   weight: number;
   at: string;
   contradicts: boolean;
+  /** ref_ids folded into this one (repeat reporter / coordinated burst) */
+  covers?: string[];
 }
 
 export interface DisruptionEvent {
