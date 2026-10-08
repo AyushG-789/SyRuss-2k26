@@ -24,6 +24,10 @@ class Settings(BaseSettings):
     newsapi_key: str = ""           # newsapi.org — news search (B8)
     mapbox_token: str = ""          # Mapbox — map tiles / directions
 
+    voice_provider: str = "sarvam"                      # sarvam | gemini (SPEC §7)
+    voice_stt_model: str = "gemini-3.5-flash"           # multimodal audio STT
+    voice_tts_model: str = "gemini-3.8-flash-tts"       # natural Indian voice TTS
+
     demo_date: str = "2026-10-20"
     scenario_file: str = "scenarios/demo.json"
     news_mode: str = "mock"          # mock | live
@@ -34,6 +38,12 @@ class Settings(BaseSettings):
     cache_dir: Path = REPO_ROOT / "backend" / ".cache"
     database_url: str = f"sqlite:///{REPO_ROOT / 'backend' / 'travelbuddy.db'}"
     cors_origins: list[str] = ["http://localhost:3000"]
+
+    @property
+    def tts_cache_dir(self) -> Path:
+        p = self.cache_dir / "tts"
+        p.mkdir(parents=True, exist_ok=True)
+        return p
 
 
 settings = Settings()

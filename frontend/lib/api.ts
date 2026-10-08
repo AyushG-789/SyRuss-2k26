@@ -394,3 +394,35 @@ export interface ItineraryPlan {
   total_travel_min?: number; total_cost_inr?: number; ends_at?: string; warnings?: string[]; as_of?: string;
 }
 export const planItinerary = (traveller: Traveller) => post<ItineraryPlan>("/itinerary", { traveller });
+
+// ---- Voice (SPEC.md §7, POST /voice/stt & POST /voice/tts) ----------------------------------
+export interface VoiceSTTResponse {
+  text: string;
+  language: "en" | "hi" | "mr";
+}
+
+export interface VoiceTTSResponse {
+  audio_base64: string | null;
+  mime: string;
+  cached?: boolean;
+  fallback_to_browser?: boolean;
+}
+
+export async function sendVoiceSTT(audioBlob: Blob): Promise<VoiceSTTResponse> {
+  const form = new FormData();
+  const ext = audioBlob.type.includes("wav") ? "wav" : audioBlob.type.includes("mp4") ? "mp4" : "webm";
+  form.append("file", audioBlob, `voice.${ext}`);
+  console.log(`[Voice:API] POST /voice/stt (${audioBlob.size} bytes, type=${audioBlob.type})`);
+  const res = await fetch(`${API_URL}/voice/stt`, {
+    method: "POST",
+    body: form,
+  });
+  if (!res.ok) throw new Error(`/voice/stt failed: ${res.status} ${await res.text()}`);
+  const data = (await res.json()) as VoiceSTTResponse;
+  console.log(`[Voice:API] STT received: "${data.text}" [${data.language}]`);
+  return data;
+}
+
+export async function getVoiceTTS(text: string, language?: string): Promise<VoiceTTSResponse> {
+  return post<VoiceTTSResponse>("/voice/tts", { text, language: language ?? null });
+}

@@ -1,4 +1,5 @@
-"""FastAPI entry point. Run from backend/:  uvicorn app.main:app --reload --port 8000"""
+"""FastAPI entry point. Run from backend/: uvicorn app.main:app --reload --port 8000"""
+
 from __future__ import annotations
 
 import asyncio
@@ -8,7 +9,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .api import admin, chat, events, insights, journeys, plan, reports
+from .api import admin, chat, events, insights, journeys, plan, reports, voice
 from .clock import clock, fmt_hhmm
 from .config import settings
 from .data_loader import load_seed
@@ -44,6 +45,7 @@ app.include_router(insights.router)
 app.include_router(journeys.router)
 app.include_router(plan.router)
 app.include_router(reports.router)
+app.include_router(voice.router)
 
 
 @app.get("/health")

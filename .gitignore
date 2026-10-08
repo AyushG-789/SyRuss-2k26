@@ -21,3 +21,5 @@ data/gtfs/
 
 # local Claude Code settings
 .claude/
+
+/package-lock.json

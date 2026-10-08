@@ -371,10 +371,11 @@ plan_itinerary(traveller) -> ItineraryPlan
 ---
 
 ## 7. Voice (`backend/app/voice/`)
-- STT: Sarvam **Saaras** → `{text, language}`.
-- TTS: Sarvam **Bulbul** with `target_language_code` ∈ `en-IN | hi-IN | mr-IN` on **every**
-  call; returns base64 audio → frontend decodes and plays.
-- Fallback: OpenAI TTS. Cache audio by `sha256(text+lang)` in `backend/.cache/tts/`.
+- **STT**: Gemini multimodal audio (`gemini-3.8-flash`) with optional Sarvam **Saaras** (`VOICE_PROVIDER=sarvam`) → `{text, language}` (supports en, hi, mr, Hinglish).
+- **TTS**: Gemini Flash TTS (`gemini-3.8-flash-tts`) with optional Sarvam **Bulbul** (`target_language_code` ∈ `en-IN | hi-IN | mr-IN`); returns base64 WAV audio → frontend HTML5 `<audio>` plays.
+- **Cache**: Fast disk cache by `sha256(lang + ":" + text)` in `backend/.cache/tts/` (zero latency & zero cost on repeated phrases).
+- **Client Fallback**: Browser Web Speech API (`webkitSpeechRecognition` + `speechSynthesis`) ensures zero failure during demo on poor network.
+- **Provider Switch**: Switchable via `VOICE_PROVIDER=gemini` (default) or `VOICE_PROVIDER=sarvam`.
 
 ---
 
