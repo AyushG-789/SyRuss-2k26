@@ -77,7 +77,7 @@
       "origin": {"label": "Andheri (W) office", "lat": 19.1200, "lon": 72.8400},
       "destination": {"label": "Phoenix Palladium", "lat": 18.9945, "lon": 72.8250, "poi_id": "poi_phoenix_palladium"},
       "leave_at": "17:00", "arrive_by": "18:00", "hard_deadline": false,
-      "max_budget_inr": 300, "max_walk_min": 10, "max_transfers": 2,
+      "max_budget_inr": 300, "max_walk_min": 20, "max_transfers": 2,
       "priority": "balanced",
       "modes_allowed": ["local", "metro", "bus", "walk", "cab"],
       "step_free": false, "heavy_luggage": false, "avoid_crowds": false,

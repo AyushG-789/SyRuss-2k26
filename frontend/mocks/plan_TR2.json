@@ -1,0 +1,42 @@
+{
+  "_note": "MOCK placeholder for TR2 (Rohan, ₹50 budget) — illustrative numbers only; real ones come from routing/scorer.py.",
+  "as_of": "17:35",
+  "notes": ["The cheapest plan is the same as Optimal.", "Ignored: 5 'Metro 1 completely shut' posts from brand-new accounts at 16:40 (suspicious burst, 5%)."],
+  "cards": [
+    {
+      "plan_id": "tr2_fast", "label": "fastest", "recommended": false,
+      "legs": [
+        {"mode": "walk", "line_id": null, "from_id": "origin", "to_id": "ghatkopar_m1", "depart": "16:45", "arrive": "16:46", "duration_min": 1, "cost_inr": 0, "walk_m": 80, "step_free": true, "event_ids": [], "risk": 0.0},
+        {"mode": "metro", "line_id": "METRO1", "from_id": "ghatkopar_m1", "to_id": "andheri_m1", "depart": "16:49", "arrive": "17:05", "duration_min": 16, "cost_inr": 30, "walk_m": 0, "step_free": true, "event_ids": ["ev_m1_sakinaka"], "risk": 0.5},
+        {"mode": "walk", "line_id": null, "from_id": "andheri_m1", "to_id": "andheri_wr", "depart": "17:05", "arrive": "17:10", "duration_min": 5, "cost_inr": 0, "walk_m": 350, "step_free": false, "event_ids": [], "risk": 0.0},
+        {"mode": "local", "line_id": "WR_FAST", "from_id": "andheri_wr", "to_id": "bandra", "depart": "17:12", "arrive": "17:21", "duration_min": 9, "cost_inr": 5, "walk_m": 0, "step_free": false, "event_ids": [], "risk": 0.0},
+        {"mode": "walk", "line_id": null, "from_id": "bandra", "to_id": "bandra_bus", "depart": "17:21", "arrive": "17:24", "duration_min": 3, "cost_inr": 0, "walk_m": 200, "step_free": false, "event_ids": [], "risk": 0.0},
+        {"mode": "bus", "line_id": "BEST_TODO_C", "from_id": "bandra_bus", "to_id": "hill_road_bus", "depart": "17:26", "arrive": "17:31", "duration_min": 5, "cost_inr": 10, "walk_m": 0, "step_free": false, "event_ids": [], "risk": 0.0},
+        {"mode": "walk", "line_id": null, "from_id": "hill_road_bus", "to_id": "destination", "depart": "17:31", "arrive": "17:33", "duration_min": 2, "cost_inr": 0, "walk_m": 120, "step_free": true, "event_ids": [], "risk": 0.0}
+      ],
+      "duration_min": 48, "cost_inr": 45, "transfers": 2, "walk_min": 11,
+      "reliability": 0.5, "reliability_colour": "red", "score": 5.4,
+      "reason": "Normally the fastest, but Metro 1 is stuck near Saki Naka (3 commuters + news, 83%).",
+      "facts": {"event": "ev_m1_sakinaka", "confidence": 0.83, "sources": {"crowd": 3, "news": 1}}
+    },
+    {
+      "plan_id": "tr2_opt", "label": "optimal", "recommended": true,
+      "legs": [
+        {"mode": "walk", "line_id": null, "from_id": "origin", "to_id": "ghatkopar", "depart": "16:45", "arrive": "16:46", "duration_min": 1, "cost_inr": 0, "walk_m": 60, "step_free": false, "event_ids": [], "risk": 0.0},
+        {"mode": "local", "line_id": "CR_FAST", "from_id": "ghatkopar", "to_id": "dadar_cr", "depart": "16:50", "arrive": "17:02", "duration_min": 12, "cost_inr": 10, "walk_m": 0, "step_free": false, "event_ids": [], "risk": 0.0},
+        {"mode": "walk", "line_id": null, "from_id": "dadar_cr", "to_id": "dadar_wr", "depart": "17:02", "arrive": "17:10", "duration_min": 8, "cost_inr": 0, "walk_m": 550, "step_free": false, "event_ids": [], "risk": 0.0},
+        {"mode": "local", "line_id": "WR_SLOW", "from_id": "dadar_wr", "to_id": "bandra", "depart": "17:13", "arrive": "17:20", "duration_min": 7, "cost_inr": 0, "walk_m": 0, "step_free": false, "event_ids": [], "risk": 0.0},
+        {"mode": "walk", "line_id": null, "from_id": "bandra", "to_id": "bandra_bus", "depart": "17:20", "arrive": "17:24", "duration_min": 4, "cost_inr": 0, "walk_m": 200, "step_free": false, "event_ids": [], "risk": 0.0},
+        {"mode": "bus", "line_id": "BEST_TODO_C", "from_id": "bandra_bus", "to_id": "hill_road_bus", "depart": "17:28", "arrive": "17:33", "duration_min": 5, "cost_inr": 10, "walk_m": 0, "step_free": false, "event_ids": [], "risk": 0.0},
+        {"mode": "walk", "line_id": null, "from_id": "hill_road_bus", "to_id": "destination", "depart": "17:33", "arrive": "17:35", "duration_min": 2, "cost_inr": 0, "walk_m": 120, "step_free": true, "event_ids": [], "risk": 0.0}
+      ],
+      "duration_min": 50, "cost_inr": 20, "transfers": 2, "walk_min": 15,
+      "reliability": 0.93, "reliability_colour": "green", "score": 8.7,
+      "reason": "Avoids the Metro 1 delay. At Dadar, walk outside the station because the middle FOB is closed.",
+      "facts": {"avoids_events": ["ev_m1_sakinaka", "ev_dadar_fob"]}
+    }
+  ],
+  "rejected": [
+    {"summary": "Auto from Kurla to Bandra", "reason": "You chose train, metro, bus and walking only"}
+  ]
+}

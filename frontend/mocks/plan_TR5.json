@@ -1,0 +1,36 @@
+{
+  "_note": "MOCK placeholder for TR5 (Priya, no autos) — illustrative numbers only; real ones come from routing/scorer.py.",
+  "as_of": "17:35",
+  "notes": ["Ignored: 'Western line puri band hai' (1 commuter) — Western Railway says services are running."],
+  "cards": [
+    {
+      "plan_id": "tr5_fast", "label": "fastest", "recommended": false,
+      "legs": [
+        {"mode": "walk", "line_id": null, "from_id": "origin", "to_id": "andheri_wr", "depart": "17:00", "arrive": "17:08", "duration_min": 8, "cost_inr": 0, "walk_m": 650, "step_free": false, "event_ids": [], "risk": 0.0},
+        {"mode": "local", "line_id": "WR_SLOW", "from_id": "andheri_wr", "to_id": "lower_parel", "depart": "17:10", "arrive": "17:31", "duration_min": 21, "cost_inr": 10, "walk_m": 0, "step_free": false, "event_ids": ["ev_andheri_delay"], "risk": 0.5},
+        {"mode": "walk", "line_id": null, "from_id": "lower_parel", "to_id": "destination", "depart": "17:31", "arrive": "17:39", "duration_min": 8, "cost_inr": 0, "walk_m": 600, "step_free": false, "event_ids": [], "risk": 0.0}
+      ],
+      "duration_min": 39, "cost_inr": 10, "transfers": 0, "walk_min": 16,
+      "reliability": 0.5, "reliability_colour": "red", "score": 6.0,
+      "reason": "No changes, but slow trains at Andheri are running late (3 commuters + news, 83%).",
+      "facts": {"event": "ev_andheri_delay", "confidence": 0.83, "sources": {"crowd": 3, "news": 1}}
+    },
+    {
+      "plan_id": "tr5_opt", "label": "optimal", "recommended": true,
+      "legs": [
+        {"mode": "walk", "line_id": null, "from_id": "origin", "to_id": "andheri_wr", "depart": "17:00", "arrive": "17:08", "duration_min": 8, "cost_inr": 0, "walk_m": 650, "step_free": false, "event_ids": [], "risk": 0.0},
+        {"mode": "local", "line_id": "WR_FAST", "from_id": "andheri_wr", "to_id": "dadar_wr", "depart": "17:11", "arrive": "17:26", "duration_min": 15, "cost_inr": 10, "walk_m": 0, "step_free": false, "event_ids": [], "risk": 0.0},
+        {"mode": "local", "line_id": "WR_SLOW", "from_id": "dadar_wr", "to_id": "lower_parel", "depart": "17:29", "arrive": "17:33", "duration_min": 4, "cost_inr": 0, "walk_m": 0, "step_free": false, "event_ids": [], "risk": 0.0},
+        {"mode": "walk", "line_id": null, "from_id": "lower_parel", "to_id": "destination", "depart": "17:33", "arrive": "17:41", "duration_min": 8, "cost_inr": 0, "walk_m": 600, "step_free": false, "event_ids": [], "risk": 0.0}
+      ],
+      "duration_min": 41, "cost_inr": 10, "transfers": 1, "walk_min": 16,
+      "reliability": 0.97, "reliability_colour": "green", "score": 9.2,
+      "reason": "Fast train skips the delayed slow line at Andheri; 1 change at Dadar, same 10 rupee fare.",
+      "facts": {"avoids_event": "ev_andheri_delay", "cost_inr": 10, "transfers": 1}
+    }
+  ],
+  "rejected": [
+    {"summary": "Cab from Andheri", "reason": "About 340 rupees in evening traffic, over your 300 rupee budget"},
+    {"summary": "Auto to Andheri station", "reason": "You chose not to take autos"}
+  ]
+}

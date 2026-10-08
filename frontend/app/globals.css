@@ -1,26 +1,75 @@
 @import "tailwindcss";
 
+/* TravelBuddy colour tokens. Use them through Tailwind: bg-surface, text-muted, border-line, … */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --surface-2: #f0f2f5;
+  --text: #15181e;
+  --muted: #5d6573;
+  --line: #e2e5ea;
+  --brand: #0f766e;
+  --brand-ink: #ffffff;
+  --brand-soft: #e6f4f2;
+  --good: #15803d;
+  --good-soft: #e8f6ec;
+  --warn: #b45309;
+  --warn-soft: #fdf3e3;
+  --bad: #b91c1c;
+  --bad-soft: #fdecec;
+  --grey: #6b7280;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --bg: #0e1116;
+    --surface: #161a21;
+    --surface-2: #1d222b;
+    --text: #e8eaee;
+    --muted: #9aa3b2;
+    --line: #2a303b;
+    --brand: #2dd4bf;
+    --brand-ink: #062a27;
+    --brand-soft: #123532;
+    --good: #4ade80;
+    --good-soft: #13291b;
+    --warn: #fbbf24;
+    --warn-soft: #2e2410;
+    --bad: #f87171;
+    --bad-soft: #321616;
+    --grey: #9ca3af;
   }
 }
 
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-brand: var(--brand);
+  --color-brand-ink: var(--brand-ink);
+  --color-brand-soft: var(--brand-soft);
+  --color-good: var(--good);
+  --color-good-soft: var(--good-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-bad: var(--bad);
+  --color-bad-soft: var(--bad-soft);
+  --color-grey: var(--grey);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* Leaflet popups follow the theme */
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  background: var(--surface);
+  color: var(--text);
 }
