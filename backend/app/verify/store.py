@@ -11,10 +11,11 @@ from __future__ import annotations
 
 import threading
 import uuid
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime, timedelta
+from typing import Literal
 
-from ..clock import clock, fmt_hhmm
+from ..clock import clock, fmt_hhmm, parse_hhmm
 from ..data_loader import load_seed
 from ..schemas import Affected, DisruptionType, Event, EventStatus, Severity
 from . import policy
@@ -23,6 +24,10 @@ from .score import ScoreResult, evaluate
 from .seed import seed_events
 
 ROUTING_STATUSES: set[EventStatus] = {"confirmed", "possible"}
+
+# scripted = every seed item arrives at its scheduled time as the clock moves.
+# manual   = only history from before the scenario start is loaded; the presenter injects the rest.
+DemoMode = Literal["scripted", "manual"]
 
 # Minutes of extra travel time a confirmed event adds, used by routing (SPEC §4.6).
 DELAY_BY_SEVERITY = {"low": 5, "medium": 15, "high": 25}
@@ -68,22 +73,61 @@ class EventStore:
         self._events: dict[str, StoredEvent] = {}
         self.reporters: dict[str, dict] = {}
         self.weather_alerts: list[RawEvidence] = []
+        self.mode: DemoMode = "scripted"
+        self.injected: list[dict] = []   # [{"ref_id", "at"}] in injection order
 
     # ---- loading ---------------------------------------------------------------------------
-    def reset(self) -> None:
-        """Reload the demo seed (reports, news, official notices, reporters)."""
+    def reset(self, mode: DemoMode = "scripted") -> None:
+        """Reload the demo seed (reports, news, official notices, reporters).
+
+        In manual mode only evidence from before the scenario start is kept (the stale morning
+        reports and the afternoon rain alert); everything else waits to be injected.
+        """
         seed = load_seed()
+        start = parse_hhmm(seed.scenario["start"])
         with self._lock:
+            self.mode = mode
+            self.injected = []
             self.reporters = {k: dict(v) for k, v in seed.reporters.items()}
             self._events = {}
             self.weather_alerts = []
             for se in seed_events(seed).values():
+                evidence = list(se.evidence) if mode == "scripted" else [e for e in se.evidence if e.at < start]
                 self._events[se.event_id] = StoredEvent(
                     event_id=se.event_id, type=se.type, severity=se.severity,
-                    affected=se.affected.model_copy(deep=True), evidence=list(se.evidence),
+                    affected=se.affected.model_copy(deep=True), evidence=evidence,
                 )
                 if se.type == "waterlogging":
                     self.weather_alerts = [e for e in se.evidence if e.source_type == "weather"]
+
+    def inject(self, ref_ids: list[str], at: datetime) -> list[dict]:
+        """Re-send seed items (reports R01–R30, news N.., official O..) as if they arrived at `at`.
+
+        Each copy joins the same event as the original. Returns [{"ref_id", "event_ids"}].
+        Raises ValueError for an id that isn't a seed item tied to an event.
+        """
+        by_ref: dict[str, list[tuple[str, RawEvidence]]] = {}
+        for se in seed_events(load_seed()).values():
+            for e in se.evidence:
+                by_ref.setdefault(e.ref_id, []).append((se.event_id, e))
+        unknown = [r for r in ref_ids if r not in by_ref]
+        if unknown:
+            raise ValueError(f"Not a seed item tied to a disruption: {', '.join(unknown)}")
+        out = []
+        stamp = fmt_hhmm(at).replace(":", "")
+        with self._lock:
+            for ref in ref_ids:
+                event_ids = []
+                for event_id, original in by_ref[ref]:
+                    ev = self._events[event_id]
+                    copy = replace(original, at=at, ref_id=f"{ref}@{stamp}")
+                    if copy.ref_id not in {e.ref_id for e in ev.evidence}:
+                        ev.evidence.append(copy)
+                        ev.evidence.sort(key=lambda e: e.at)
+                    event_ids.append(event_id)
+                self.injected.append({"ref_id": ref, "at": fmt_hhmm(at)})
+                out.append({"ref_id": ref, "event_ids": event_ids})
+        return out
 
     # ---- reads -----------------------------------------------------------------------------
     def _score(self, ev: StoredEvent, now: datetime) -> ScoreResult:

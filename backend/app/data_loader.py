@@ -58,3 +58,16 @@ def load_seed(data_dir: Path | None = None) -> SeedData:
         for sid in line["stations"]:
             seed.lines_by_stop.setdefault(sid, []).append(lid)
     return seed
+
+
+@lru_cache(maxsize=1)
+def load_typed_network(data_dir: Path | None = None) -> tuple[dict[str, Station], dict[str, Line], dict[str, Transfer], FareConfig]:
+    from .routing.models import Station, Line, Transfer, parse_fare_config
+
+    seed = load_seed(data_dir)
+    stations = {sid: Station.model_validate(s) for sid, s in seed.stations.items()}
+    lines = {lid: Line.model_validate(l) for lid, l in seed.lines.items()}
+    transfers = {tid: Transfer.model_validate(t) for tid, t in seed.transfers.items()}
+    fares = parse_fare_config(seed.fares)
+    return stations, lines, transfers, fares
+

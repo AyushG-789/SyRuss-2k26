@@ -1,10 +1,10 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import Link from "next/link";
+import { Geist_Mono, Plus_Jakarta_Sans } from "next/font/google";
+import AppShell from "@/components/AppShell";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const jakarta = Plus_Jakarta_Sans({
+  variable: "--font-jakarta",
   subsets: ["latin"],
 });
 
@@ -25,21 +25,18 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col font-sans">
-        {/* z-index above Leaflet's controls (1000) so the map never covers the header */}
-        <header className="sticky top-0 z-[1100] border-b border-line bg-surface/90 backdrop-blur">
-          <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-            <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
-              <span className="grid h-8 w-8 place-items-center rounded-lg bg-brand text-brand-ink" aria-hidden>
-                TB
-              </span>
-              <span className="text-lg">TravelBuddy</span>
-            </Link>
-            <span className="hidden text-sm text-muted sm:block">Mumbai · crowd-verified routes</span>
-          </div>
-        </header>
-        {children}
+    <html lang="en" className={`${jakarta.variable} ${geistMono.variable} h-full antialiased`}>
+      <head>
+        {/* Icon font used by the design (Material Symbols Outlined) */}
+        {/* "block" so icons never flash as their text names while the font loads */}
+        {/* eslint-disable-next-line @next/next/no-page-custom-font, @next/next/google-font-display */}
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block"
+        />
+      </head>
+      <body className="min-h-full font-sans">
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );

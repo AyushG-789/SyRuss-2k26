@@ -51,9 +51,8 @@ export function planRequest(traveller: Traveller) {
 }
 
 export async function getPlan(traveller: Traveller): Promise<PlanResponse> {
-  if (USE_MOCKS) {
+  if (USE_MOCKS && mockPlans[traveller.traveller_id]) {
     const load = mockPlans[traveller.traveller_id];
-    if (!load) throw new RoutingNotConnected();
     return (await load()).default as PlanResponse;
   }
   return post<PlanResponse>("/plan", planRequest(traveller));
@@ -102,3 +101,106 @@ export async function getLiveEvents(): Promise<LiveEvents> {
     return mock;
   }
 }
+
+// ---- Demo controls (Person B, SPEC.md §10) --------------------------------------------------
+export interface ClockState {
+  now: string;
+  iso: string;
+  speed: number;
+  mode: "scripted" | "manual";
+}
+
+export interface Preset {
+  id: string;
+  label: string;
+  refs: string[];
+  expect: string;
+}
+
+export interface TimelineItem {
+  t: string;
+  kind: "report" | "news" | "official" | "action";
+  ref: string | null;
+  label: string;
+  state: "history" | "done" | "upcoming" | "not_injected" | "other_day";
+  traveller_id: string | null;
+}
+
+export interface Timeline extends ClockState {
+  start: string;
+  end: string;
+  items: TimelineItem[];
+  injected: { ref_id: string; at: string }[];
+}
+
+export const getClock = () => fetchJson<ClockState>("/admin/clock", 2000);
+export const getTimeline = () => fetchJson<Timeline>("/admin/timeline", 2000);
+export const getPresets = () => fetchJson<Preset[]>("/admin/presets", 2000);
+export const getBackendEvents = () => fetchJson<DisruptionEvent[]>("/events", 2000);
+
+export const updateClock = (body: { set?: string; advance_min?: number; speed?: number }) =>
+  post<ClockState>("/admin/clock", body);
+export const resetDemo = (mode: ClockState["mode"]) => post<ClockState>("/admin/reset", { mode });
+export const injectPreset = (preset: string) => post<ClockState>("/admin/inject", { preset });
+
+// ---- Crowd reports (Person B, SPEC.md §10 POST /reports) ------------------------------------
+export interface ReportIn {
+  reporter_id: string;
+  text: string;
+  type: DisruptionEvent["type"];
+  severity: DisruptionEvent["severity"];
+  affected: { stop_ids: string[]; line_ids: string[]; transfer_ids: string[] };
+}
+
+export interface ReportOut {
+  event_id: string;
+  created_event: boolean;
+  status: DisruptionEvent["status"];
+  confidence: number;
+  reported_at: string;
+}
+
+export const submitReport = (body: ReportIn) => post<ReportOut>("/reports", body);
+
+// ---- Chatbot (SPEC.md §6, POST /chat) --------------------------------------------------------
+export interface ChatMessage {
+  role: "user" | "assistant";
+  text: string;
+}
+
+export interface ChatProblem {
+  event_id: string;
+  title: string;
+  status: DisruptionEvent["status"];
+  meaning: string;
+  trust_pct: number;
+  sources: string;
+  on_this_route?: boolean;
+}
+
+export interface ChatOption {
+  label: "fastest" | "optimal" | "cheapest";
+  recommended: boolean;
+  route: string;
+  depart: string;
+  arrive: string;
+  duration_min: number;
+  cost_inr: number;
+  changes: number;
+  walk_min: number;
+  live_problems: ChatProblem[];
+  blocked_by_confirmed_problem: boolean;
+}
+
+export interface ChatReply {
+  reply: string;
+  source: "gemini" | "template" | "fallback";
+  model: string | null;
+  tools_used: string[];
+  trip: { traveller: Traveller; from: string; to: string; options: ChatOption[] } | null;
+  problems: ChatProblem[] | null;
+  note: string | null;
+}
+
+export const sendChat = (messages: ChatMessage[], journeyId?: string | null) =>
+  post<ChatReply>("/chat", { messages, journey_id: journeyId ?? null });

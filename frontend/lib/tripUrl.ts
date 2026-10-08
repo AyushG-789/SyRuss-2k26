@@ -1,10 +1,10 @@
 import type { Traveller } from "./types";
 
-// A custom trip travels in the URL (/trip?t=<json>) so the page can be reloaded or shared.
+// A custom trip travels in the URL (/routes?t=<json>) so the page can be reloaded or shared.
 // It only holds places and preferences — no personal data.
 
 export function tripHref(traveller: Traveller): string {
-  return `/trip?t=${encodeURIComponent(JSON.stringify(traveller))}`;
+  return `/routes?t=${encodeURIComponent(JSON.stringify(traveller))}`;
 }
 
 export function parseTrip(raw: string | null): Traveller | null {

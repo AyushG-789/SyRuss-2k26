@@ -3,11 +3,11 @@
 import { useSearchParams } from "next/navigation";
 import { useMemo } from "react";
 import { parseTrip } from "@/lib/tripUrl";
-import PlanView from "./PlanView";
+import RouteResults from "./RouteResults";
 
-export default function TripFromUrl() {
+export default function CustomRoutes() {
   const raw = useSearchParams().get("t");
-  // Parse once per URL so PlanView doesn't refetch on every render.
+  // Parse once per URL so RouteResults doesn't refetch on every render.
   const traveller = useMemo(() => parseTrip(raw), [raw]);
-  return <PlanView traveller={traveller} />;
+  return <RouteResults traveller={traveller} />;
 }

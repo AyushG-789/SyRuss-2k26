@@ -19,6 +19,18 @@ export const MODE_LABEL: Record<Mode, string> = {
 };
 
 /** Short line names for leg chips, e.g. "CR Fast", "Metro 3", "BEST". */
+/** "Via WR_SLOW -> METRO3" → "Via WR Slow → Metro 3" (route summaries from the planner). */
+export function readableRoute(summary: string): string {
+  return summary
+    .split(" -> ")
+    .map((part, i) => {
+      const via = i === 0 && part.startsWith("Via ") ? "Via " : "";
+      const id = via ? part.slice(4) : part;
+      return via + (/^[A-Z0-9_]+$/.test(id) ? lineShortName(id) : id);
+    })
+    .join(" → ");
+}
+
 export function lineShortName(lineId: string): string {
   const known: Record<string, string> = {
     WR_SLOW: "WR Slow", WR_FAST: "WR Fast", CR_SLOW: "CR Slow", CR_FAST: "CR Fast",
@@ -72,11 +84,18 @@ export function eventPosition(ev: DisruptionEvent): [number, number] | null {
 
 export function evidenceSummary(ev: DisruptionEvent): string {
   const counts: Record<string, number> = {};
+  const burst = ev.flags.includes("coordinated_burst");
+  let burstSize = 0;
   for (const e of ev.evidence) {
     if (e.contradicts) continue;
+    if (burst && e.source_type === "crowd" && (e.covers?.length ?? 0) >= 3) {
+      burstSize = e.covers!.length;   // one suspicious burst, shown as such
+      continue;
+    }
     counts[e.source_type] = (counts[e.source_type] ?? 0) + 1;
   }
   const parts = [];
+  if (burstSize) parts.push(`${burstSize} new accounts, near-identical posts (counted as 1)`);
   if (counts.crowd) parts.push(`${counts.crowd} commuter${counts.crowd > 1 ? "s" : ""}`);
   if (counts.news) parts.push(`${counts.news} news`);
   if (counts.official) parts.push("official notice");
@@ -84,3 +103,18 @@ export function evidenceSummary(ev: DisruptionEvent): string {
   const contradicted = ev.evidence.some((e) => e.contradicts);
   return parts.join(" + ") + (contradicted ? " · contradicted by official source" : "");
 }
+
+/** Short human title for an event, e.g. "Delay · Saki Naka, Asalpha" or "Closure · Dadar transfer". */
+export function eventTitle(ev: DisruptionEvent): string {
+  const type = TYPE_LABEL[ev.type] ?? ev.type;
+  const stops = ev.affected.stop_ids.map((id) => stations[id]?.name ?? id);
+  let where: string;
+  if (ev.affected.transfer_ids.length) where = `${stops.join(" ↔ ")} transfer`;
+  else if (stops.length) where = stops.join(", ");
+  else where = ev.affected.line_ids.map(lineShortName).join(", ");
+  return `${type} · ${where}`;
+}
+
+export const STATUS_ORDER: Record<EventStatus, number> = {
+  confirmed: 0, possible: 1, coordinated: 2, ignored: 3, expired: 4,
+};
