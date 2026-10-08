@@ -17,6 +17,7 @@ const NAV: NavItem[] = [
   { href: "/plan", label: "Journey Planner", icon: "alt_route", match: (p) => p === "/plan" },
   { href: "/routes/TR3", label: "Route Results", icon: "directions_subway", match: (p) => p.startsWith("/routes") },
   { href: "/track", label: "Live Trip Tracking", icon: "fmd_good", match: (p) => p.startsWith("/track") },
+  { href: "/report", label: "Report Incident", icon: "campaign", match: (p) => p.startsWith("/report") },
   { href: "/stations", label: "Station Explorer & Nearby", icon: "near_me", match: (p) => p.startsWith("/stations") },
   { href: "/dashboard", label: "Commuter Dashboard & Passes", icon: "badge", match: (p) => p.startsWith("/dashboard") },
 ];

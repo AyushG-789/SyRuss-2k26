@@ -9,6 +9,7 @@ import { useEffect, useState } from "react";
 import { submitReport, type ReportOut } from "@/lib/api";
 import { pct, STATUS_STYLE } from "@/lib/format";
 import { mapInfo, platforms, reportCategories, reportTarget, share, steps, trip, vehicle, velocity, type StepState } from "@/lib/mockTracking";
+import { reporterId } from "@/lib/reporter";
 import { useRefreshLiveEvents } from "@/lib/useLiveEvents";
 import Icon from "./Icon";
 
@@ -483,7 +484,7 @@ function ReportModal({ onClose }: { onClose: () => void }) {
     setBusy(true);
     try {
       const out = await submitReport({
-        reporter_id: "web_demo",
+        reporter_id: reporterId(),
         text: details.trim() || `${c.label} near ${reportTarget.label}`,
         type: c.type, severity: "medium",
         affected: { stop_ids: [reportTarget.stop_id], line_ids: [reportTarget.line_id], transfer_ids: [] },
