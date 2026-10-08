@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "note": "Replayed by the simulated clock (POST /admin/reset then play). Items with t before `start` are loaded at reset (stale history). ground_truth is what REALLY happened; run_eval.py uses it to score schedule-only vs RouteSaathi plans (SPEC §12).",
+    "note": "Replayed by the simulated clock (POST /admin/reset then play). Items with t before `start` are loaded at reset (stale history). ground_truth is what REALLY happened; run_eval.py uses it to score schedule-only vs TravelBuddy plans (SPEC §12).",
     "check_at": "17:35"
   },
   "start": "16:30",

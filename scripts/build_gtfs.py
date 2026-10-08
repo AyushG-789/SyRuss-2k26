@@ -84,7 +84,7 @@ def main() -> None:
     write("transfers.txt", ["from_stop_id", "to_stop_id", "transfer_type", "min_transfer_time"], transfers)
 
     write("feed_info.txt", ["feed_publisher_name", "feed_publisher_url", "feed_lang", "feed_version"],
-          [["RouteSaathi (hackathon prototype, approximate data)", "https://example.org", "en", "0.1"]])
+          [["TravelBuddy (hackathon prototype, approximate data)", "https://example.org", "en", "0.1"]])
 
     print(f"Wrote GTFS to {OUT.relative_to(ROOT)}: {len(stations)} stops, {len(routes)} routes, "
           f"{len(trips)} trips, {len(stop_times)} stop_times, {len(freqs)} frequency rows, "

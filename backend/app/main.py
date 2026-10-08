@@ -9,7 +9,7 @@ from .clock import clock, fmt_hhmm
 from .config import settings
 from .data_loader import load_seed
 
-app = FastAPI(title="RouteSaathi API", version="0.1.0")
+app = FastAPI(title="TravelBuddy API", version="0.1.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,

@@ -24,7 +24,7 @@ class Settings(BaseSettings):
 
     data_dir: Path = REPO_ROOT / "data"
     cache_dir: Path = REPO_ROOT / "backend" / ".cache"
-    database_url: str = f"sqlite:///{REPO_ROOT / 'backend' / 'routesaathi.db'}"
+    database_url: str = f"sqlite:///{REPO_ROOT / 'backend' / 'travelbuddy.db'}"
     cors_origins: list[str] = ["http://localhost:3000"]
 
 

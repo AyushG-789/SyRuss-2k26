@@ -1,4 +1,4 @@
-# SyRuss-2k26 · RouteSaathi
+# SyRuss-2k26 · TravelBuddy
 
 Crowd-verified multimodal journey planner for Mumbai — Syrus 7.0, PS5 (Smart Mobility).
 Navigation apps tell you the schedule; locals tell you the truth. We listen to locals,

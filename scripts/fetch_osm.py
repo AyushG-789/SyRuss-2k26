@@ -24,7 +24,7 @@ OSM_DIR = ROOT / "data" / "osm"
 BBOX = "18.88,72.76,19.28,73.10"  # south, west, north, east
 SERVERS = ["https://overpass-api.de/api/interpreter",
            "https://overpass.kumi.systems/api/interpreter"]
-HEADERS = {"User-Agent": "RouteSaathi-hackathon/0.1 (Syrus 7.0 student project)"}
+HEADERS = {"User-Agent": "TravelBuddy-hackathon/0.1 (Syrus 7.0 student project)"}
 
 QUERIES = {
     "stations": f"""[out:json][timeout:120];

@@ -1,4 +1,4 @@
-# Transit lines for the RouteSaathi Mumbai prototype. See SPEC.md §2 and §5.
+# Transit lines for the TravelBuddy Mumbai prototype. See SPEC.md §2 and §5.
 #
 # STATUS: STARTER DATA. Station order is from public line maps; run_minutes and headways are
 # APPROXIMATE and marked verify: true. P1: check against WR/CR timetables and the metro

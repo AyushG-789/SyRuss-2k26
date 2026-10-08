@@ -1,4 +1,4 @@
-# SPEC.md — RouteSaathi (Syrus 7.0 · PS5)
+# SPEC.md — TravelBuddy (Syrus 7.0 · PS5)
 
 > **Paste this file into every AI coding session.** It is the single source of truth for names,
 > schemas, formulas and endpoints. If code and SPEC disagree, fix one of them in the same PR.
@@ -418,7 +418,7 @@ Run all 5 travellers twice (baseline vs aware) against `scenarios/demo.json` gro
 a leg on a really-closed line/transfer → journey **failed** (or + 30 min if a fallback exists);
 a leg on a really-delayed line → + true delay.
 
-| Metric | Schedule-only | RouteSaathi |
+| Metric | Schedule-only | TravelBuddy |
 |---|---|---|
 | Late or failed journeys (of 5) | | |
 | Average arrival delay (min) | | |
@@ -443,7 +443,7 @@ a leg on a really-delayed line → + true delay.
 | 17:25 | 1 waterlogging report near Azad Maidan + rain alert → possible 40% → TR4 itinerary shows warning, keeps plan |
 | 17:30 | Lift-out at BKC Metro 3 (2 reports) → possible, but TR1 (wheelchair) is routed around it |
 | 18:00 | Andheri delay expires, pin greys out |
-| end | `/eval` page: baseline vs RouteSaathi numbers |
+| end | `/eval` page: baseline vs TravelBuddy numbers |
 
 ---
 
