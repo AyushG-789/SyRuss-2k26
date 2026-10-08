@@ -39,13 +39,24 @@ async function post<T>(path: string, body: unknown): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+/** Thrown in mock mode for trips we have no mock plan for (i.e. anything typed into the form). */
+export class RoutingNotConnected extends Error {
+  constructor() {
+    super("The routing engine isn't connected yet");
+  }
+}
+
+export function planRequest(traveller: Traveller) {
+  return { traveller, mode: "aware" as const };
+}
+
 export async function getPlan(traveller: Traveller): Promise<PlanResponse> {
   if (USE_MOCKS) {
     const load = mockPlans[traveller.traveller_id];
-    if (!load) throw new Error(`No mock plan for ${traveller.traveller_id}`);
+    if (!load) throw new RoutingNotConnected();
     return (await load()).default as PlanResponse;
   }
-  return post<PlanResponse>("/plan", { traveller, mode: "aware" });
+  return post<PlanResponse>("/plan", planRequest(traveller));
 }
 
 export async function getEvents(): Promise<DisruptionEvent[]> {

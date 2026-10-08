@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import MockBanner from "@/components/MockBanner";
 import PlanView from "@/components/PlanView";
-import { TRAVELLER_IDS } from "@/lib/api";
+import { getTraveller, TRAVELLER_IDS } from "@/lib/api";
 
 // Pre-build one page per demo traveller (/plan/TR1 … /plan/TR5).
 export function generateStaticParams() {
@@ -22,5 +22,5 @@ export default function PlanPage(props: PageProps<"/plan/[travellerId]">) {
 
 async function PlanForTraveller({ params }: { params: PageProps<"/plan/[travellerId]">["params"] }) {
   const { travellerId } = await params;
-  return <PlanView travellerId={travellerId} />;
+  return <PlanView traveller={getTraveller(travellerId) ?? null} />;
 }

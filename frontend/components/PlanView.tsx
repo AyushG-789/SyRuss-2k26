@@ -3,9 +3,9 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { getEvents, getPlan, getTraveller } from "@/lib/api";
+import { getEvents, getPlan, planRequest, RoutingNotConnected } from "@/lib/api";
 import { placeName } from "@/lib/format";
-import type { DisruptionEvent, PlanResponse } from "@/lib/types";
+import type { DisruptionEvent, PlanResponse, Traveller } from "@/lib/types";
 import RouteCard from "./RouteCard";
 
 const RouteMap = dynamic(() => import("./RouteMap"), {
@@ -16,10 +16,10 @@ const RouteMap = dynamic(() => import("./RouteMap"), {
 type State =
   | { status: "loading" }
   | { status: "error"; message: string }
+  | { status: "not_connected"; events: DisruptionEvent[] }
   | { status: "ready"; plan: PlanResponse; events: DisruptionEvent[] };
 
-export default function PlanView({ travellerId }: { travellerId: string }) {
-  const traveller = getTraveller(travellerId);
+export default function PlanView({ traveller }: { traveller: Traveller | null }) {
   const [state, setState] = useState<State>({ status: "loading" });
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -32,8 +32,13 @@ export default function PlanView({ travellerId }: { travellerId: string }) {
         setState({ status: "ready", plan, events });
         setSelectedId((plan.cards.find((c) => c.recommended) ?? plan.cards[0])?.plan_id ?? null);
       })
-      .catch((err: unknown) => {
-        if (!cancelled) setState({ status: "error", message: err instanceof Error ? err.message : String(err) });
+      .catch(async (err: unknown) => {
+        if (cancelled) return;
+        if (err instanceof RoutingNotConnected) {
+          setState({ status: "not_connected", events: await getEvents() });
+        } else {
+          setState({ status: "error", message: err instanceof Error ? err.message : String(err) });
+        }
       });
     return () => {
       cancelled = true;
@@ -41,7 +46,7 @@ export default function PlanView({ travellerId }: { travellerId: string }) {
   }, [traveller]);
 
   if (!traveller) {
-    return <p className="p-6">Unknown traveller “{travellerId}”.</p>;
+    return <p className="mx-auto w-full max-w-6xl px-4 py-6">This trip link is broken — go back and plan it again.</p>;
   }
 
   const destination = (state.status === "ready" && state.plan.destination) || traveller.destination;
@@ -80,6 +85,28 @@ export default function PlanView({ travellerId }: { travellerId: string }) {
         <p className="rounded-xl border border-bad/40 bg-bad-soft p-3 text-sm text-bad">
           Couldn’t load the plan: {state.message}
         </p>
+      )}
+
+      {state.status === "not_connected" && destination && (
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+          <div className="flex flex-col gap-3 rounded-2xl border border-line bg-surface p-4">
+            <h2 className="font-semibold">Your trip is ready to plan</h2>
+            <p className="text-sm leading-relaxed text-muted">
+              The routing engine isn’t connected yet, so there are no route cards for custom trips. Once
+              <code className="mx-1 rounded bg-surface-2 px-1">POST /plan</code> is live on the backend, this page will show
+              Fastest, Optimal and Cheapest plans here automatically.
+            </p>
+            <details className="text-sm">
+              <summary className="cursor-pointer font-medium">Request that will be sent</summary>
+              <pre className="mt-2 max-h-72 overflow-auto rounded-xl bg-surface-2 p-3 text-xs">
+                {JSON.stringify(planRequest(traveller), null, 2)}
+              </pre>
+            </details>
+          </div>
+          <div className="h-[55vh] min-h-80 overflow-hidden rounded-2xl border border-line">
+            <RouteMap card={null} origin={traveller.origin} destination={destination} events={state.events} />
+          </div>
+        </div>
       )}
 
       {state.status === "ready" && destination && (
@@ -128,7 +155,7 @@ export default function PlanView({ travellerId }: { travellerId: string }) {
                 events={state.events}
               />
             </div>
-            <SelectedLegs plan={state.plan} selectedId={selectedId} travellerId={travellerId} />
+            <SelectedLegs plan={state.plan} selectedId={selectedId} traveller={traveller} />
             <MapLegend />
           </div>
         </div>
@@ -137,8 +164,7 @@ export default function PlanView({ travellerId }: { travellerId: string }) {
   );
 }
 
-function SelectedLegs({ plan, selectedId, travellerId }: { plan: PlanResponse; selectedId: string | null; travellerId: string }) {
-  const traveller = getTraveller(travellerId)!;
+function SelectedLegs({ plan, selectedId, traveller }: { plan: PlanResponse; selectedId: string | null; traveller: Traveller }) {
   const card = plan.cards.find((c) => c.plan_id === selectedId);
   if (!card) return null;
   return (

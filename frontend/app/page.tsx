@@ -1,5 +1,6 @@
 import MockBanner from "@/components/MockBanner";
 import TravellerCard from "@/components/TravellerCard";
+import TripForm from "@/components/TripForm";
 import { travellers } from "@/lib/api";
 
 export default function Home() {
@@ -17,30 +18,27 @@ export default function Home() {
           </p>
         </section>
 
-        <section className="rounded-2xl border border-line bg-surface p-4" aria-labelledby="ask">
-          <h2 id="ask" className="mb-2 text-sm font-semibold">
-            Plan a trip
-          </h2>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <input
-              disabled
-              placeholder="e.g. Thane to Wankhede by 6:30, under ₹150"
-              className="flex-1 rounded-xl border border-line bg-surface-2 px-3 py-2.5 text-sm placeholder:text-muted disabled:cursor-not-allowed"
-            />
-            <div className="flex gap-1" role="group" aria-label="Language">
-              {["EN", "हिं", "मरा"].map((l) => (
-                <button key={l} disabled className="rounded-lg border border-line px-3 py-2 text-sm text-muted disabled:cursor-not-allowed">
-                  {l}
-                </button>
-              ))}
+        <section className="flex flex-col gap-4 rounded-2xl border border-line bg-surface p-4" aria-label="Plan a trip">
+          <div>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <input
+                disabled
+                placeholder="Coming soon: just say it — “Thane to Wankhede by 6:30, under ₹150”"
+                className="flex-1 rounded-xl border border-dashed border-line bg-surface-2 px-3 py-2.5 text-sm placeholder:text-muted disabled:cursor-not-allowed"
+              />
+              <button disabled className="rounded-xl border border-dashed border-line px-3 py-2 text-sm text-muted disabled:cursor-not-allowed">
+                🎤 Voice
+              </button>
             </div>
+            <p className="mt-1.5 text-xs text-muted">The AI will fill the form below from your words (English, हिंदी, मराठी). For now, fill it in yourself.</p>
           </div>
-          <p className="mt-2 text-xs text-muted">Typing and voice requests are coming soon. Pick a demo traveller below.</p>
+          <hr className="border-line" />
+          <TripForm />
         </section>
 
         <section className="flex flex-col gap-3" aria-labelledby="demo">
           <h2 id="demo" className="text-lg font-semibold">
-            Demo travellers
+            Or try a demo traveller
           </h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {travellers.map((t) => (
