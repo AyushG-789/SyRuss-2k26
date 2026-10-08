@@ -323,8 +323,23 @@ its weights; if two labels pick the same route, the second takes its next best. 
 
 ## 6. LLM layer (`backend/app/llm/`)
 
-Provider: **OpenAI** (structured outputs + function calling).
-`OPENAI_MODEL_FAST` (mini tier) for parsing/extraction, `OPENAI_MODEL_SMART` for explanations.
+Provider: **Google Gemini** (REST `generateContent` + function calling, `backend/app/llm/gemini.py`).
+`GEMINI_MODEL` (default `gemini-flash-lite-latest`, ~1–2 s) with `GEMINI_FALLBACK_MODEL`
+(`gemini-flash-latest`) tried on 429/5xx. Key: `GEMINI_API_KEY` in `.env` (never committed).
+
+### 6.0 Chatbot (`chat.py`, `POST /chat`)
+- Body `{messages: [{role: user|assistant, text}], journey_id?}` → `{reply, source: gemini|template|fallback,
+  model, tools_used, trip: {traveller, from, to, options[]} | null, problems[] | null, note}`.
+- Gemini only understands the question and words the answer; facts come from the tools below.
+  Replies in the traveller's language (en / hi / mr / Hinglish), ≤ 70 words.
+- **Number check** (`check_numbers.py`): every number in the reply (incl. Devanagari digits) must
+  appear in a tool result or the user's message → otherwise retry once → otherwise a plain
+  template built from the tool results (`source: "template"`).
+- **No key / quota / outage** → rule-based fallback for "A to B (by HH:MM)" and line/station
+  status (`source: "fallback"`). Never crashes.
+- Place names resolved by `app/places.py` (POIs + stations + aliases, same tiers as the web form).
+- UI: floating "Ask TravelBuddy" panel on every page (`frontend/components/ChatAssistant.tsx`);
+  trip answers show option cards (with live problems) + "Open full route details" → `/routes?t=`.
 
 ### 6.1 Request parsing (`parse_request.py`)
 Natural language (any of en/hi/mr) → partial `Traveller` fields; the UI pre-fills the form for
@@ -332,6 +347,11 @@ the user to confirm. Place names resolved through `geocode.py` (POIs → station
 
 ### 6.2 Agent tools (function calling)
 ```
+plan_trip(origin, destination, leave_at?, arrive_by?, budget, walk, changes, priority, modes, …)
+                                     -> options[] with live problems on each route   (built)
+get_live_problems(line?, station?)   -> confirmed/possible + untrusted (fake burst) events  (built)
+explain_problem(event_id)            -> evidence, weights, thresholds                (built)
+get_my_journey(journey_id?)          -> saved trip + replan proposal (B9)            (built)
 plan_routes(traveller) -> RouteCard[] (numbers only, reason empty)
 get_events(status?, line_id?, stop_id?) -> Event[]
 get_fares(legs) -> int
@@ -358,15 +378,29 @@ plan_itinerary(traveller) -> ItineraryPlan
 
 ---
 
-## 8. Replanning (`backend/app/replan/monitor.py`)
-1. On every event transition to `confirmed` (and each clock tick), find saved journeys
-   (status `active` or `upcoming`) with a leg whose line/stop/transfer is affected and whose
-   time window overlaps the event.
-2. Replan from the traveller's current position (the start of the first not-yet-completed leg).
-3. Push over WebSocket `/ws/alerts`:
-   `{type:"replan_proposal", journey_id, affected_leg_idx:[..], event, old_card, new_card, delta:{min, inr}}`
-4. Plan changes **only** after `POST /journeys/{id}/replan/accept`. `reject` keeps the old plan.
-   Both decisions are logged for evaluation.
+## 8. Replanning (`backend/app/replan/monitor.py`, `impact.py`)
+1. `POST /journeys` saves the card the traveller chose. On every check (each `/journeys` read,
+   and once a second while a client is connected to `/ws/alerts`) the monitor looks at journeys
+   that aren't `completed` and finds **confirmed** events that hit a leg not yet finished.
+   `possible` events never trigger a replan.
+   - Matching (`impact.py`): transfer events hit only that transfer walk (not trains passing
+     through); line events hit rides on that line (with stops: only rides whose stretch includes
+     one); stop-only events hit rides passing the stop and legs starting/ending there;
+     `lift_out` only matters to step-free / heavy-luggage travellers.
+   - closure / mega_block / (lift_out for step-free) = **blocked**; other types add
+     `expected_delay_min`. Confirmed delays under 5 min are ignored.
+2. Replan from the traveller's position: the start of the first unfinished leg — or, if they are
+   already riding a train/bus, where that ride stops (they stay on it). Remaining budget =
+   `max_budget_inr` − money already spent. Alternatives are checked against the same events
+   (blocked dropped, delays added) until routing does this itself (A5).
+3. Propose only if the old route is blocked, or an alternative arrives ≥ 3 min earlier.
+   Otherwise the journey gets a `notice` ("delay on your route; it is still the best option" /
+   "no working alternative found"). Events are asked about once.
+4. Proposal: `{proposal_id, event_ids, affected_leg_idx, from_label, old_card (hit legs carry
+   event_ids + risk), new_card (completed legs + new route), delta:{min, inr}, old_blocked, message}`.
+   Pushed over WebSocket `/ws/alerts` as `{type:"replan_proposal", journey_id, proposal}`.
+5. Plan changes **only** after `POST /journeys/{id}/replan/accept`. `reject` keeps the old plan.
+   Both decisions are logged in `journey.log` for evaluation. `/admin/reset` clears journeys.
 
 ---
 
@@ -388,20 +422,24 @@ plan_itinerary(traveller) -> ItineraryPlan
 | GET | `/events?status=&line_id=&stop_id=` | → `Event[]` scored at the demo clock, newest first; events not yet reported are hidden |
 | GET | `/events/{id}` | → `{event, breakdown: {support, decay, contradiction, summary, evidence[]}}` |
 | GET | `/verify/policy` | → all Pakka Check weights, thresholds, lifetimes |
+| POST | `/chat` | `{messages, journey_id?}` → `{reply, source, tools_used, trip, problems, note}` (§6.0) |
 | POST | `/parse-request` | `{text, language}` → `{traveller: partial Traveller, missing: [field]}` |
 | POST | `/plan` | `{traveller, mode:"aware"|"baseline"}` → `{cards: RouteCard[3], rejected: [{legs, reason}]}` |
 | POST | `/itinerary` | `{traveller}` → `ItineraryPlan` |
-| POST | `/journeys` | `{traveller_id, card}` → `{journey_id}` |
-| GET | `/journeys/{id}` | → journey + current card + pending proposal |
-| POST | `/journeys/{id}/replan/accept` · `/reject` | → updated journey |
+| POST | `/journeys` | `{traveller, card}` → `Journey` (`journey_id`, status `upcoming\|active\|completed`, card, proposal, notice, log) |
+| GET | `/journeys` | → all saved journeys |
+| GET | `/journeys/{id}` | → journey + current card + pending proposal (polling fallback for the socket) |
+| POST | `/journeys/{id}/replan/accept` · `/reject` | → updated journey (409 if nothing pending) |
 | POST | `/voice/stt` | audio → `{text, language}` |
 | POST | `/voice/tts` | `{text, language}` → `{audio_base64, mime}` |
 | GET | `/eval` | → metrics table (§12) |
 | GET | `/transparency` | → sources, weights, thresholds, lifetimes, assumptions, event log |
-| GET/POST | `/admin/clock` | `{set?: "HH:MM", advance_min?: int, speed?: float}` → `{now}` |
-| POST | `/admin/inject` | `{ref_ids: ["R01","N02"]}` → pushes seed items now |
-| POST | `/admin/reset` | → reload seed data, clock to scenario start |
-| WS | `/ws/alerts` | server → client: `event_update`, `replan_proposal`, `clock` |
+| GET/POST | `/admin/clock` | `{set?: "HH:MM", advance_min?: int, speed?: float}` → `{now, speed, mode}` |
+| POST | `/admin/reset` | `{mode?: "scripted"\|"manual"}` → reload seed, clock to scenario start, paused. **scripted**: seed items arrive at their scheduled times as the clock moves. **manual**: only pre-start history is loaded; the presenter injects the rest |
+| POST | `/admin/inject` | `{ref_ids?: ["R04","N01"], preset?: "fake_burst"}` → copies of seed items arrive *now* on the demo clock, joining their seed event |
+| GET | `/admin/presets` | → one-click inject buttons `[{id, label, refs, expect}]` |
+| GET | `/admin/timeline` | → scenario items with state `history \| done \| upcoming \| not_injected \| other_day` |
+| WS | `/ws/alerts` | server → client: `clock {now}`, `event_update {event_id, status, confidence}`, `replan_proposal {journey_id, proposal}`, `journey_notice {journey_id, notice}` |
 
 Backend runs on `:8000`, frontend on `:3000`, CORS allows `http://localhost:3000`.
 Frontend reads `NEXT_PUBLIC_API_URL`.
@@ -410,16 +448,24 @@ Frontend reads `NEXT_PUBLIC_API_URL`.
 
 ## 11. Frontend pages (`frontend/app/`)
 
+Design system: `frontend/app/globals.css` (from the team's "Marg Transit" DESIGN.md — Plus Jakarta
+Sans, emerald primary, amber alerts, white hairline cards, Material Symbols icons). App shell =
+left sidebar + top bar (latest confirmed Pakka Check alert, live/sample feed status).
+
 | Route | Content |
 |---|---|
-| `/` | Chat/voice box (EN/HI/MR) → auto-filled request form · 5 one-click traveller profiles |
-| `/plan` | 3 route cards (Fastest / Optimal / Cheapest, Recommended badge, score/10, legs, time, ₹, transfers, walk, reliability colour + %, reason) + Leaflet map |
-| `/radar` | Live disruption map: pins coloured by status, click → evidence list + confidence breakdown |
-| `/journey/[id]` | Saved trip timeline; replan dialog (affected legs red, new legs, Δmin/Δ₹, Accept / Keep) |
-| `/itinerary` | Day plan timeline, slack warnings, aware vs baseline toggle |
-| `/eval` | Metrics table + bar chart (baseline vs ours) |
-| `/transparency` | Sources, weights, thresholds, lifetimes, assumptions, full event log incl. ignored |
-| `/admin` | Clock slider (play/pause/speed), inject buttons ("Fake Metro 1 burst", …), reset |
+| `/` | Home & Transit Hub — design-faithful copy of the team design (welcome + quick route finder, daily frequent trips, 5 transport modes, network pulse table, live transit map, NCMC card, recent journeys). **Frontend-only: all content is sample data from `frontend/lib/mockHome.ts`**; each block notes the backend call that will replace it |
+| `/plan` | Journey Planner — design-faithful copy of the team design. **The form is live** (departure/destination with suggestions, via stop, swap/reset, saved-place shortcuts, Depart now/at/Arrive by, modality tiles, priority strategy, step-free) and opens `/routes?t=`. Engine strip, map overlays, recommended options, advisories, spotlights and congestion are **sample data from `frontend/lib/mockPlanner.ts`**. `?from=&to=` prefill |
+| `/routes/[TR1..TR5]`, `/routes?t=<json>` | Route results: Optimal / Fastest / Cheapest cards (time, fare, changes, walk, reliability, reason, steps), map with selected route, trade-off matrix, rejected options. Custom trips show a "routing not connected" panel until `POST /plan` exists |
+| `/track` | Live Trip Tracking (team design) on **real data**: the trip from *Start trip* (saved via `POST /journeys`, id in localStorage for the chatbot), moved by the **demo clock** — phase (not started / on the way / arrived), time left, ETA (+ confirmed delays), fare paid so far, current leg + next stop, milestones per leg with Pakka Check problems (`journey.live_hits`), map with route + "you" marker. **Replan banner** with Switch / Keep (`/replan/accept|reject`). Report Issue → `POST /reports` at the next stop. No trip → empty state with a one-click demo trip (TR3 via the Dadar FOB). Share link + SOS are labelled samples |
+| `/admin` | Demo control (presenter): demo clock + slider, scripted ↔ manual, inject presets, live disruptions, story timeline |
+| `/report` | Report Incident — design-faithful copy of the team design (citizen incident console). **Real:** category → disruption type, description, linked station, corridor + direction → `POST /reports` with the verdict shown; live header counts; Nearby Active Feed from `/events` with "I see this too" (a crowd confirmation — same reporter counts once). **Sample:** voice memo/transcript, media (previewed locally, not uploaded), reputation card (`frontend/lib/mockReport.ts`) |
+| `/stations` | Station Explorer & Nearby — design-faithful copy of the team design (breadcrumb, search + radius, mode filter chips that filter the station cards, departures, amenities, real map centred on the searched station, gate guide, facilities). **Sample data from `frontend/lib/mockStations.ts`** |
+| `/dashboard` | "Coming soon" placeholder for Commuter Dashboard & Passes (no design yet) |
+| `/radar`, `/itinerary`, `/eval`, `/transparency` | Not built yet |
+
+Only real data is shown — panels in the design with no data source (card balance, vehicle speed,
+carbon, CCTV crowding, station gates) were intentionally left out.
 
 Until the backend exists, the frontend uses `frontend/mocks/*.json` with exactly the shapes above.
 

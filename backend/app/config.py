@@ -11,6 +11,9 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=REPO_ROOT / ".env", extra="ignore")
 
+    gemini_api_key: str = ""
+    gemini_model: str = "gemini-flash-lite-latest"      # chatbot: fast + generous free quota (SPEC §6)
+    gemini_fallback_model: str = "gemini-flash-latest"  # used if the main one is busy / over quota
     openai_api_key: str = ""
     openai_model_fast: str = ""
     openai_model_smart: str = ""

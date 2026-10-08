@@ -59,3 +59,19 @@ def test_post_plan_custom_trip():
     # Check that route starts at dadar and reaches churchgate
     first_card = data["cards"][0]
     assert first_card["legs"][0]["from_id"] in {"origin", "dadar_wr", "dadar_cr"}
+
+
+def test_rejected_options_have_no_repeats():
+    from app.routing.tidy import tidy_rejected
+    from app.schemas import RejectedOption
+
+    raw = [RejectedOption(summary=s, reason="Walking time 26 min exceeds max 15 min") for s in
+           ["Via WR_SLOW -> METRO3", "Via WR_SLOW -> WR_SLOW -> METRO3", "Via WR_SLOW -> METRO3 -> METRO3",
+            "Via Walk -> WR_SLOW -> METRO3", "Via WR_FAST -> METRO3"]]
+    assert [r.summary for r in tidy_rejected(raw)] == [
+        "Via WR_SLOW -> METRO3", "Via Walk -> WR_SLOW -> METRO3", "Via WR_FAST -> METRO3"]
+
+    seed = load_seed()
+    rejected = client.post("/plan", json={"traveller": seed.travellers["TR3"]}).json()["rejected"]
+    summaries = [r["summary"] for r in rejected]
+    assert len(summaries) == len(set(summaries)) <= 5

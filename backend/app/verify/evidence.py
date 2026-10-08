@@ -43,4 +43,5 @@ class WeightedEvidence:
             weight=round(self.weight, 3),
             at=fmt_hhmm(self.raw.at),
             contradicts=self.raw.contradicts,
+            covers=list(self.covers),
         )
