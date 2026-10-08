@@ -1,0 +1,43 @@
+{
+  "_note": "MOCK response of POST /plan for TR3 (Thane -> Wankhede) after E_DADAR_FOB is confirmed. Shape = SPEC.md §3 RouteCard. Numbers are illustrative only; the real ones come from routing/scorer.py.",
+  "cards": [
+    {
+      "plan_id": "p_fast", "label": "fastest", "recommended": false,
+      "legs": [
+        {"mode": "local", "line_id": "CR_FAST", "from_id": "thane", "to_id": "dadar_cr", "depart": "16:45", "arrive": "17:16", "duration_min": 31, "cost_inr": 15, "walk_m": 0, "step_free": false, "event_ids": [], "risk": 0.0},
+        {"mode": "walk", "line_id": null, "from_id": "dadar_cr", "to_id": "dadar_wr", "depart": "17:16", "arrive": "17:22", "duration_min": 6, "cost_inr": 0, "walk_m": 300, "step_free": false, "event_ids": ["ev_dadar_fob"], "risk": 0.89},
+        {"mode": "local", "line_id": "WR_FAST", "from_id": "dadar_wr", "to_id": "churchgate", "depart": "17:24", "arrive": "17:40", "duration_min": 16, "cost_inr": 0, "walk_m": 0, "step_free": false, "event_ids": [], "risk": 0.0},
+        {"mode": "walk", "line_id": null, "from_id": "churchgate", "to_id": "destination", "depart": "17:40", "arrive": "17:48", "duration_min": 8, "cost_inr": 0, "walk_m": 550, "step_free": true, "event_ids": [], "risk": 0.0}
+      ],
+      "duration_min": 63, "cost_inr": 15, "transfers": 1, "walk_min": 14,
+      "reliability": 0.11, "reliability_colour": "red", "score": 6.1,
+      "reason": "Fastest on paper, but the Dadar CR-WR foot-overbridge is closed (2 commuters + Central Railway notice, 89%).",
+      "facts": {"event": "ev_dadar_fob", "confidence": 0.89, "sources": {"crowd": 2, "official": 1}}
+    },
+    {
+      "plan_id": "p_opt", "label": "optimal", "recommended": true,
+      "legs": [
+        {"mode": "local", "line_id": "CR_FAST", "from_id": "thane", "to_id": "csmt", "depart": "16:45", "arrive": "17:30", "duration_min": 45, "cost_inr": 15, "walk_m": 0, "step_free": false, "event_ids": [], "risk": 0.0},
+        {"mode": "taxi", "line_id": null, "from_id": "csmt", "to_id": "destination", "depart": "17:35", "arrive": "17:47", "duration_min": 12, "cost_inr": 48, "walk_m": 0, "step_free": true, "event_ids": [], "risk": 0.0}
+      ],
+      "duration_min": 62, "cost_inr": 63, "transfers": 1, "walk_min": 0,
+      "reliability": 0.97, "reliability_colour": "green", "score": 9.1,
+      "reason": "Skips the closed Dadar bridge and still arrives at 17:47, well before your 18:30 deadline.",
+      "facts": {"arrive": "17:47", "arrive_by": "18:30", "avoids_event": "ev_dadar_fob"}
+    },
+    {
+      "plan_id": "p_cheap", "label": "cheapest", "recommended": false,
+      "legs": [
+        {"mode": "local", "line_id": "CR_SLOW", "from_id": "thane", "to_id": "csmt", "depart": "16:44", "arrive": "17:38", "duration_min": 54, "cost_inr": 15, "walk_m": 0, "step_free": false, "event_ids": [], "risk": 0.0},
+        {"mode": "walk", "line_id": null, "from_id": "csmt", "to_id": "destination", "depart": "17:38", "arrive": "17:58", "duration_min": 20, "cost_inr": 0, "walk_m": 1400, "step_free": true, "event_ids": ["ev_azad_water"], "risk": 0.2}
+      ],
+      "duration_min": 74, "cost_inr": 15, "transfers": 0, "walk_min": 20,
+      "reliability": 0.8, "reliability_colour": "yellow", "score": 7.4,
+      "reason": "Cheapest at 15 rupees, but the walk passes possible waterlogging near Azad Maidan (1 report + rain alert, 40%).",
+      "facts": {"cost_inr": 15, "event": "ev_azad_water", "confidence": 0.4}
+    }
+  ],
+  "rejected": [
+    {"summary": "Cab from Thane", "reason": "Over budget (est. 620 rupees > 150)"}
+  ]
+}

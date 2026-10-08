@@ -1,0 +1,88 @@
+{
+  "_meta": {
+    "demo_date": "see DEMO_DATE in .env (scenario assumes a weekday, NOT Monday/Wednesday so museums are open)",
+    "schema": "SPEC.md §3 Traveller"
+  },
+  "travellers": [
+    {
+      "traveller_id": "TR1",
+      "name": "Meera (wheelchair user)",
+      "story": "Arrives at the international airport for a conference at Jio World Centre. Needs step-free routes only.",
+      "origin": {"label": "Airport T2", "lat": 19.0990, "lon": 72.8740, "poi_id": "poi_airport_t2"},
+      "destination": {"label": "Jio World Centre, BKC", "lat": 19.0640, "lon": 72.8630, "poi_id": "poi_bkc_jio_world"},
+      "leave_at": "17:20", "arrive_by": "18:15", "hard_deadline": false,
+      "max_budget_inr": 400, "max_walk_min": 8, "max_transfers": 1,
+      "priority": "most_reliable",
+      "modes_allowed": ["metro", "walk", "cab", "taxi"],
+      "step_free": true, "heavy_luggage": true, "avoid_crowds": true,
+      "language": "en",
+      "demo_hook": "Lift-out reports at BKC Metro 3 (E_BKC_LIFT) -> routed around even though only 'possible'"
+    },
+    {
+      "traveller_id": "TR2",
+      "name": "Rohan (tight-budget student)",
+      "story": "Student going from Ghatkopar to a class in Bandra. Very tight budget, prefers metro/local.",
+      "origin": {"label": "Ghatkopar station", "lat": 19.0860, "lon": 72.9081},
+      "destination": {"label": "Bandra (W) Hill Road", "lat": 19.0550, "lon": 72.8320},
+      "leave_at": "16:45", "arrive_by": "17:45", "hard_deadline": false,
+      "max_budget_inr": 50, "max_walk_min": 15, "max_transfers": 2,
+      "priority": "cheapest",
+      "modes_allowed": ["local", "metro", "bus", "walk"],
+      "step_free": false, "heavy_luggage": false, "avoid_crowds": false,
+      "language": "hi",
+      "demo_hook": "Fake 'Metro 1 shut' burst at 16:40 must NOT reroute him; real Metro 1 issue confirmed at 17:12 DOES"
+    },
+    {
+      "traveller_id": "TR3",
+      "name": "Arjun (strict deadline)",
+      "story": "Going from Thane to Wankhede for a 7 PM match; must be inside by 18:30.",
+      "origin": {"label": "Thane station", "lat": 19.1865, "lon": 72.9758},
+      "destination": {"label": "Wankhede Stadium", "lat": 18.9389, "lon": 72.8258, "poi_id": "poi_wankhede"},
+      "leave_at": "16:40", "arrive_by": "18:30", "hard_deadline": true,
+      "max_budget_inr": 150, "max_walk_min": 15, "max_transfers": 2,
+      "priority": "fastest",
+      "modes_allowed": ["local", "metro", "bus", "walk", "taxi"],
+      "step_free": false, "heavy_luggage": false, "avoid_crowds": false,
+      "language": "en",
+      "demo_hook": "Dadar FOB closure (E_DADAR_FOB) confirmed 17:15 -> replan to fast local to CSMT + taxi"
+    },
+    {
+      "traveller_id": "TR4",
+      "name": "The Kulkarni family (tourists, multi-stop day)",
+      "story": "First visit to Mumbai, staying near CSMT. Want a South Mumbai afternoon ending at Marine Drive for sunset.",
+      "origin": {"label": "Hotel near CSMT", "lat": 18.9420, "lon": 72.8350},
+      "destination": null,
+      "leave_at": "13:30", "arrive_by": null, "hard_deadline": false,
+      "max_budget_inr": 600, "max_walk_min": 12, "max_transfers": 2,
+      "priority": "balanced",
+      "modes_allowed": ["local", "metro", "bus", "walk", "taxi"],
+      "step_free": false, "heavy_luggage": false, "avoid_crowds": true,
+      "language": "mr",
+      "itinerary": {
+        "day_start": "13:30", "day_end": "19:30",
+        "stops": [
+          {"poi_id": "poi_gateway", "must_visit": true},
+          {"poi_id": "poi_csmvs", "must_visit": true},
+          {"poi_id": "poi_kala_ghoda", "must_visit": false},
+          {"poi_id": "poi_crawford_market", "must_visit": false},
+          {"poi_id": "poi_marine_drive", "must_visit": true, "fixed_time": "18:30"}
+        ]
+      },
+      "demo_hook": "Possible waterlogging near Azad Maidan (E_AZAD_WATER, 40%) -> warning on walking legs, plan kept"
+    },
+    {
+      "traveller_id": "TR5",
+      "name": "Priya (refuses autos)",
+      "story": "Office in Andheri, meeting at Phoenix Palladium. Won't take autos; ok with local, metro, bus, cab.",
+      "origin": {"label": "Andheri (W) office", "lat": 19.1200, "lon": 72.8400},
+      "destination": {"label": "Phoenix Palladium", "lat": 18.9945, "lon": 72.8250, "poi_id": "poi_phoenix_palladium"},
+      "leave_at": "17:00", "arrive_by": "18:00", "hard_deadline": false,
+      "max_budget_inr": 300, "max_walk_min": 10, "max_transfers": 2,
+      "priority": "balanced",
+      "modes_allowed": ["local", "metro", "bus", "walk", "cab"],
+      "step_free": false, "heavy_luggage": false, "avoid_crowds": false,
+      "language": "en",
+      "demo_hook": "WR slow delay at Andheri (E_ANDHERI_DELAY) + exaggerated 'WR fully band' report that official notice contradicts"
+    }
+  ]
+}

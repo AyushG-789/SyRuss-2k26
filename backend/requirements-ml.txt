@@ -1,0 +1,4 @@
+# Heavier optional dependency for report merging (SPEC.md §4.3). Install when you start on
+# verify/merge.py:  pip install -r requirements-ml.txt   (downloads torch, ~1-2 GB)
+# Until then merge.py can fall back to rapidfuzz text similarity.
+sentence-transformers>=3.0

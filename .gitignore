@@ -1,0 +1,20 @@
+# secrets
+.env
+.env.local
+
+# python
+backend/.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+backend/.cache/
+backend/*.db
+
+# generated data (rebuild with scripts/)
+data/osm/
+data/gtfs/
+
+# os / editors
+.DS_Store
+.vscode/
+.idea/

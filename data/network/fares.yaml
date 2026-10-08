@@ -1,0 +1,72 @@
+# Fares for RouteSaathi. See SPEC.md §5.
+#
+# STATUS: EVERY NUMBER HERE IS APPROXIMATE (verify: true). P3: replace with current official
+# values and write the source + date checked in `source`. Transparency page shows this file.
+#
+# slab: fare = fares[i] for the first slab whose upper km bound >= trip km (last fare beyond).
+
+transit:
+  local_2nd_class:
+    applies_to_modes: [local]
+    type: slab
+    slabs_km: [10, 20, 30, 45, 60]
+    fares_inr: [5, 10, 15, 20, 25, 30]
+    verify: true
+    source: "Indian Railways suburban 2nd class single journey (UTS app fare table) — TODO check"
+  metro_line1:
+    applies_to_lines: [METRO1]
+    type: slab
+    slabs_km: [3, 8, 11]
+    fares_inr: [10, 20, 30, 40]
+    verify: true
+    source: "Mumbai Metro One fare chart — TODO check"
+  metro_line3:
+    applies_to_lines: [METRO3]
+    type: slab
+    slabs_km: [3, 12, 18, 24, 30, 36, 42]
+    fares_inr: [10, 20, 30, 40, 50, 60, 70, 80]
+    verify: true
+    source: "MMRCL Aqua Line fare chart — TODO check"
+  best_non_ac:
+    applies_to_modes: [bus]
+    type: slab
+    slabs_km: [5, 10, 15, 20]
+    fares_inr: [10, 15, 20, 30, 40]
+    verify: true
+    source: "BEST fare table (revised 2025) — TODO check"
+
+# A change between two different fare systems (e.g. local -> metro) means a new ticket.
+# Rides on the same fare system with a transfer in between are charged once on total km.
+ticketing: {same_system_through_ticket: true}
+
+last_mile:
+  walk: {speed_kmh: 4.5, step_free_speed_kmh: 3.0, detour_factor: 1.3}
+  auto:
+    min_fare_inr: 26
+    min_km: 1.5
+    per_km_inr: 17.0
+    speed_kmh: 18
+    wait_min: 5
+    detour_factor: 1.4
+    not_allowed_south_of_lat: 19.04   # autos don't ply south of Bandra/Sion
+    verify: true
+    source: "MMRTA auto meter tariff — TODO check"
+  taxi:   # kaali-peeli
+    min_fare_inr: 31
+    min_km: 1.5
+    per_km_inr: 21.0
+    speed_kmh: 18
+    wait_min: 5
+    detour_factor: 1.4
+    verify: true
+    source: "MMRTA taxi meter tariff — TODO check"
+  cab:    # app cab (Uber/Ola): no public tariff, MODELLED
+    base_inr: 50
+    per_km_inr: 14
+    per_min_inr: 1.5
+    surge: 1.0
+    speed_kmh: 18
+    wait_min: 6
+    detour_factor: 1.4
+    verify: true
+    source: "Modelled estimate, not an official tariff (disclosed as an assumption)"

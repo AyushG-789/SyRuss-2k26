@@ -1,0 +1,23 @@
+{
+  "_meta": {
+    "note": "SYNTHETIC official notices modelled on the style of CR / WR / metro / IMD posts. The X API is paid, so official alerts are mocked for the demo (disclosed on the transparency page). P3: add 5-10 REAL past notices (copied with date + source link) as extra examples.",
+    "source_type": "official | weather"
+  },
+  "alerts": [
+    {"alert_id": "O01", "source": "Central Railway (mock)", "source_type": "official", "published_at": "17:15",
+     "text": "Due to heavy crowding, the middle FOB connecting Central and Western Railway platforms at Dadar is temporarily closed. Passengers are requested to use the north FOB.",
+     "expected": {"event": "E_DADAR_FOB", "type": "closure", "affected": {"transfer_ids": ["T_dadar_cr__dadar_wr"], "stop_ids": ["dadar_cr", "dadar_wr"]}}},
+    {"alert_id": "O02", "source": "Western Railway (mock)", "source_type": "official", "published_at": "17:22",
+     "text": "WR suburban services are running. Slow line services near Andheri are running late due to a signal issue; fast line services are running normally.",
+     "expected": {"event": "E_WR_FALSE", "type": "running_normally", "affected": {"line_ids": ["WR_SLOW", "WR_FAST"]}, "note": "Contradicts line-wide closure claim R23; does NOT contradict E_ANDHERI_DELAY (it confirms it)"}},
+    {"alert_id": "O03", "source": "Central Railway (mock)", "source_type": "official", "published_at": "17:24",
+     "text": "Harbour line services are running normally between CSMT and Vashi/Panvel.",
+     "expected": {"event": "E_HARBOUR_FALSE", "type": "running_normally", "affected": {"line_ids": ["HARBOUR"]}}},
+    {"alert_id": "O04", "source": "IMD Mumbai (mock)", "source_type": "weather", "published_at": "15:30",
+     "text": "Orange alert: heavy rainfall likely in Mumbai city and suburbs this evening. Waterlogging possible in low-lying areas.",
+     "expected": {"event": null, "type": "weather_alert", "level": "orange", "note": "Activates the 0.2 weather prior for waterlogging events (SPEC §4.5)"}},
+    {"alert_id": "O05", "source": "Central Railway (mock)", "source_type": "official", "published_at": "2026-10-24",
+     "text": "Mega block on Sunday 25 October: Up and Down fast lines between Matunga and Mulund from 11:05 to 15:55.",
+     "expected": {"event": null, "type": "mega_block", "note": "Different date -> no effect on the demo day"}}
+  ]
+}

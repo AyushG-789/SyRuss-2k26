@@ -1,0 +1,28 @@
+{
+  "_meta": {
+    "note": "SYNTHETIC news items in the shape returned by feeds/news_rss.py. Used when NEWS_MODE=mock. P3: optionally replace/extend with real cached articles (keep url + outlet + published_at).",
+    "shape": "{news_id, outlet, title, summary, url, published_at (HH:MM on DEMO_DATE, or ISO date for other days), expected}"
+  },
+  "news": [
+    {"news_id": "N01", "outlet": "Mumbai Live (mock)", "published_at": "17:12",
+     "title": "Metro Line 1 services hit after technical snag near Saki Naka",
+     "summary": "Commuters on the Versova-Ghatkopar Metro Line 1 faced delays on Tuesday evening after a train halted near Saki Naka due to a technical issue. Services are running with delays.",
+     "url": null,
+     "expected": {"event": "E_M1_SAKINAKA", "type": "delay", "affected": {"line_ids": ["METRO1"], "stop_ids": ["saki_naka"]}}},
+    {"news_id": "N02", "outlet": "Mid-day (mock)", "published_at": "17:06",
+     "title": "Signal failure delays Western Railway slow locals at Andheri",
+     "summary": "Slow local services on the Western line were running 15-20 minutes late in the evening peak after a signal failure near Andheri. Fast services were unaffected.",
+     "url": null,
+     "expected": {"event": "E_ANDHERI_DELAY", "type": "delay", "affected": {"line_ids": ["WR_SLOW"], "stop_ids": ["andheri_wr"]}}},
+    {"news_id": "N03", "outlet": "Hindustan Times Mumbai (mock)", "published_at": "14:00",
+     "title": "Metro 3 Aqua Line records highest weekday ridership",
+     "summary": "The Aqua Line carried a record number of passengers on Monday, officials said.",
+     "url": null,
+     "expected": {"event": null, "type": "not_a_disruption"}},
+    {"news_id": "N04", "outlet": "Free Press Journal (mock)", "published_at": "2026-10-24",
+     "title": "Central Railway announces Sunday mega block between Matunga and Mulund",
+     "summary": "A mega block on the up and down fast lines between Matunga and Mulund will be operated on Sunday 25 October from 11:05 to 15:55.",
+     "url": null,
+     "expected": {"event": null, "type": "mega_block", "note": "Different day -> must not affect demo-day routing"}}
+  ]
+}

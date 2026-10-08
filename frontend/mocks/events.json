@@ -1,0 +1,30 @@
+{
+  "_note": "MOCK response of GET /events at clock 17:35. Shape = SPEC.md §3 Event. Numbers illustrative.",
+  "events": [
+    {"event_id": "ev_m1_fake", "type": "closure", "severity": "high", "affected": {"line_ids": ["METRO1"], "stop_ids": [], "transfer_ids": []},
+     "first_seen": "16:40", "last_seen": "16:44", "confidence": 0.05, "status": "coordinated", "expires_at": "20:44",
+     "evidence": [{"source_type": "crowd", "ref_id": "R04", "reporter_id": "n01", "weight": 0.05, "at": "16:40", "contradicts": false}],
+     "flags": ["coordinated_burst"], "expected_delay_min": 0},
+    {"event_id": "ev_m1_sakinaka", "type": "delay", "severity": "high", "affected": {"line_ids": ["METRO1"], "stop_ids": ["saki_naka"], "transfer_ids": []},
+     "first_seen": "17:05", "last_seen": "17:12", "confidence": 0.83, "status": "confirmed", "expires_at": "17:57",
+     "evidence": [
+       {"source_type": "crowd", "ref_id": "R15", "reporter_id": "u02", "weight": 0.25, "at": "17:05", "contradicts": false},
+       {"source_type": "crowd", "ref_id": "R16", "reporter_id": "u05", "weight": 0.25, "at": "17:07", "contradicts": false},
+       {"source_type": "crowd", "ref_id": "R17", "reporter_id": "u08", "weight": 0.25, "at": "17:08", "contradicts": false},
+       {"source_type": "news", "ref_id": "N01", "reporter_id": null, "weight": 0.6, "at": "17:12", "contradicts": false}],
+     "flags": [], "expected_delay_min": 25},
+    {"event_id": "ev_dadar_fob", "type": "closure", "severity": "high", "affected": {"line_ids": [], "stop_ids": ["dadar_cr", "dadar_wr"], "transfer_ids": ["T_dadar_cr__dadar_wr"]},
+     "first_seen": "17:10", "last_seen": "17:15", "confidence": 0.89, "status": "confirmed", "expires_at": "21:15",
+     "evidence": [
+       {"source_type": "crowd", "ref_id": "R18", "reporter_id": "u04", "weight": 0.25, "at": "17:10", "contradicts": false},
+       {"source_type": "crowd", "ref_id": "R19", "reporter_id": "u10", "weight": 0.25, "at": "17:13", "contradicts": false},
+       {"source_type": "official", "ref_id": "O01", "reporter_id": null, "weight": 0.8, "at": "17:15", "contradicts": false}],
+     "flags": [], "expected_delay_min": 0},
+    {"event_id": "ev_azad_water", "type": "waterlogging", "severity": "medium", "affected": {"line_ids": [], "stop_ids": ["csmt", "csmt_m3"], "transfer_ids": []},
+     "first_seen": "17:25", "last_seen": "17:25", "confidence": 0.4, "status": "possible", "expires_at": "19:25",
+     "evidence": [
+       {"source_type": "crowd", "ref_id": "R28", "reporter_id": "u12", "weight": 0.25, "at": "17:25", "contradicts": false},
+       {"source_type": "weather", "ref_id": "O04", "reporter_id": null, "weight": 0.2, "at": "15:30", "contradicts": false}],
+     "flags": [], "expected_delay_min": 10}
+  ]
+}

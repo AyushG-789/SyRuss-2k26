@@ -1,0 +1,169 @@
+# Transit lines for the RouteSaathi Mumbai prototype. See SPEC.md §2 and §5.
+#
+# STATUS: STARTER DATA. Station order is from public line maps; run_minutes and headways are
+# APPROXIMATE and marked verify: true. P1: check against WR/CR timetables and the metro
+# operators' sites, then set verify: false. Every stop id must exist in stations.yaml
+# (python scripts/validate_data.py checks this).
+#
+# run_minutes[i] = minutes from stations[i] to stations[i+1] (one direction; reverse is the same).
+# headway_min: minutes between trains per direction, by time band "HH:MM-HH:MM".
+
+lines:
+  - id: WR_SLOW
+    name: Western Line (Slow)
+    operator: Western Railway
+    mode: local
+    color: "#D32F2F"
+    verify: true
+    stations: [churchgate, marine_lines, charni_road, grant_road, mumbai_central, mahalaxmi,
+               lower_parel, prabhadevi, dadar_wr, matunga_road, mahim, bandra, khar_road,
+               santacruz, vile_parle, andheri_wr, jogeshwari, ram_mandir, goregaon, malad,
+               kandivali, borivali]
+    run_minutes: [3, 2, 2, 3, 2, 2, 2, 2, 2, 2, 3, 2, 3, 3, 3, 2, 2, 2, 3, 3, 3]
+    headway_min: {"04:00-07:00": 8, "07:00-11:00": 4, "11:00-17:00": 7, "17:00-21:00": 4, "21:00-24:00": 9}
+
+  - id: WR_FAST
+    name: Western Line (Fast)
+    operator: Western Railway
+    mode: local
+    color: "#B71C1C"
+    verify: true
+    stations: [churchgate, mumbai_central, dadar_wr, bandra, andheri_wr, borivali]
+    run_minutes: [8, 8, 6, 9, 15]
+    headway_min: {"04:00-07:00": 10, "07:00-11:00": 5, "11:00-17:00": 9, "17:00-21:00": 5, "21:00-24:00": 12}
+
+  - id: CR_SLOW
+    name: Central Line (Slow)
+    operator: Central Railway
+    mode: local
+    color: "#F9A825"
+    verify: true
+    stations: [csmt, masjid, sandhurst_road, byculla, chinchpokli, currey_road, parel, dadar_cr,
+               matunga, sion, kurla, vidyavihar, ghatkopar, vikhroli, kanjurmarg, bhandup, nahur,
+               mulund, thane]
+    run_minutes: [3, 2, 3, 2, 2, 2, 3, 3, 3, 4, 3, 3, 4, 3, 3, 3, 3, 5]
+    headway_min: {"04:00-07:00": 8, "07:00-11:00": 4, "11:00-17:00": 7, "17:00-21:00": 4, "21:00-24:00": 9}
+
+  - id: CR_FAST
+    name: Central Line (Fast)
+    operator: Central Railway
+    mode: local
+    color: "#F57F17"
+    verify: true   # fast stopping pattern varies by train; this is the common one
+    stations: [csmt, byculla, dadar_cr, kurla, ghatkopar, vikhroli, bhandup, mulund, thane]
+    run_minutes: [7, 6, 7, 5, 5, 4, 5, 6]
+    headway_min: {"04:00-07:00": 10, "07:00-11:00": 5, "11:00-17:00": 9, "17:00-21:00": 5, "21:00-24:00": 12}
+
+  - id: HARBOUR
+    name: Harbour Line (CSMT–Vashi)
+    operator: Central Railway
+    mode: local
+    color: "#6A1B9A"
+    verify: true
+    stations: [csmt, masjid, sandhurst_road, dockyard_road, reay_road, cotton_green, sewri,
+               vadala_road, gtb_nagar, chunabhatti, kurla_hb, tilak_nagar, chembur, govandi,
+               mankhurd, vashi]
+    run_minutes: [2, 2, 3, 2, 2, 2, 3, 3, 3, 3, 4, 3, 3, 3, 6]
+    headway_min: {"04:00-07:00": 10, "07:00-11:00": 6, "11:00-17:00": 10, "17:00-21:00": 6, "21:00-24:00": 12}
+
+  - id: METRO1
+    name: Metro Line 1 (Versova–Ghatkopar)
+    operator: Mumbai Metro One
+    mode: metro
+    color: "#1E88E5"
+    verify: true
+    stations: [versova, dn_nagar, azad_nagar, andheri_m1, weh_m1, chakala, airport_road,
+               marol_naka_m1, saki_naka, asalpha, jagruti_nagar, ghatkopar_m1]
+    run_minutes: [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2]
+    headway_min: {"05:30-08:00": 7, "08:00-11:00": 4, "11:00-17:00": 6, "17:00-21:00": 4, "21:00-24:00": 8}
+
+  - id: METRO3
+    name: Metro Line 3 (Aqua, Cuffe Parade–Aarey JVLR)
+    operator: MMRCL
+    mode: metro
+    color: "#00ACC1"
+    verify: true   # check that every station below is open on the demo date
+    stations: [cuffe_parade, vidhan_bhavan, churchgate_m3, hutatma_chowk, csmt_m3, kalbadevi,
+               girgaon, grant_road_m3, mumbai_central_m3, mahalaxmi_m3, science_centre,
+               acharya_atre_chowk, worli_m3, siddhivinayak, dadar_m3, shitaladevi, dharavi_m3,
+               bkc_m3, bandra_colony, santacruz_m3, csmia_t1, sahar_road, csmia_t2, marol_naka_m3,
+               midc_andheri, seepz, aarey_jvlr]
+    run_minutes: [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2]
+    headway_min: {"06:30-09:00": 8, "09:00-11:00": 6, "11:00-17:00": 8, "17:00-21:00": 6, "21:00-22:30": 10}
+
+  # ---- BEST buses -------------------------------------------------------------------------
+  # PLACEHOLDERS: these follow real corridors but the route numbers are NOT real yet.
+  # P1: replace each with a real BEST route (number + stop list from bestundertaking.com / Chalo app),
+  # keep the id format BEST_<number>, and update stations.yaml bus stops.
+  - id: BEST_TODO_A
+    name: "BEST (TODO number) Colaba – CSMT – Crawford Market"
+    operator: BEST
+    mode: bus
+    color: "#C62828"
+    verify: true
+    stations: [colaba_depot_bus, regal_circle_bus, kala_ghoda_bus, csmt_bus, crawford_market_bus]
+    run_minutes: [6, 3, 5, 4]
+    headway_min: {"06:00-23:00": 12}
+
+  - id: BEST_TODO_B
+    name: "BEST (TODO number) Churchgate – Marine Drive – Haji Ali"
+    operator: BEST
+    mode: bus
+    color: "#C62828"
+    verify: true
+    stations: [churchgate_bus, marine_drive_bus, girgaum_chowpatty_bus, kemps_corner_bus, haji_ali_bus]
+    run_minutes: [5, 5, 6, 7]
+    headway_min: {"06:00-23:00": 15}
+
+  - id: BEST_TODO_C
+    name: "BEST (TODO number) Bandra Stn (W) – Mount Mary – Bandstand"
+    operator: BEST
+    mode: bus
+    color: "#C62828"
+    verify: true
+    stations: [bandra_bus, hill_road_bus, mount_mary_bus, bandstand_bus]
+    run_minutes: [5, 5, 3]
+    headway_min: {"06:00-23:00": 12}
+
+  - id: BEST_TODO_D
+    name: "BEST (TODO number) Andheri Stn (W) – Juhu Beach"
+    operator: BEST
+    mode: bus
+    color: "#C62828"
+    verify: true
+    stations: [andheri_bus, juhu_circle_bus, juhu_beach_bus]
+    run_minutes: [8, 6]
+    headway_min: {"06:00-23:00": 10}
+
+  - id: BEST_TODO_E
+    name: "BEST (TODO number) Kanjurmarg Stn – IIT Bombay – Powai"
+    operator: BEST
+    mode: bus
+    color: "#C62828"
+    verify: true
+    stations: [kanjurmarg_bus, iit_main_gate_bus, powai_hiranandani_bus]
+    run_minutes: [7, 6]
+    headway_min: {"06:00-23:00": 12}
+
+# Walking links between separate stops of one station complex, or between a rail stop and its
+# bus stop. walk_min is platform-to-platform. step_free: can a wheelchair user make this change?
+# These ids are what events reference in affected.transfer_ids (e.g. a closed foot-overbridge).
+transfers:
+  - {id: T_dadar_cr__dadar_wr, a: dadar_cr, b: dadar_wr, walk_min: 6, step_free: false, via: "Dadar foot-overbridge (FOB)"}
+  - {id: T_dadar_wr__dadar_m3, a: dadar_wr, b: dadar_m3, walk_min: 7, step_free: false}
+  - {id: T_dadar_cr__dadar_m3, a: dadar_cr, b: dadar_m3, walk_min: 8, step_free: false}
+  - {id: T_andheri_wr__andheri_m1, a: andheri_wr, b: andheri_m1, walk_min: 7, step_free: false}
+  - {id: T_ghatkopar__ghatkopar_m1, a: ghatkopar, b: ghatkopar_m1, walk_min: 6, step_free: false}
+  - {id: T_kurla__kurla_hb, a: kurla, b: kurla_hb, walk_min: 5, step_free: false}
+  - {id: T_csmt__csmt_m3, a: csmt, b: csmt_m3, walk_min: 6, step_free: true}
+  - {id: T_churchgate__churchgate_m3, a: churchgate, b: churchgate_m3, walk_min: 5, step_free: true}
+  - {id: T_mumbai_central__mumbai_central_m3, a: mumbai_central, b: mumbai_central_m3, walk_min: 6, step_free: false}
+  - {id: T_grant_road__grant_road_m3, a: grant_road, b: grant_road_m3, walk_min: 5, step_free: false}
+  - {id: T_mahalaxmi__mahalaxmi_m3, a: mahalaxmi, b: mahalaxmi_m3, walk_min: 6, step_free: false}
+  - {id: T_marol_naka_m1__marol_naka_m3, a: marol_naka_m1, b: marol_naka_m3, walk_min: 5, step_free: true}
+  - {id: T_santacruz__santacruz_m3, a: santacruz, b: santacruz_m3, walk_min: 10, step_free: false}
+  - {id: T_csmt__csmt_bus, a: csmt, b: csmt_bus, walk_min: 4, step_free: true}
+  - {id: T_churchgate__churchgate_bus, a: churchgate, b: churchgate_bus, walk_min: 3, step_free: true}
+  - {id: T_bandra__bandra_bus, a: bandra, b: bandra_bus, walk_min: 4, step_free: false}
+  - {id: T_andheri_wr__andheri_bus, a: andheri_wr, b: andheri_bus, walk_min: 5, step_free: false}
+  - {id: T_kanjurmarg__kanjurmarg_bus, a: kanjurmarg, b: kanjurmarg_bus, walk_min: 4, step_free: false}
