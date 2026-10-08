@@ -412,16 +412,21 @@ Frontend reads `NEXT_PUBLIC_API_URL`.
 
 ## 11. Frontend pages (`frontend/app/`)
 
+Design system: `frontend/app/globals.css` (from the team's "Marg Transit" DESIGN.md — Plus Jakarta
+Sans, emerald primary, amber alerts, white hairline cards, Material Symbols icons). App shell =
+left sidebar + top bar (latest confirmed Pakka Check alert, live/sample feed status).
+
 | Route | Content |
 |---|---|
-| `/` | Chat/voice box (EN/HI/MR) → auto-filled request form · 5 one-click traveller profiles |
-| `/plan` | 3 route cards (Fastest / Optimal / Cheapest, Recommended badge, score/10, legs, time, ₹, transfers, walk, reliability colour + %, reason) + Leaflet map |
-| `/radar` | Live disruption map: pins coloured by status, click → evidence list + confidence breakdown |
-| `/journey/[id]` | Saved trip timeline; replan dialog (affected legs red, new legs, Δmin/Δ₹, Accept / Keep) |
-| `/itinerary` | Day plan timeline, slack warnings, aware vs baseline toggle |
-| `/eval` | Metrics table + bar chart (baseline vs ours) |
-| `/transparency` | Sources, weights, thresholds, lifetimes, assumptions, full event log incl. ignored |
-| `/admin` | Demo clock + slider (play/pause/speed/+5/reset), scripted ↔ manual mode, inject preset buttons, live disruptions with confidence bars, story timeline (polls the backend every 1 s) |
+| `/` | Home hub: quick From/To search, 5 example trips (demo travellers), transport-mode status and per-line status table from live events, disruption map |
+| `/plan` | Journey planner: full trip form (places, leave/arrive, modes, priority, budget/walk/changes, step-free, language), network map of all lines, live advisories. `?from=&to=` prefill |
+| `/routes/[TR1..TR5]`, `/routes?t=<json>` | Route results: Optimal / Fastest / Cheapest cards (time, fare, changes, walk, reliability, reason, steps), map with selected route, trade-off matrix, rejected options. Custom trips show a "routing not connected" panel until `POST /plan` exists |
+| `/track` | Live trip tracking of the route chosen with "Start trip" (sessionStorage until B9 `/journeys`): milestones driven by the demo clock, remaining time / arrival vs deadline / fare, "disruption ahead" banner for confirmed events on upcoming legs, "Report issue" → `POST /reports` |
+| `/admin` | Demo control (presenter): demo clock + slider, scripted ↔ manual, inject presets, live disruptions, story timeline |
+| `/radar`, `/itinerary`, `/eval`, `/transparency` | Not built yet |
+
+Only real data is shown — panels in the design with no data source (card balance, vehicle speed,
+carbon, CCTV crowding, station gates) were intentionally left out.
 
 Until the backend exists, the frontend uses `frontend/mocks/*.json` with exactly the shapes above.
 

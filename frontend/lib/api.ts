@@ -143,3 +143,22 @@ export const updateClock = (body: { set?: string; advance_min?: number; speed?: 
   post<ClockState>("/admin/clock", body);
 export const resetDemo = (mode: ClockState["mode"]) => post<ClockState>("/admin/reset", { mode });
 export const injectPreset = (preset: string) => post<ClockState>("/admin/inject", { preset });
+
+// ---- Crowd reports (Person B, SPEC.md §10 POST /reports) ------------------------------------
+export interface ReportIn {
+  reporter_id: string;
+  text: string;
+  type: DisruptionEvent["type"];
+  severity: DisruptionEvent["severity"];
+  affected: { stop_ids: string[]; line_ids: string[]; transfer_ids: string[] };
+}
+
+export interface ReportOut {
+  event_id: string;
+  created_event: boolean;
+  status: DisruptionEvent["status"];
+  confidence: number;
+  reported_at: string;
+}
+
+export const submitReport = (body: ReportIn) => post<ReportOut>("/reports", body);

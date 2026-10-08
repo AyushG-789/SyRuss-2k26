@@ -186,7 +186,7 @@ export default function AdminConsole() {
         <section className="flex flex-col gap-2" aria-labelledby="live">
           <div className="flex items-baseline justify-between">
             <h2 id="live" className="font-semibold">Live disruptions ({events.length})</h2>
-            <Link href="/plan/TR3" className="text-sm text-muted hover:text-text">See them on a trip map →</Link>
+            <Link href="/routes/TR3" className="text-sm text-muted hover:text-text">See them on a trip map →</Link>
           </div>
           {sorted.length === 0 && (
             <p className="rounded-2xl border border-dashed border-line p-4 text-sm text-muted">Nothing reported yet at {timeline.now}.</p>
