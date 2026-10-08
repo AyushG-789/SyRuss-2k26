@@ -25,9 +25,9 @@ export const hero = {
   // Real places from the trip form's list, so "Find Routes" can go straight to results.
   defaultFrom: "Andheri station",
   defaultTo: "Jio World Centre, BKC",
-  /** "now" = the demo clock's scenario time (same as the Journey Planner). */
+  /** "now" = the demo clock's current time (the backend fills it in). */
   departOptions: [
-    { label: "Leave Now", mode: "leave", time: "17:00" },
+    { label: "Leave Now", mode: "leave", time: "now" },
     { label: "Depart at 05:30 PM", mode: "leave", time: "17:30" },
     { label: "Depart at 06:00 PM", mode: "leave", time: "18:00" },
     { label: "Arrive by 06:30 PM", mode: "arrive", time: "18:30" },

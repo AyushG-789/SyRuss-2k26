@@ -11,7 +11,7 @@ import {
   activePath, advisories, congestion, defaults, engine, legend, mapLayers, quickChips, recommended, savedPlaces, spotlights,
 } from "@/lib/mockPlanner";
 import { findPlace, PLACE_OPTIONS } from "@/lib/places";
-import { EMPTY_FORM, type FormState, travellerFromForm, validateForm } from "@/lib/tripForm";
+import { EMPTY_FORM, type FormState, NOW, travellerFromForm, validateForm } from "@/lib/tripForm";
 import { tripHref } from "@/lib/tripUrl";
 import type { Mode } from "@/lib/types";
 import Icon from "./Icon";
@@ -80,9 +80,9 @@ export default function JourneyPlanner() {
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    const errs = validateForm(form);
+    const errs = validateForm(departure === "now" ? { ...form, time: NOW } : form);
     setErrors(errs);
-    if (errs.length === 0) router.push(tripHref(travellerFromForm(form)));
+    if (errs.length === 0) router.push(tripHref(travellerFromForm(departure === "now" ? { ...form, timeMode: "leave", time: NOW } : form)));
   }
 
   return (
@@ -205,7 +205,7 @@ export default function JourneyPlanner() {
                     <input type="time" value={form.time} onChange={(e) => set("time", e.target.value)} aria-label="Time"
                       className="bg-transparent text-[15px] tabular-nums focus:outline-none" />
                   ) : (
-                    <span className="truncate text-[15px]">{departure === "now" ? defaults.departureNote : `Today, ${form.time}`}</span>
+                    <span className="truncate text-[15px]">{departure === "now" ? "Now (current demo time)" : `Today, ${form.time}`}</span>
                   )}
                 </label>
                 <button type="button" onClick={() => setEditTime((v) => !v)} className="rounded-xl bg-container-low px-4 text-[15px] hover:bg-container">

@@ -7,7 +7,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useId, useState } from "react";
 import { findPlace, PLACE_OPTIONS } from "@/lib/places";
-import { EMPTY_FORM, travellerFromForm } from "@/lib/tripForm";
+import { EMPTY_FORM, NOW, travellerFromForm } from "@/lib/tripForm";
 import { tripHref } from "@/lib/tripUrl";
 import { frequentTrips, hero, liveMap, modes, pulse, recentJourneys, TONE } from "@/lib/mockHome";
 import Icon from "./Icon";
@@ -142,7 +142,7 @@ function quickTripHref(from: string, to: string): string {
   const b = findPlace(to);
   if (!a || !b || a.label === b.label) return `/plan?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
   return tripHref(travellerFromForm({
-    ...EMPTY_FORM, from: a.label, to: b.label, priority: "fastest",
+    ...EMPTY_FORM, from: a.label, to: b.label, time: NOW, priority: "fastest",
     modes: ["local", "metro", "bus", "auto", "taxi", "cab"],
   }));
 }

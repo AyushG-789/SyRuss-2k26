@@ -8,7 +8,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  decideReplan, getClock, getJourney, getPlan, lines, stations, submitReport, travellers,
+  decideReplan, getClock, getJourney, getPlan, lines, stations, submitReport, travellers, updateClock,
   type ClockState, type Journey, type LegHit, type ReportOut,
 } from "@/lib/api";
 import { lineShortName, pct, placeName, STATUS_STYLE } from "@/lib/format";
@@ -34,7 +34,7 @@ const hhmm = (min: number) => `${String(Math.floor(min / 60) % 24).padStart(2, "
 /* ---------------------------------------------------------------- data hooks */
 
 /** The demo clock from the backend (moves when the presenter plays it on Demo control). */
-function useDemoClock(): ClockState | null {
+function useDemoClock(): [ClockState | null, (c: ClockState) => void] {
   const [clock, setClock] = useState<ClockState | null>(null);
   useEffect(() => {
     let alive = true;
@@ -43,7 +43,7 @@ function useDemoClock(): ClockState | null {
     const id = setInterval(tick, 2000);
     return () => { alive = false; clearInterval(id); };
   }, []);
-  return clock;
+  return [clock, setClock];
 }
 
 /** The saved journey from the backend: status, problems on each leg, replan proposal. */
@@ -79,7 +79,7 @@ export default function TrackView() {
 
 function LiveTrip({ trip, onTrip }: { trip: SavedTrip; onTrip: (t: SavedTrip | null) => void }) {
   const [modal, setModal] = useState<Modal>(null);
-  const clock = useDemoClock();
+  const [clock, setClock] = useDemoClock();
   const [journey, setJourney, lost] = useJourney(trip.journeyId);
   const live = useLiveEvents();
 
@@ -145,8 +145,11 @@ function LiveTrip({ trip, onTrip }: { trip: SavedTrip; onTrip: (t: SavedTrip | n
               <PhasePill phase={phase} />
               <Link href="/admin" title="The demo runs on a simulated clock — move it on Demo control"
                 className="flex items-center gap-1 rounded-full bg-container px-2 py-0.5 font-mono text-[11px] font-bold text-on-surface-variant hover:bg-container-high">
-                <Icon name="schedule" className="text-[14px]" /> {clock ? `Demo time ${clock.now}${clock.speed ? ` · ${clock.speed}×` : ""}` : "Demo clock offline"}
+                <Icon name="schedule" className="text-[14px]" /> {clock ? `Demo time ${clock.now}${clock.speed ? ` · ${clock.speed}×` : " · paused"}` : "Demo clock offline"}
               </Link>
+              {clock && phase !== "arrived" && (
+                <ClockButtons speed={clock.speed} onChange={setClock} />
+              )}
             </div>
             <p className="truncate text-[13px] text-on-surface-variant">
               {traveller.origin.label} → {destLabel} · {card.label} route · {routeText(legs)}
@@ -399,6 +402,26 @@ function reportTargetFor(legs: Leg[], from: number, nowMin: number): { stop_id: 
     }
   }
   return null;
+}
+
+/** The demo clock is paused after a reset; let the presenter play it from here (same as Demo control). */
+function ClockButtons({ speed, onChange }: { speed: number; onChange: (c: ClockState) => void }) {
+  const set = (body: { speed?: number; advance_min?: number }) => updateClock(body).then(onChange).catch(() => undefined);
+  const btn = "flex items-center gap-0.5 rounded-full bg-primary px-2 py-0.5 text-[11px] font-bold text-on-primary hover:bg-primary-container";
+  return speed === 0 ? (
+    <>
+      <button type="button" onClick={() => set({ speed: 10 })} className={btn} title="Play the demo clock at 10× (1 demo minute every 6 seconds)">
+        <Icon name="play_arrow" className="text-[14px]" /> Play 10×
+      </button>
+      <button type="button" onClick={() => set({ advance_min: 5 })} className={btn.replace("bg-primary ", "bg-container ").replace("text-on-primary", "text-on-surface")} title="Jump 5 demo minutes ahead">
+        +5 min
+      </button>
+    </>
+  ) : (
+    <button type="button" onClick={() => set({ speed: 0 })} className={btn.replace("bg-primary ", "bg-container ").replace("text-on-primary", "text-on-surface")}>
+      <Icon name="pause" className="text-[14px]" /> Pause
+    </button>
+  );
 }
 
 function PhasePill({ phase }: { phase: "upcoming" | "moving" | "arrived" }) {

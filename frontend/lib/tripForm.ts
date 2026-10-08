@@ -9,6 +9,7 @@ export interface FormState {
   from: string;
   to: string;
   timeMode: TimeMode;
+  /** "HH:MM", or NOW = leave at the demo clock's current time (decided by the backend). */
   time: string;
   hardDeadline: boolean;
   budget: string;
@@ -38,6 +39,8 @@ export const PRIORITIES: { value: Traveller["priority"]; label: string; hint: st
   { value: "fewest_transfers", label: "Fewest changes", hint: "Fewer vehicle switches", icon: "sync_alt" },
   { value: "most_reliable", label: "Most reliable", hint: "Avoid anything reported", icon: "verified" },
 ];
+
+export const NOW = "now";
 
 export const EMPTY_FORM: FormState = {
   from: "",
@@ -94,7 +97,7 @@ export function validateForm(f: FormState): string[] {
   if (!from) errors.push("Pick a starting point from the list.");
   if (!to) errors.push("Pick a destination from the list.");
   if (from && to && from.label === to.label) errors.push("Start and destination must be different.");
-  if (!/^\d{2}:\d{2}$/.test(f.time)) errors.push("Enter a time.");
+  if (f.time !== NOW && !/^\d{2}:\d{2}$/.test(f.time)) errors.push("Enter a time.");
   if (f.modes.length === 0) errors.push("Choose at least one way to travel besides walking.");
   for (const [value, name] of [[f.budget, "Budget"], [f.maxWalk, "Walking limit"], [f.maxTransfers, "Changes"]] as const) {
     if (value !== "" && !(Number(value) >= 0)) errors.push(`${name} must be a positive number.`);
@@ -111,8 +114,9 @@ export function travellerFromForm(f: FormState): Traveller {
     name: "Your trip",
     origin: { label: from.label, lat: from.lat, lon: from.lon, poi_id: from.poi_id },
     destination: { label: to.label, lat: to.lat, lon: to.lon, poi_id: to.poi_id },
-    leave_at: f.timeMode === "leave" ? f.time : null,
-    arrive_by: f.timeMode === "arrive" ? f.time : null,
+    // leave_at null = "leave now": the backend plans from the demo clock's current time.
+    leave_at: f.timeMode === "leave" && f.time !== NOW ? f.time : null,
+    arrive_by: f.timeMode === "arrive" && f.time !== NOW ? f.time : null,
     hard_deadline: f.timeMode === "arrive" && f.hardDeadline,
     max_budget_inr: num(f.budget),
     max_walk_min: num(f.maxWalk),

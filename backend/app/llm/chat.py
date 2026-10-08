@@ -15,7 +15,7 @@ import time
 from ..clock import clock, fmt_hhmm
 from ..config import settings
 from ..places import resolve_place
-from . import gemini
+from . import gemini, indic
 from .check_numbers import allowed_numbers, unsupported
 from .tools import DECLARATIONS, TOOLS, get_live_problems, plan_trip
 
@@ -62,40 +62,42 @@ def _text(content: dict) -> str:
 
 
 # ---- Plain answers built straight from tool results (fallback + number-check failure) ---------
-def _trip_text(r: dict) -> str:
+def _trip_text(r: dict, lang: str = "en") -> str:
     if not r.get("ok"):
         return r.get("error", "I couldn't plan that trip.")
     if not r["options"]:
-        return f"I couldn't find a route from {r['from']} to {r['to']} within your limits."
+        return indic.say("no_route", lang, frm=r["from"], to=r["to"])
     best = next((o for o in r["options"] if o["recommended"]), r["options"][0])
-    line = (f"{r['from']} → {r['to']}: {best['route']}, leave {best['depart']}, arrive {best['arrive']} "
-            f"({best['duration_min']} min, ₹{best['cost_inr']}).")
+    line = indic.say("trip", lang, frm=r["from"], to=r["to"], route=best["route"], depart=best["depart"],
+                     arrive=best["arrive"], mins=best["duration_min"], cost=best["cost_inr"])
     if best["live_problems"]:
         p = best["live_problems"][0]
-        line += f" Note: {p['title']} is {p['meaning']} ({p['trust_pct']}%)."
+        line += indic.say("trip_note", lang, title=p["title"], meaning=indic.meaning(p["status"], p["meaning"], lang),
+                          pct=p["trust_pct"])
     return line
 
 
-def _problems_text(r: dict) -> str:
+def _problems_text(r: dict, lang: str = "en") -> str:
     if not r.get("ok"):
         return r.get("error", "I couldn't check that.")
     trusted = [p for p in r["problems"] if p["status"] in ("confirmed", "possible")]
     untrusted = [p for p in r["problems"] if p["status"] not in ("confirmed", "possible")]
     if not trusted and not untrusted:
-        return f"No problems reported there as of {r['now']}."
-    bits = [f"{p['title']}: {p['meaning']}, {p['trust_pct']}% ({p['sources']})." for p in trusted[:3]]
+        return indic.say("no_problems", lang, now=r["now"])
+    bits = [indic.say("problem", lang, title=p["title"], meaning=indic.meaning(p["status"], p["meaning"], lang),
+                      pct=p["trust_pct"], sources=p["sources"]) for p in trusted[:3]]
     if untrusted:
         p = untrusted[0]
-        bits.append(f"Ignored: {p['title']} ({p['meaning']}).")
+        bits.append(indic.say("ignored", lang, title=p["title"], meaning=indic.meaning(p["status"], p["meaning"], lang)))
     return " ".join(bits)
 
 
-def _template(calls: list[tuple[str, dict]]) -> str:
+def _template(calls: list[tuple[str, dict]], lang: str = "en") -> str:
     for name, r in reversed(calls):
         if name == "plan_trip":
-            return _trip_text(r)
+            return _trip_text(r, lang)
         if name == "get_live_problems":
-            return _problems_text(r)
+            return _problems_text(r, lang)
         if name == "get_my_journey":
             if not r.get("ok"):
                 return r["error"]
@@ -103,9 +105,7 @@ def _template(calls: list[tuple[str, dict]]) -> str:
             return p["message"] if p else (r.get("notice") or f"Your trip ({r['route']}) is {r['status']}, arriving {r['arrive']}.")
         if name == "explain_problem" and r.get("ok"):
             return f"{r['title']}: {r['meaning']}, {r['trust_pct']}%. {r['summary']}"
-    return "Sorry, I couldn't answer that. Try “Thane to Wankhede by 18:30” or “Is Metro 1 running?”."
-
-
+    return indic.say("offline", lang)
 
 
 _BUDGET = re.compile(r"(?:under|below|max|within|budget(?: of)?)\s*(?:₹|rs\.?|inr)?\s*(\d{2,4})", re.I)
@@ -119,27 +119,42 @@ LINE_WORDS = ("metro 1", "metro 3", "western", "central", "harbour", "aqua")
 STATION_WORDS = ("dadar", "andheri", "saki naka", "bandra", "kurla", "ghatkopar", "thane", "csmt", "churchgate")
 
 
+def _trip_prefs(text: str, args: dict) -> dict:
+    """Budget and priority words: 'under ₹150', 'cheapest' / 'सबसे सस्ता' / 'स्वस्त', 'fastest' / 'जल्दी' / 'लवकर'."""
+    lowered = text.lower()
+    if (bm := _BUDGET.search(text)):
+        args["max_budget_inr"] = int(bm.group(1))
+    if "cheap" in lowered or "सस्त" in text or "स्वस्त" in text:
+        args["priority"] = "cheapest"
+    elif "fast" in lowered or "quick" in lowered or "जल्दी" in text or "लवकर" in text:
+        args["priority"] = "fastest"
+    return args
+
+
 def detect(message: str) -> tuple[str, dict] | None:
     """Recognise the two most common questions without AI, so they need only one Gemini call:
     'A to B (by HH:MM, under ₹N, cheapest)' and 'is <line> running / problem at <station>?'."""
     text = re.sub(r"\s+", " ", message.replace(",", " ")).strip()
     lowered = text.lower()
-    m = re.match(r"^(?:from\s+)?(?P<a>.+?)\s+(?:to|se)\s+(?P<b>.+)$", text, re.I)
+    lang = indic.language(message)
+    # Hindi / Marathi / Hinglish trips first: "मला अंधेरीहून BKC ला जायचे आहे", "Thane se Wankhede jana hai".
+    if lang != "en" and (trip := indic.find_trip(message, resolve_place)):
+        args = {"origin": trip[0], "destination": trip[1], "language": lang}
+        if (tm := re.search(r"(\d{1,2}[:.]\d{2})", text.translate(str.maketrans("०१२३४५६७८९", "0123456789")))):
+            args["arrive_by"] = tm.group(1).replace(".", ":").zfill(5)
+        return "plan_trip", _trip_prefs(text, args)
+    m = None if re.search(r"[\u0900-\u097F]", message) else re.match(r"^(?:from\s+)?(?P<a>.+?)\s+(?:to|se)\s+(?P<b>.+)$", text, re.I)
     if m:
         a, b = m.group("a").strip(), _TRIP_WORDS.sub("", m.group("b")).strip(" ?.!")
         if resolve_place(a) and resolve_place(b):
             args: dict = {"origin": a, "destination": b}
             if (tm := _TIME.search(text)):
                 args["arrive_by"] = tm.group(1).replace(".", ":").zfill(5)
-            if (bm := _BUDGET.search(text)):
-                args["max_budget_inr"] = int(bm.group(1))
-            if "cheap" in lowered:
-                args["priority"] = "cheapest"
-            elif "fast" in lowered or "quick" in lowered:
-                args["priority"] = "fastest"
-            return "plan_trip", args
+            return "plan_trip", _trip_prefs(text, args)
+    latin = indic.to_latin(message)
+    lowered = latin.lower()
     short = len(text.split()) <= 3
-    if not (short or _STATUS.search(text)):
+    if not (short or _STATUS.search(latin) or indic.STATUS_WORDS.search(message)):
         return None
     for word in LINE_WORDS:
         if word in lowered:
@@ -151,14 +166,14 @@ def detect(message: str) -> tuple[str, dict] | None:
 
 
 def _fallback(message: str) -> tuple[str, list[tuple[str, dict]]]:
-    """No Gemini: answer the recognised questions straight from live data."""
+    """No Gemini: answer the recognised questions straight from live data, in the asker's language."""
+    lang = indic.language(message)
     hit = detect(message)
     if hit:
         name, args = hit
         r = TOOLS[name](**args)
-        return _template([(name, r)]), [(name, r)]
-    return ("The AI assistant is offline right now. I can still plan “Thane to Wankhede by 18:30” "
-            "or check “Is Metro 1 running?”."), []
+        return _template([(name, r)], lang), [(name, r)]
+    return indic.say("offline", lang), []
 
 
 # ---- Main entry ---------------------------------------------------------------------------------
@@ -191,12 +206,12 @@ def chat(messages: list[dict], journey_id: str | None = None) -> dict:
             calls += more
             allowed |= allowed_numbers(*[_public(r) for _, r in more])
             if reply2 is None or unsupported(reply2, allowed):
-                reply, source, note = _template(calls), "template", f"number check failed: {bad}"
+                reply, source, note = _template(calls, indic.language(last)), "template", f"number check failed: {bad}"
             else:
                 reply = reply2
     except _SlowAfterTools as slow:
         calls = slow.calls
-        reply, source, note = _template(calls), "template", "Gemini too slow; answered from live data"
+        reply, source, note = _template(calls, indic.language(last)), "template", "Gemini too slow; answered from live data"
     except gemini.GeminiError as exc:
         reply, calls = _fallback(last)
         source, note = "fallback", str(exc)

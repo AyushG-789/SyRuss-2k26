@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { getPlan, planRequest, RoutingNotConnected, USE_MOCKS } from "@/lib/api";
+import { getClock, getPlan, planRequest, RoutingNotConnected, USE_MOCKS } from "@/lib/api";
+import { toMin } from "@/lib/geo";
 import { legColor, lineShortName, MODE_LABEL, PLAN_LABEL, pct, placeName, readableRoute } from "@/lib/format";
 import { startTrip } from "@/lib/savedTrip";
 import type { PlanLabel, PlanResponse, RouteCard, Traveller } from "@/lib/types";
@@ -62,12 +63,13 @@ export default function RouteResults({ traveller }: { traveller: Traveller | nul
 
   async function startTracking(card: RouteCard) {
     const qs = search.toString();
-    await startTrip({ traveller: traveller!, destination, card, resultsHref: qs ? `${pathname}?${qs}` : pathname, savedAt: new Date().toISOString() });
+    const fresh = await freshCard(traveller!, card);
+    await startTrip({ traveller: traveller!, destination, card: fresh, resultsHref: qs ? `${pathname}?${qs}` : pathname, savedAt: new Date().toISOString() });
     router.push("/track");
   }
 
   const chips = [
-    traveller.leave_at && { icon: "schedule", text: `Leave ${traveller.leave_at}` },
+    { icon: "schedule", text: traveller.leave_at ? `Leave ${traveller.leave_at}` : traveller.arrive_by ? "Leave now" : `Leave now${plan?.as_of ? ` (${plan.as_of})` : ""}` },
     traveller.arrive_by && { icon: "flag", text: `${traveller.hard_deadline ? "Must arrive" : "Arrive"} by ${traveller.arrive_by}` },
     traveller.max_budget_inr && { icon: "payments", text: `≤ ₹${traveller.max_budget_inr}` },
     traveller.max_walk_min && { icon: "directions_walk", text: `≤ ${traveller.max_walk_min} min walk` },
@@ -347,4 +349,20 @@ function NotConnected({ traveller, destination }: { traveller: Traveller; destin
       </div>
     </div>
   );
+}
+
+/**
+ * If this route's departure has already passed on the demo clock (results opened earlier, or the
+ * clock was played), re-plan from "now" and take the option with the same label — so the trip you
+ * start is one you can still catch. Falls back to the card as shown.
+ */
+async function freshCard(traveller: Traveller, card: RouteCard): Promise<RouteCard> {
+  try {
+    const clock = await getClock();
+    if (toMin(card.legs[0].depart) >= toMin(clock.now) - 1) return card;
+    const plan = await getPlan({ ...traveller, traveller_id: "CUSTOM", leave_at: null, arrive_by: traveller.arrive_by });
+    return plan.cards.find((c) => c.label === card.label) ?? plan.cards[0] ?? card;
+  } catch {
+    return card;
+  }
 }

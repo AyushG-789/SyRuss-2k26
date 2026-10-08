@@ -173,3 +173,27 @@ def test_resting_gemini_answers_instantly(monkeypatch):
     monkeypatch.setattr(gemini, "generate", lambda *a, **k: called.append(1))
     r = ask("Is Metro 1 running?")
     assert r["source"] == "template" and not called      # no waiting on a slow Gemini
+
+
+# ---- Hindi / Marathi without the AI ---------------------------------------------------------
+@pytest.mark.parametrize("text,origin,dest,lang", [
+    ("मला अंधेरीहून BKC ला जायचे आहे", "Andheri", "BKC", "mr"),
+    ("मला ठाण्याहून दादरला जायचे आहे", "Thane", "Dadar", "mr"),
+    ("वानखेडेला अंधेरीहून कसे जायचे?", "Andheri", "Wankhede", "mr"),
+    ("ठाणे से वानखेडे कैसे जाऊं?", "Thane", "Wankhede", "hi"),
+    ("Thane se Wankhede jana hai", "Thane", "Wankhede", "hi"),
+])
+def test_detects_hindi_marathi_trips(text, origin, dest, lang):
+    name, args = chat_mod.detect(text)
+    assert name == "plan_trip" and (args["origin"], args["destination"], args["language"]) == (origin, dest, lang)
+
+
+def test_marathi_fallback_answers_in_marathi(monkeypatch):
+    monkeypatch.setattr(gemini, "available", lambda: False)
+    r = ask("मला अंधेरीहून BKC ला जायचे आहे")
+    assert r["source"] == "fallback" and r["trip"] is not None
+    assert "निघा" in r["reply"] and "पोहोचाल" in r["reply"]        # Marathi template
+    r = ask("मेट्रो 1 चालू आहे का?")
+    assert r["source"] == "fallback" and r["problems"] is not None
+    r = ask("मला भूक लागली आहे")                                     # not about travel
+    assert "उपलब्ध नाही" in r["reply"]                                # offline message in Marathi
