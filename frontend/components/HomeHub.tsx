@@ -369,7 +369,7 @@ function DemoTravellers() {
       </div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
         {travellers.map((t) => (
-          <Link key={t.traveller_id} href={t.itinerary ? "/itinerary" : `/routes/${t.traveller_id}`}
+          <Link key={t.traveller_id} href={t.itinerary ? `/itinerary?demo=${t.traveller_id}` : `/routes/${t.traveller_id}`}
             className="group flex flex-col gap-2 rounded-xl bg-container-low p-3 transition-colors hover:bg-container">
             <div className="flex items-center gap-2">
               <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-primary text-on-primary">

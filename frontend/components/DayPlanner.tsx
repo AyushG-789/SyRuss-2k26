@@ -5,6 +5,7 @@
 // the live, disruption-aware route for each hop. POST /itinerary.
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import poisMock from "@/mocks/pois.json";
 import { type ItineraryPlan, planItinerary, travellers } from "@/lib/api";
@@ -17,15 +18,19 @@ const POIS = poisMock.pois as unknown as Record<string, { name: string; lat: num
 type Stop = { poi_id: string; must_visit: boolean; fixed_time: string };
 const MAX_STOPS = 5;
 
+const tr4 = travellers.find((t) => t.traveller_id === "TR4")!;
+const exampleStops = (): Stop[] =>
+  (tr4.itinerary?.stops ?? []).map((s) => ({ poi_id: s.poi_id, must_visit: s.must_visit, fixed_time: s.fixed_time ?? "" }));
+
 export default function DayPlanner() {
-  const tr4 = travellers.find((t) => t.traveller_id === "TR4")!;
-  const [start, setStart] = useState(tr4.origin.label);
-  const [dayStart, setDayStart] = useState(tr4.itinerary?.day_start ?? "13:30");
-  const [dayEnd, setDayEnd] = useState(tr4.itinerary?.day_end ?? "19:30");
-  const [budget, setBudget] = useState(String(tr4.max_budget_inr ?? ""));
-  const [stops, setStops] = useState<Stop[]>(
-    (tr4.itinerary?.stops ?? []).map((s) => ({ poi_id: s.poi_id, must_visit: s.must_visit, fixed_time: s.fixed_time ?? "" })),
-  );
+  // Empty for the traveller to fill in; /itinerary?demo=TR4 (Home's demo traveller card) opens the
+  // Kulkarni family's example day already planned.
+  const demo = useSearchParams().get("demo") === "TR4";
+  const [start, setStart] = useState(demo ? tr4.origin.label : "");
+  const [dayStart, setDayStart] = useState(demo ? tr4.itinerary?.day_start ?? "13:30" : "10:00");
+  const [dayEnd, setDayEnd] = useState(demo ? tr4.itinerary?.day_end ?? "19:30" : "19:00");
+  const [budget, setBudget] = useState(demo ? String(tr4.max_budget_inr ?? "") : "");
+  const [stops, setStops] = useState<Stop[]>(demo ? exampleStops() : []);
   const [plan, setPlan] = useState<ItineraryPlan | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -40,7 +45,7 @@ export default function DayPlanner() {
       leave_at: dayStart, max_budget_inr: budget ? Number(budget) : null,
       itinerary: { day_start: dayStart, day_end: dayEnd, stops: stops.map((s) => ({ poi_id: s.poi_id, must_visit: s.must_visit, fixed_time: s.fixed_time || null })) },
     };
-  }, [start, dayStart, dayEnd, budget, stops, tr4]);
+  }, [start, dayStart, dayEnd, budget, stops]);
 
   const run = useCallback(async () => {
     if (!traveller) return;
@@ -56,10 +61,26 @@ export default function DayPlanner() {
     }
   }, [traveller]);
 
-  // Plan the Kulkarni family's day once on load.
+  // Opened from the demo traveller card: plan the example day straight away.
   useEffect(() => {
-    Promise.resolve().then(run);
+    if (demo) Promise.resolve().then(run);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function loadExample() {
+    setStart(tr4.origin.label);
+    setDayStart(tr4.itinerary?.day_start ?? "13:30");
+    setDayEnd(tr4.itinerary?.day_end ?? "19:30");
+    setBudget(String(tr4.max_budget_inr ?? ""));
+    setStops(exampleStops());
+    setPlan(null);
+  }
+
+  function clearAll() {
+    setStart("");
+    setBudget("");
+    setStops([]);
+    setPlan(null);
+  }
 
   const toggle = (id: string) =>
     setStops((s) => (s.some((x) => x.poi_id === id) ? s.filter((x) => x.poi_id !== id)
@@ -82,10 +103,21 @@ export default function DayPlanner() {
       <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-12">
         {/* ---- Form ---- */}
         <section className="flex flex-col gap-4 rounded-2xl bg-container-lowest p-5 shadow-sm lg:col-span-4">
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={loadExample}
+              className="flex items-center gap-1 rounded-lg bg-container-low px-3 py-1.5 text-[12px] font-semibold text-primary hover:bg-container">
+              <Icon name="family_restroom" className="text-[16px]" /> Load example day (Kulkarni family)
+            </button>
+            {(stops.length > 0 || start) && (
+              <button type="button" onClick={clearAll} className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-[12px] font-semibold text-on-surface-variant hover:bg-container-low">
+                <Icon name="restart_alt" className="text-[16px]" /> Clear
+              </button>
+            )}
+          </div>
           <datalist id="day-places">{PLACE_OPTIONS.map((p) => <option key={p.label} value={p.label} />)}</datalist>
           <label className="flex flex-col gap-1 text-[13px] font-semibold">
             Start from
-            <input list="day-places" value={start} onChange={(e) => setStart(e.target.value)}
+            <input list="day-places" value={start} onChange={(e) => setStart(e.target.value)} placeholder="e.g. CSMT station, Andheri, your hotel area"
               className="rounded-xl bg-container-low px-3 py-2.5 font-normal focus:outline-none focus:ring-2 focus:ring-primary" />
           </label>
           <div className="grid grid-cols-3 gap-2">
@@ -103,6 +135,7 @@ export default function DayPlanner() {
 
           <div className="flex flex-col gap-2">
             <span className="text-[13px] font-semibold">Your stops ({stops.length}/{MAX_STOPS})</span>
+            {stops.length === 0 && <p className="rounded-xl bg-container-low p-3 text-[13px] text-on-surface-variant">No stops yet — add places below.</p>}
             {stops.map((s) => (
               <div key={s.poi_id} className="flex flex-col gap-2 rounded-xl bg-container-low p-2.5">
                 <div className="flex items-center justify-between gap-2">
@@ -121,7 +154,7 @@ export default function DayPlanner() {
             ))}
           </div>
 
-          <details className="text-[13px]">
+          <details className="text-[13px]" open={stops.length === 0}>
             <summary className="cursor-pointer font-semibold text-primary">Add places</summary>
             <div className="mt-2 flex max-h-56 flex-wrap gap-1.5 overflow-y-auto">
               {Object.entries(POIS).filter(([id]) => !stops.some((s) => s.poi_id === id)).map(([id, p]) => (
@@ -205,6 +238,13 @@ export default function DayPlanner() {
             </>
           )}
           {!plan && busy && <p className="text-sm text-on-surface-variant">Planning the day…</p>}
+          {!plan && !busy && (
+            <div className="flex flex-col items-center gap-2 rounded-2xl bg-container-lowest p-10 text-center shadow-sm">
+              <Icon name="event_note" className="text-[40px] text-outline" />
+              <p className="text-sm font-semibold">Your day plan will appear here</p>
+              <p className="max-w-sm text-[13px] text-on-surface-variant">Pick where you start, add up to {MAX_STOPS} places, then press <b>Plan my day</b>. Not sure? Load the example day.</p>
+            </div>
+          )}
         </section>
       </div>
     </main>
