@@ -161,3 +161,46 @@ export interface ReportOut {
 }
 
 export const submitReport = (body: ReportIn) => post<ReportOut>("/reports", body);
+
+// ---- Chatbot (SPEC.md §6, POST /chat) --------------------------------------------------------
+export interface ChatMessage {
+  role: "user" | "assistant";
+  text: string;
+}
+
+export interface ChatProblem {
+  event_id: string;
+  title: string;
+  status: DisruptionEvent["status"];
+  meaning: string;
+  trust_pct: number;
+  sources: string;
+  on_this_route?: boolean;
+}
+
+export interface ChatOption {
+  label: "fastest" | "optimal" | "cheapest";
+  recommended: boolean;
+  route: string;
+  depart: string;
+  arrive: string;
+  duration_min: number;
+  cost_inr: number;
+  changes: number;
+  walk_min: number;
+  live_problems: ChatProblem[];
+  blocked_by_confirmed_problem: boolean;
+}
+
+export interface ChatReply {
+  reply: string;
+  source: "gemini" | "template" | "fallback";
+  model: string | null;
+  tools_used: string[];
+  trip: { traveller: Traveller; from: string; to: string; options: ChatOption[] } | null;
+  problems: ChatProblem[] | null;
+  note: string | null;
+}
+
+export const sendChat = (messages: ChatMessage[], journeyId?: string | null) =>
+  post<ChatReply>("/chat", { messages, journey_id: journeyId ?? null });

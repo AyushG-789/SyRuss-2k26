@@ -8,6 +8,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { shell } from "@/lib/mockHome";
 import { LiveEventsProvider } from "@/lib/useLiveEvents";
+import ChatAssistant from "./ChatAssistant";
 import Icon from "./Icon";
 
 type NavItem = { href: string; label: string; icon: string; match: (p: string) => boolean };
@@ -184,6 +185,7 @@ function Shell({ children }: { children: React.ReactNode }) {
         </header>
         {children}
       </div>
+      <ChatAssistant />
     </div>
   );
 }

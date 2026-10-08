@@ -323,8 +323,23 @@ its weights; if two labels pick the same route, the second takes its next best. 
 
 ## 6. LLM layer (`backend/app/llm/`)
 
-Provider: **OpenAI** (structured outputs + function calling).
-`OPENAI_MODEL_FAST` (mini tier) for parsing/extraction, `OPENAI_MODEL_SMART` for explanations.
+Provider: **Google Gemini** (REST `generateContent` + function calling, `backend/app/llm/gemini.py`).
+`GEMINI_MODEL` (default `gemini-flash-lite-latest`, ~1–2 s) with `GEMINI_FALLBACK_MODEL`
+(`gemini-flash-latest`) tried on 429/5xx. Key: `GEMINI_API_KEY` in `.env` (never committed).
+
+### 6.0 Chatbot (`chat.py`, `POST /chat`)
+- Body `{messages: [{role: user|assistant, text}], journey_id?}` → `{reply, source: gemini|template|fallback,
+  model, tools_used, trip: {traveller, from, to, options[]} | null, problems[] | null, note}`.
+- Gemini only understands the question and words the answer; facts come from the tools below.
+  Replies in the traveller's language (en / hi / mr / Hinglish), ≤ 70 words.
+- **Number check** (`check_numbers.py`): every number in the reply (incl. Devanagari digits) must
+  appear in a tool result or the user's message → otherwise retry once → otherwise a plain
+  template built from the tool results (`source: "template"`).
+- **No key / quota / outage** → rule-based fallback for "A to B (by HH:MM)" and line/station
+  status (`source: "fallback"`). Never crashes.
+- Place names resolved by `app/places.py` (POIs + stations + aliases, same tiers as the web form).
+- UI: floating "Ask TravelBuddy" panel on every page (`frontend/components/ChatAssistant.tsx`);
+  trip answers show option cards (with live problems) + "Open full route details" → `/routes?t=`.
 
 ### 6.1 Request parsing (`parse_request.py`)
 Natural language (any of en/hi/mr) → partial `Traveller` fields; the UI pre-fills the form for
@@ -332,6 +347,11 @@ the user to confirm. Place names resolved through `geocode.py` (POIs → station
 
 ### 6.2 Agent tools (function calling)
 ```
+plan_trip(origin, destination, leave_at?, arrive_by?, budget, walk, changes, priority, modes, …)
+                                     -> options[] with live problems on each route   (built)
+get_live_problems(line?, station?)   -> confirmed/possible + untrusted (fake burst) events  (built)
+explain_problem(event_id)            -> evidence, weights, thresholds                (built)
+get_my_journey(journey_id?)          -> saved trip + replan proposal (B9)            (built)
 plan_routes(traveller) -> RouteCard[] (numbers only, reason empty)
 get_events(status?, line_id?, stop_id?) -> Event[]
 get_fares(legs) -> int
@@ -402,6 +422,7 @@ plan_itinerary(traveller) -> ItineraryPlan
 | GET | `/events?status=&line_id=&stop_id=` | → `Event[]` scored at the demo clock, newest first; events not yet reported are hidden |
 | GET | `/events/{id}` | → `{event, breakdown: {support, decay, contradiction, summary, evidence[]}}` |
 | GET | `/verify/policy` | → all Pakka Check weights, thresholds, lifetimes |
+| POST | `/chat` | `{messages, journey_id?}` → `{reply, source, tools_used, trip, problems, note}` (§6.0) |
 | POST | `/parse-request` | `{text, language}` → `{traveller: partial Traveller, missing: [field]}` |
 | POST | `/plan` | `{traveller, mode:"aware"|"baseline"}` → `{cards: RouteCard[3], rejected: [{legs, reason}]}` |
 | POST | `/itinerary` | `{traveller}` → `ItineraryPlan` |

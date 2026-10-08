@@ -76,7 +76,7 @@ def _signature(legs: list[Leg]) -> tuple:
     return tuple((leg.mode, leg.line_id, leg.from_id, leg.to_id) for leg in legs)
 
 
-def _event_title(ev: Event, stations: dict, lines: dict, transfers: dict) -> str:
+def event_title(ev: Event, stations: dict, lines: dict, transfers: dict) -> str:
     """e.g. 'Dadar foot-overbridge (FOB) closure', 'Metro Line 1 delay at Saki Naka'."""
     kind = {"lift_out": "lift outage", "crowding": "heavy crowding", "mega_block": "mega block"}.get(ev.type, ev.type)
     aff = ev.affected
@@ -175,7 +175,7 @@ class JourneyStore:
         old_blocked, old_delay = summarize(hits)
         if not old_blocked and old_delay < DELAY_NOTICE_MIN:
             return False
-        titles = ", ".join(_event_title(by_id[i], stations, lines, transfers) for i in new_ids if i in by_id)
+        titles = ", ".join(event_title(by_id[i], stations, lines, transfers) for i in new_ids if i in by_id)
 
         # Replan from the traveller's position: the start of the first unfinished leg. If they are
         # already riding a train/bus, they stay on it, so the new route starts where it stops.

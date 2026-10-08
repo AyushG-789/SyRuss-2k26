@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .api import admin, events, journeys, plan, reports
+from .api import admin, chat, events, journeys, plan, reports
 from .clock import clock, fmt_hhmm
 from .config import settings
 from .data_loader import load_seed
@@ -33,6 +33,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(admin.router)
+app.include_router(chat.router)
 app.include_router(events.router)
 app.include_router(journeys.router)
 app.include_router(plan.router)
