@@ -50,6 +50,36 @@ function journeyId(): string | null {
   }
 }
 
+function encodeWav(samples: Float32Array, sampleRate: number): Blob {
+  const buffer = new ArrayBuffer(44 + samples.length * 2);
+  const view = new DataView(buffer);
+  const writeString = (offset: number, str: string) => {
+    for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+  };
+
+  writeString(0, "RIFF");
+  view.setUint32(4, 36 + samples.length * 2, true);
+  writeString(8, "WAVE");
+  writeString(12, "fmt ");
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true); // PCM format
+  view.setUint16(22, 1, true); // Mono channel
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true); // byte rate
+  view.setUint16(32, 2, true); // block align
+  view.setUint16(34, 16, true); // 16 bits
+  writeString(36, "data");
+  view.setUint32(40, samples.length * 2, true);
+
+  let offset = 44;
+  for (let i = 0; i < samples.length; i++, offset += 2) {
+    const s = Math.max(-1, Math.min(1, samples[i]));
+    view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+  }
+
+  return new Blob([buffer], { type: "audio/wav" });
+}
+
 export default function ChatAssistant() {
   const [open, setOpen] = useState(false);
   const [entries, setEntries] = useState<Entry[]>([]);
@@ -61,10 +91,14 @@ export default function ChatAssistant() {
 
   const scroller = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLTextAreaElement>(null);
+  const audioContext = useRef<AudioContext | null>(null);
+  const scriptProcessor = useRef<ScriptProcessorNode | null>(null);
+  const audioBuffers = useRef<Float32Array[]>([]);
+  const recordingStartTime = useRef<number>(0);
+  const mediaStream = useRef<MediaStream | null>(null);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const audioChunks = useRef<Blob[]>([]);
   const audioPlayer = useRef<HTMLAudioElement | null>(null);
-  const mediaStream = useRef<MediaStream | null>(null);
 
   useEffect(() => {
     scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: "smooth" });
@@ -77,9 +111,28 @@ export default function ChatAssistant() {
   useEffect(() => {
     return () => {
       stopAudio();
-      mediaStream.current?.getTracks().forEach((t) => t.stop());
+      stopRecordingCleanup();
     };
   }, []);
+
+  function stopRecordingCleanup() {
+    if (scriptProcessor.current) {
+      scriptProcessor.current.disconnect();
+      scriptProcessor.current = null;
+    }
+    if (audioContext.current && audioContext.current.state !== "closed") {
+      audioContext.current.close().catch(() => {});
+      audioContext.current = null;
+    }
+    if (mediaStream.current) {
+      mediaStream.current.getTracks().forEach((t) => t.stop());
+      mediaStream.current = null;
+    }
+    if (mediaRecorder.current && mediaRecorder.current.state !== "inactive") {
+      mediaRecorder.current.stop();
+      mediaRecorder.current = null;
+    }
+  }
 
   function stopAudio() {
     if (audioPlayer.current) {
@@ -122,86 +175,133 @@ export default function ChatAssistant() {
   // --- Voice Input (STT) ---
   async function toggleRecording() {
     if (recording) {
-      mediaRecorder.current?.stop();
+      await finishRecording();
       return;
     }
+    await startRecording();
+  }
 
+  async function startRecording() {
     try {
       if (!navigator.mediaDevices?.getUserMedia) {
-        throw new Error("getUserMedia not supported");
+        throw new Error("getUserMedia not supported in this browser");
       }
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          channelCount: 1,
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+      });
       mediaStream.current = stream;
-      audioChunks.current = [];
+      audioBuffers.current = [];
+      recordingStartTime.current = Date.now();
 
-      const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
-        ? "audio/webm;codecs=opus"
-        : MediaRecorder.isTypeSupported("audio/webm")
-        ? "audio/webm"
-        : "";
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const AudioCtxClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (AudioCtxClass) {
+        const ctx = new AudioCtxClass({ sampleRate: 16000 });
+        audioContext.current = ctx;
+        const source = ctx.createMediaStreamSource(stream);
+        const processor = ctx.createScriptProcessor(4096, 1, 1);
+        scriptProcessor.current = processor;
 
-      const mr = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
-      mediaRecorder.current = mr;
+        processor.onaudioprocess = (e) => {
+          const inputData = e.inputBuffer.getChannelData(0);
+          audioBuffers.current.push(new Float32Array(inputData));
+        };
 
-      mr.ondataavailable = (e) => {
-        if (e.data.size > 0) audioChunks.current.push(e.data);
-      };
-
-      mr.onstop = async () => {
-        setRecording(false);
-        stream.getTracks().forEach((track) => track.stop());
-        const audioBlob = new Blob(audioChunks.current, { type: mr.mimeType || "audio/webm" });
-        if (audioBlob.size > 0) {
-          setTranscribing(true);
-          try {
-            const res = await sendVoiceSTT(audioBlob);
-            if (res.text && res.text.trim()) {
-              const spoken = res.text.trim();
-              setText(spoken);
-              ask(spoken);
-            }
-          } catch (err) {
-            console.warn("Backend STT error:", err);
-          } finally {
-            setTranscribing(false);
-          }
-        }
-      };
-
-      mr.start();
-      setRecording(true);
+        source.connect(processor);
+        processor.connect(ctx.destination);
+        setRecording(true);
+        console.log("[Voice:STT] Recording started (16kHz PCM WAV mode)");
+      } else {
+        // Fallback to MediaRecorder if AudioContext is missing
+        audioChunks.current = [];
+        const mr = new MediaRecorder(stream);
+        mediaRecorder.current = mr;
+        mr.ondataavailable = (e) => {
+          if (e.data.size > 0) audioChunks.current.push(e.data);
+        };
+        mr.start();
+        setRecording(true);
+        console.log("[Voice:STT] Recording started (MediaRecorder fallback mode)");
+      }
     } catch (err) {
-      console.warn("MediaRecorder unavailable, trying Web Speech API fallback:", err);
-      fallbackBrowserSpeechRecognition();
+      console.error("[Voice:STT] Failed to access microphone:", err);
+      alert("Microphone permission was denied or is unavailable. Please allow microphone access in your browser settings.");
     }
   }
 
-  function fallbackBrowserSpeechRecognition() {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const windowWithSpeech = window as any;
-    const SpeechRec = windowWithSpeech.SpeechRecognition || windowWithSpeech.webkitSpeechRecognition;
-    if (!SpeechRec) {
-      alert("Microphone permission or browser speech recognition is required.");
-      return;
-    }
-    const rec = new SpeechRec();
-    rec.continuous = false;
-    rec.interimResults = false;
-    rec.lang = "en-IN";
-    setRecording(true);
+  async function finishRecording() {
+    setRecording(false);
+    const durationMs = Date.now() - recordingStartTime.current;
+    console.log(`[Voice:STT] Recording stopped (${durationMs}ms duration)`);
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    rec.onresult = (event: any) => {
-      const transcript = event.results?.[0]?.[0]?.transcript;
-      if (transcript?.trim()) {
-        const spoken = transcript.trim();
+    // Clean up audio nodes
+    if (scriptProcessor.current) {
+      scriptProcessor.current.disconnect();
+      scriptProcessor.current = null;
+    }
+    if (audioContext.current) {
+      const sampleRate = audioContext.current.sampleRate || 16000;
+      await audioContext.current.close().catch(() => {});
+      audioContext.current = null;
+
+      if (mediaStream.current) {
+        mediaStream.current.getTracks().forEach((t) => t.stop());
+        mediaStream.current = null;
+      }
+
+      const totalSamples = audioBuffers.current.reduce((acc, b) => acc + b.length, 0);
+      if (totalSamples === 0 || durationMs < 400) {
+        console.warn("[Voice:STT] Recording too brief or empty");
+        return;
+      }
+
+      const merged = new Float32Array(totalSamples);
+      let offset = 0;
+      for (const b of audioBuffers.current) {
+        merged.set(b, offset);
+        offset += b.length;
+      }
+
+      const wavBlob = encodeWav(merged, sampleRate);
+      console.log(`[Voice:STT] Created 16kHz WAV: ${wavBlob.size} bytes`);
+      await processAndSendAudio(wavBlob);
+    } else if (mediaRecorder.current) {
+      const mr = mediaRecorder.current;
+      mr.onstop = async () => {
+        if (mediaStream.current) {
+          mediaStream.current.getTracks().forEach((t) => t.stop());
+          mediaStream.current = null;
+        }
+        const blob = new Blob(audioChunks.current, { type: mr.mimeType || "audio/webm" });
+        await processAndSendAudio(blob);
+      };
+      mr.stop();
+    }
+  }
+
+  async function processAndSendAudio(audioBlob: Blob) {
+    if (audioBlob.size < 100) return;
+    setTranscribing(true);
+    try {
+      const res = await sendVoiceSTT(audioBlob);
+      if (res.text && res.text.trim()) {
+        const spoken = res.text.trim();
+        console.log(`[Voice:STT] Transcription succeeded: "${spoken}" [${res.language}]`);
         setText(spoken);
         ask(spoken);
+      } else {
+        console.warn("[Voice:STT] Transcription returned empty text");
       }
-    };
-    rec.onerror = () => setRecording(false);
-    rec.onend = () => setRecording(false);
-    rec.start();
+    } catch (err) {
+      console.error("[Voice:STT] STT request failed:", err);
+    } finally {
+      setTranscribing(false);
+    }
   }
 
   // --- Voice Output (TTS) ---

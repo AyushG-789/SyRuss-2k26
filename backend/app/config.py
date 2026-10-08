@@ -19,8 +19,8 @@ class Settings(BaseSettings):
     openai_model_smart: str = ""
     sarvam_api_key: str = ""
 
-    voice_provider: str = "gemini"                      # gemini | sarvam (SPEC §7)
-    voice_stt_model: str = "gemini-3.8-flash"           # multimodal audio STT
+    voice_provider: str = "sarvam"                      # sarvam | gemini (SPEC §7)
+    voice_stt_model: str = "gemini-3.5-flash"           # multimodal audio STT
     voice_tts_model: str = "gemini-3.8-flash-tts"       # natural Indian voice TTS
 
     demo_date: str = "2026-10-20"

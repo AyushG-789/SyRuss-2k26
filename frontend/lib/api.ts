@@ -220,13 +220,17 @@ export interface VoiceTTSResponse {
 
 export async function sendVoiceSTT(audioBlob: Blob): Promise<VoiceSTTResponse> {
   const form = new FormData();
-  form.append("file", audioBlob, "voice.webm");
+  const ext = audioBlob.type.includes("wav") ? "wav" : audioBlob.type.includes("mp4") ? "mp4" : "webm";
+  form.append("file", audioBlob, `voice.${ext}`);
+  console.log(`[Voice:API] POST /voice/stt (${audioBlob.size} bytes, type=${audioBlob.type})`);
   const res = await fetch(`${API_URL}/voice/stt`, {
     method: "POST",
     body: form,
   });
   if (!res.ok) throw new Error(`/voice/stt failed: ${res.status} ${await res.text()}`);
-  return res.json() as Promise<VoiceSTTResponse>;
+  const data = (await res.json()) as VoiceSTTResponse;
+  console.log(`[Voice:API] STT received: "${data.text}" [${data.language}]`);
+  return data;
 }
 
 export async function getVoiceTTS(text: string, language?: string): Promise<VoiceTTSResponse> {
