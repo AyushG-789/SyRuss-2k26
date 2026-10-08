@@ -48,6 +48,7 @@ Open http://localhost:3000. Until the backend endpoints exist, build screens aga
 python scripts/validate_data.py   # checks every id across data/ — run before committing data changes
 python scripts/build_gtfs.py      # writes data/gtfs/ (git-ignored) for GTFS tools / validators
 python scripts/fetch_osm.py       # re-fetches OSM stations/POIs and reports coordinate mismatches
+python scripts/export_frontend_data.py  # copies stations/lines/travellers into frontend/mocks/ — run after editing data/
 ```
 
 ## Data status — what still needs checking

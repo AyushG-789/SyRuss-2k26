@@ -1,0 +1,33 @@
+{
+  "_note": "MOCK placeholder for TR4 (Kulkarni family) — first leg of the day only; the multi-stop day planner is not built yet.",
+  "as_of": "13:30",
+  "destination": {"label": "Gateway of India", "lat": 18.922, "lon": 72.8347, "poi_id": "poi_gateway"},
+  "notes": ["Day planner (5 stops) coming soon — showing the first leg: hotel → Gateway of India.", "Only 2 plans fit your 12-minute walking limit."],
+  "cards": [
+    {
+      "plan_id": "tr4_fast", "label": "fastest", "recommended": false,
+      "legs": [
+        {"mode": "taxi", "line_id": null, "from_id": "origin", "to_id": "destination", "depart": "13:35", "arrive": "13:45", "duration_min": 10, "cost_inr": 48, "walk_m": 0, "step_free": true, "event_ids": [], "risk": 0.04}
+      ],
+      "duration_min": 15, "cost_inr": 48, "transfers": 0, "walk_min": 0,
+      "reliability": 0.96, "reliability_colour": "green", "score": 8.4,
+      "reason": "Quickest door to door; one taxi fits the whole family.",
+      "facts": {}
+    },
+    {
+      "plan_id": "tr4_opt", "label": "optimal", "recommended": true,
+      "legs": [
+        {"mode": "walk", "line_id": null, "from_id": "origin", "to_id": "csmt_bus", "depart": "13:30", "arrive": "13:33", "duration_min": 3, "cost_inr": 0, "walk_m": 200, "step_free": true, "event_ids": [], "risk": 0.0},
+        {"mode": "bus", "line_id": "BEST_TODO_A", "from_id": "csmt_bus", "to_id": "regal_circle_bus", "depart": "13:38", "arrive": "13:46", "duration_min": 8, "cost_inr": 10, "walk_m": 0, "step_free": false, "event_ids": [], "risk": 0.0},
+        {"mode": "walk", "line_id": null, "from_id": "regal_circle_bus", "to_id": "destination", "depart": "13:46", "arrive": "13:51", "duration_min": 5, "cost_inr": 0, "walk_m": 400, "step_free": true, "event_ids": [], "risk": 0.0}
+      ],
+      "duration_min": 21, "cost_inr": 10, "transfers": 0, "walk_min": 8,
+      "reliability": 0.95, "reliability_colour": "green", "score": 9.0,
+      "reason": "One direct bus for 10 rupees per person, only 6 minutes slower than a taxi.",
+      "facts": {"cost_inr": 10, "slower_by_min": 6}
+    }
+  ],
+  "rejected": [
+    {"summary": "Walk all the way", "reason": "About 34 minutes of walking, more than your 12-minute limit"}
+  ]
+}

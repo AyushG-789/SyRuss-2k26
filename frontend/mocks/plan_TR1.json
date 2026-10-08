@@ -1,0 +1,33 @@
+{
+  "_note": "MOCK placeholder for TR1 (Meera, step-free) — illustrative numbers only; real ones come from routing/scorer.py.",
+  "as_of": "17:35",
+  "notes": ["Only 2 plans meet your step-free requirement."],
+  "cards": [
+    {
+      "plan_id": "tr1_fast", "label": "fastest", "recommended": false,
+      "legs": [
+        {"mode": "cab", "line_id": null, "from_id": "origin", "to_id": "destination", "depart": "17:24", "arrive": "17:44", "duration_min": 20, "cost_inr": 210, "walk_m": 0, "step_free": true, "event_ids": [], "risk": 0.1}
+      ],
+      "duration_min": 24, "cost_inr": 210, "transfers": 0, "walk_min": 0,
+      "reliability": 0.9, "reliability_colour": "green", "score": 7.6,
+      "reason": "Door to door with no stairs, but costs 210 rupees and evening traffic can add time.",
+      "facts": {"cost_inr": 210}
+    },
+    {
+      "plan_id": "tr1_opt", "label": "optimal", "recommended": true,
+      "legs": [
+        {"mode": "walk", "line_id": null, "from_id": "origin", "to_id": "csmia_t2", "depart": "17:20", "arrive": "17:24", "duration_min": 4, "cost_inr": 0, "walk_m": 250, "step_free": true, "event_ids": [], "risk": 0.0},
+        {"mode": "metro", "line_id": "METRO3", "from_id": "csmia_t2", "to_id": "bandra_colony", "depart": "17:27", "arrive": "17:35", "duration_min": 8, "cost_inr": 20, "walk_m": 0, "step_free": true, "event_ids": [], "risk": 0.0},
+        {"mode": "taxi", "line_id": null, "from_id": "bandra_colony", "to_id": "destination", "depart": "17:40", "arrive": "17:48", "duration_min": 8, "cost_inr": 41, "walk_m": 0, "step_free": true, "event_ids": [], "risk": 0.05}
+      ],
+      "duration_min": 28, "cost_inr": 61, "transfers": 1, "walk_min": 4,
+      "reliability": 0.95, "reliability_colour": "green", "score": 8.9,
+      "reason": "Skips BKC Metro, where 2 commuters report the lift is out (44%), and finishes by taxi with no stairs.",
+      "facts": {"avoids_event": "ev_bkc_lift", "confidence": 0.44, "sources": {"crowd": 2}}
+    }
+  ],
+  "rejected": [
+    {"summary": "Metro 3 to BKC, then walk", "reason": "BKC lift reported out (2 commuters, 44%) — treated as blocking because you need step-free access"},
+    {"summary": "Local train via Santacruz", "reason": "Suburban stations on this route are not step-free"}
+  ]
+}
