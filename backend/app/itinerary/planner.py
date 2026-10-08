@@ -18,8 +18,12 @@ from app.config import settings
 from app.data_loader import load_seed
 from app.routing.aware import plan_aware
 from app.routing.baseline import plan_baseline
+from app.routing.fares import haversine_km
 from app.routing.text import route_text
 from app.schemas import Place, RouteCard, Traveller
+from app.verify.store import active_events
+
+NEARBY_KM = 1.0   # a station-wide problem (waterlogging, crowding…) this close to a stop gets a warning
 
 DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
 TIGHT_SLACK_MIN = 10
@@ -69,6 +73,23 @@ def _estimate(key: str, a: tuple, b: tuple, depart: str) -> tuple[int, int] | No
     traveller = Traveller.model_validate_json(key)
     card = _hop(traveller, Place(label=a[0], lat=a[1], lon=a[2]), Place(label=b[0], lat=b[1], lon=b[2]), depart, aware=False)
     return (card.duration_min, card.cost_inr) if card else None
+
+
+def _nearby_problems(a: Place, b: Place, depart: str) -> list[dict]:
+    """Station-wide problems (no line named, e.g. waterlogging at CSMT) near either end of a hop.
+    They don't change the plan — 'possible' isn't enough — but the family should know."""
+    stations = load_seed().stations
+    out = []
+    for ev in active_events():
+        if ev.affected.line_ids or ev.affected.transfer_ids or depart < ev.first_seen:
+            continue  # line problems are handled by routing; earlier hops weren't affected
+        for sid in ev.affected.stop_ids:
+            st = stations.get(sid)
+            if st and min(haversine_km(st["lat"], st["lon"], p.lat, p.lon) for p in (a, b)) <= NEARBY_KM:
+                out.append({"event_id": ev.event_id, "type": ev.type, "status": ev.status,
+                            "confidence": ev.confidence, "near": st["name"]})
+                break
+    return out
 
 
 def plan_itinerary(traveller: Traveller, on: date | None = None) -> dict:
@@ -158,6 +179,11 @@ def plan_itinerary(traveller: Traveller, on: date | None = None) -> dict:
         problems = sorted({i for l in card.legs for i in l.event_ids})
         if problems:
             warnings.append(f"Route to {poi['name']}: live problems {', '.join(problems)} (reliability {round(card.reliability * 100)}%)")
+        nearby = _nearby_problems(here, dest, card.legs[0].depart)
+        for n in nearby:
+            kind = n["type"].replace("_", " ")
+            warnings.append(f"Route to {poi['name']}: {n['status']} {kind} reported near {n['near']} "
+                            f"({round(n['confidence'] * 100)}%) — allow extra time; plan kept.")
         out.append({
             "poi_id": pid, "name": poi["name"], "must_visit": s.must_visit, "fixed_time": s.fixed_time,
             "opens": _t(hours[0]) if hours[1] - hours[0] < 1440 else None,
@@ -166,7 +192,7 @@ def plan_itinerary(traveller: Traveller, on: date | None = None) -> dict:
             "visit_min": visit, "slack_min": min(slack, 999), "tight": slack < TIGHT_SLACK_MIN,
             "leg": {"route": route_text(card.legs), "depart": card.legs[0].depart, "arrive": card.legs[-1].arrive,
                     "duration_min": card.duration_min, "cost_inr": card.cost_inr, "reliability": card.reliability,
-                    "event_ids": problems, "card": card.model_dump()},
+                    "event_ids": problems, "nearby": nearby, "card": card.model_dump()},
         })
         total_travel += card.duration_min
         total_cost += card.cost_inr

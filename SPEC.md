@@ -494,6 +494,21 @@ a leg on a really-delayed line → + true delay.
 
 ## 13. Demo story (simulated clock, demo date `DEMO_DATE`, scenario start 16:30)
 
+### 13.0 Playing the 5 traveller stories (PS: five traveller itineraries)
+Each traveller in `data/travellers.json` has a `demo` entry (`kind`, `clock`, `card`, `moment`, `watch`).
+Home → **Try a demo traveller** → open a traveller → **Demo story** panel → **Play story**: resets the
+scenario, sets the demo clock, (trip stories) starts the right option and opens Live Trip, where
+**Jump to <moment>** shows the moment. Covered by `backend/tests/test_stories.py`.
+
+| Traveller | Story | Moment |
+|---|---|---|
+| TR1 Meera (wheelchair) | Normal app: Metro 3 straight to BKC, where the lift is reported out (possible 44%). TravelBuddy: Metro 3 → Santacruz + taxi | plan at 17:40 |
+| TR2 Rohan (₹50) | Fake "Metro 1 shut" burst ignored at 16:58 (still sent on Metro 1); real Saki Naka delay confirmed while on board → replan from Andheri | 17:12 |
+| TR3 Arjun (deadline 18:30) | Cheapest route via the Dadar FOB; closure confirmed → stay on to CSMT + taxi, still on time | 17:15 |
+| TR4 Kulkarni family | 5 stops inside opening hours, Marine Drive at 18:30; possible waterlogging near CSMT → warning, plan kept | 17:25 |
+| TR5 Priya (no autos) | Cheapest route takes WR Slow from Andheri; signal delay confirmed → replan; exaggerated "WR band" post cancelled by WR's notice | 17:06 |
+
+
 | Clock | What judges see |
 |---|---|
 | 16:30 | Radar empty-ish; 3 stale morning reports already greyed out (expired) |

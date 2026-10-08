@@ -4,21 +4,21 @@
   {
    "traveller_id": "TR1",
    "name": "Meera (wheelchair user)",
-   "story": "Arrives at the international airport for a conference at Jio World Centre. Needs step-free routes only.",
+   "story": "Arrives at the international airport (T2) for a conference at the MMRDA Grounds in BKC. Wheelchair user: step-free routes only, very little walking.",
    "origin": {
-    "label": "Airport T2",
-    "lat": 19.099,
-    "lon": 72.874,
-    "poi_id": "poi_airport_t2"
+    "label": "Airport T2 (International) metro exit",
+    "lat": 19.1023,
+    "lon": 72.8745,
+    "poi_id": null
    },
    "destination": {
-    "label": "Jio World Centre, BKC",
-    "lat": 19.064,
-    "lon": 72.863,
-    "poi_id": "poi_bkc_jio_world"
+    "label": "MMRDA Grounds, BKC",
+    "lat": 19.0618,
+    "lon": 72.8571,
+    "poi_id": null
    },
-   "leave_at": "17:20",
-   "arrive_by": "18:15",
+   "leave_at": "17:40",
+   "arrive_by": "18:30",
    "hard_deadline": false,
    "max_budget_inr": 400,
    "max_walk_min": 8,
@@ -34,29 +34,37 @@
    "heavy_luggage": true,
    "avoid_crowds": true,
    "language": "en",
-   "demo_hook": "Lift-out reports at BKC Metro 3 (E_BKC_LIFT) -> routed around even though only 'possible'"
+   "demo_hook": "A normal app sends her on Metro 3 straight to BKC, where commuters report the lift is out (E_BKC_LIFT, only 'possible', 44%). For a wheelchair user that is too big a risk, so TravelBuddy recommends Metro 3 to Santacruz + a taxi instead.",
+   "demo": {
+    "kind": "plan",
+    "clock": "17:40",
+    "card": null,
+    "moment": "17:40",
+    "watch": "Route Results: 'What Pakka Check changed' (lift outage counted as risk) and 'Normal app vs TravelBuddy' (the normal app uses Metro 3 to BKC)."
+   }
   },
   {
    "traveller_id": "TR2",
    "name": "Rohan (tight-budget student)",
-   "story": "Student going from Ghatkopar to a class in Bandra. Very tight budget, prefers metro/local.",
+   "story": "Student going from Ghatkopar to Juhu Beach to meet friends. ₹50 budget, quickest way within it; no taxis.",
    "origin": {
     "label": "Ghatkopar station",
     "lat": 19.086,
     "lon": 72.9081
    },
    "destination": {
-    "label": "Bandra (W) Hill Road",
-    "lat": 19.055,
-    "lon": 72.832
+    "label": "Juhu Beach",
+    "lat": 19.0988,
+    "lon": 72.8267,
+    "poi_id": "poi_juhu_beach"
    },
-   "leave_at": "16:45",
-   "arrive_by": "17:45",
+   "leave_at": "16:58",
+   "arrive_by": "18:15",
    "hard_deadline": false,
    "max_budget_inr": 50,
    "max_walk_min": 15,
    "max_transfers": 2,
-   "priority": "cheapest",
+   "priority": "fastest",
    "modes_allowed": [
     "local",
     "metro",
@@ -67,7 +75,14 @@
    "heavy_luggage": false,
    "avoid_crowds": false,
    "language": "hi",
-   "demo_hook": "Fake 'Metro 1 shut' burst at 16:40 must NOT reroute him; real Metro 1 issue confirmed at 17:12 DOES"
+   "demo_hook": "At 16:58 a burst of 'Metro 1 completely shut' posts from brand-new accounts is circulating — TravelBuddy ignores it (5%) and still sends him on Metro 1. At 17:12 the REAL Saki Naka delay is confirmed (news + 3 commuters, 83%) while he's on the train, so it replans the rest of his trip from Andheri.",
+   "demo": {
+    "kind": "track",
+    "clock": "16:58",
+    "card": "fastest",
+    "moment": "17:12",
+    "watch": "Live Trip: no alert from the fake burst; at 17:12 the replan banner ('New route from Andheri (Metro 1)')."
+   }
   },
   {
    "traveller_id": "TR3",
@@ -102,7 +117,14 @@
    "heavy_luggage": false,
    "avoid_crowds": false,
    "language": "en",
-   "demo_hook": "Dadar FOB closure (E_DADAR_FOB) confirmed 17:15 -> replan to fast local to CSMT + taxi"
+   "demo_hook": "His cheapest route changes trains at Dadar over the foot-overbridge. At 17:15 Central Railway's notice + 2 commuters confirm the bridge is closed (89%) → replan: stay on the fast local to CSMT, then a taxi — and still make the 18:30 deadline.",
+   "demo": {
+    "kind": "track",
+    "clock": "16:40",
+    "card": "cheapest",
+    "moment": "17:15",
+    "watch": "Live Trip: at 17:15 the Dadar change step shows 'closure confirmed 89% · can't be used' and the replan banner (stay on to CSMT + taxi)."
+   }
   },
   {
    "traveller_id": "TR4",
@@ -159,7 +181,14 @@
      }
     ]
    },
-   "demo_hook": "Possible waterlogging near Azad Maidan (E_AZAD_WATER, 40%) -> warning on walking legs, plan kept"
+   "demo_hook": "Five stops in one afternoon inside opening hours (museum closes 18:00), Marine Drive fixed for sunset at 18:30. When commuters report possible waterlogging near Azad Maidan / CSMT (40%), the hops nearby get a warning but the plan is kept — 'possible' is not enough to change it.",
+   "demo": {
+    "kind": "itinerary",
+    "clock": "17:25",
+    "card": null,
+    "moment": "17:25",
+    "watch": "Day Itinerary: 5 stops in opening hours, Marine Drive at 18:30; at 17:25 a warning on the hops near CSMT for possible waterlogging (40%) — plan kept."
+   }
   },
   {
    "traveller_id": "TR5",
@@ -194,7 +223,14 @@
    "heavy_luggage": false,
    "avoid_crowds": false,
    "language": "en",
-   "demo_hook": "WR slow delay at Andheri (E_ANDHERI_DELAY) + exaggerated 'WR fully band' report that official notice contradicts"
+   "demo_hook": "Her cheapest route takes a Western Slow local from Andheri. At 17:06 a signal-failure delay there is confirmed (news + commuters) → replan. A separate exaggerated 'whole WR line band' post is cancelled by Western Railway's 'running normally' notice.",
+   "demo": {
+    "kind": "track",
+    "clock": "17:00",
+    "card": "cheapest",
+    "moment": "17:06",
+    "watch": "Live Trip: at 17:06 the Western Slow delay at Andheri is confirmed → replan to a fast train; the exaggerated 'WR fully band' report is contradicted by WR's notice (see Transparency)."
+   }
   }
  ]
 }

@@ -13,6 +13,7 @@ import { findPlace, PLACE_OPTIONS } from "@/lib/places";
 import type { Traveller } from "@/lib/types";
 import Icon from "./Icon";
 import MapView from "./MapView";
+import StoryPanel from "./StoryPanel";
 
 const POIS = poisMock.pois as unknown as Record<string, { name: string; lat: number; lon: number }>;
 type Stop = { poi_id: string; must_visit: boolean; fixed_time: string };
@@ -100,6 +101,8 @@ export default function DayPlanner() {
         </p>
       </header>
 
+      {demo && <StoryPanel traveller={tr4} onReplan={run} />}
+
       <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-12">
         {/* ---- Form ---- */}
         <section className="flex flex-col gap-4 rounded-2xl bg-container-lowest p-5 shadow-sm lg:col-span-4">
@@ -120,14 +123,14 @@ export default function DayPlanner() {
             <input list="day-places" value={start} onChange={(e) => setStart(e.target.value)} placeholder="e.g. CSMT station, Andheri, your hotel area"
               className="rounded-xl bg-container-low px-3 py-2.5 font-normal focus:outline-none focus:ring-2 focus:ring-primary" />
           </label>
-          <div className="grid grid-cols-3 gap-2">
-            <label className="flex flex-col gap-1 text-[13px] font-semibold">From
-              <input type="time" value={dayStart} onChange={(e) => setDayStart(e.target.value)} className="rounded-xl bg-container-low px-2 py-2 font-normal" />
+          <div className="grid grid-cols-2 gap-2">
+            <label className="flex min-w-0 flex-col gap-1 text-[13px] font-semibold">From
+              <input type="time" value={dayStart} onChange={(e) => setDayStart(e.target.value)} className="w-full min-w-0 rounded-xl bg-container-low px-2 py-2 font-normal tabular-nums" />
             </label>
-            <label className="flex flex-col gap-1 text-[13px] font-semibold">Until
-              <input type="time" value={dayEnd} onChange={(e) => setDayEnd(e.target.value)} className="rounded-xl bg-container-low px-2 py-2 font-normal" />
+            <label className="flex min-w-0 flex-col gap-1 text-[13px] font-semibold">Until
+              <input type="time" value={dayEnd} onChange={(e) => setDayEnd(e.target.value)} className="w-full min-w-0 rounded-xl bg-container-low px-2 py-2 font-normal tabular-nums" />
             </label>
-            <label className="flex flex-col gap-1 text-[13px] font-semibold">Budget ₹
+            <label className="col-span-2 flex flex-col gap-1 text-[13px] font-semibold">Budget ₹ (total fares)
               <input inputMode="numeric" value={budget} onChange={(e) => setBudget(e.target.value.replace(/\D/g, ""))} placeholder="any"
                 className="rounded-xl bg-container-low px-2 py-2 font-normal" />
             </label>

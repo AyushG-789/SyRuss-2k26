@@ -5,7 +5,7 @@ import networkx as nx
 
 from app.clock import clock, fmt_hhmm
 from app.data_loader import load_typed_network
-from app.routing.fares import calculate_leg_costs
+from app.routing.fares import calculate_leg_costs, haversine_km
 from app.routing.graph import (
     build_multimodal_graph,
     diff_minutes_hhmm,
@@ -28,6 +28,33 @@ def summarize_legs(legs: list[Leg]) -> str:
     if not main_parts:
         return "Walk route"
     return "Via " + " -> ".join(main_parts)
+
+
+WALK_REACH_KM = 1.2  # access/egress walking radius (SPEC §5.1)
+ROAD_MODES = {"bus", "auto", "taxi", "cab"}
+
+
+def _why_no_path(traveller: Traveller, stations) -> str:
+    """Plain reason when the graph has no path between the two places."""
+    allowed = set(traveller.modes_allowed)
+    usable = [s for s in stations.values() if s.mode in allowed]
+
+    def nearest(p):
+        best = min(usable, key=lambda s: haversine_km(p.lat, p.lon, s.lat, s.lon), default=None)
+        return (best, haversine_km(p.lat, p.lon, best.lat, best.lon)) if best else (None, 0.0)
+
+    far = []
+    for end, place in (("start", traveller.origin), ("destination", traveller.destination)):
+        st, km = nearest(place)
+        if st is None or km > WALK_REACH_KM:
+            far.append(f"your {end} ({place.label}) is {km:.1f} km from the nearest usable stop"
+                       + (f", {st.name}" if st else ""))
+    if far and not (allowed & ROAD_MODES):
+        return ("No route with only " + ", ".join(sorted(allowed - {"walk"})) + ": " + "; ".join(far)
+                + " — too far to walk. Allow BEST bus, auto or taxi for that part.")
+    if far:
+        return "No route: " + "; ".join(far) + ". Try allowing more transport modes."
+    return "No connection between these places with the transport modes you allowed. Try allowing more modes."
 
 
 def plan_baseline(
@@ -91,6 +118,13 @@ def plan_baseline(
             continue
         seen_signatures.add(sig)
         unique_candidates.append(legs)
+
+    # No path at all (e.g. only rail allowed and the destination is far from any station): say why.
+    if not unique_candidates:
+        return PlanResponse(
+            cards=[], rejected=[RejectedOption(summary="Any route", reason=_why_no_path(traveller, stations))],
+            destination=traveller.destination, as_of=dep_time,
+        )
 
     # 3. Apply Hard Filters (SPEC §5.3)
     surviving: list[ScoredCandidate] = []

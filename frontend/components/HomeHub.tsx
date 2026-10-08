@@ -4,9 +4,7 @@
 // Frontend only: every value comes from lib/mockHome.ts until the backend is connected.
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useId, useState } from "react";
-import { findPlace, PLACE_OPTIONS } from "@/lib/places";
+import { findPlace } from "@/lib/places";
 import { EMPTY_FORM, NOW, travellerFromForm } from "@/lib/tripForm";
 import { tripHref } from "@/lib/tripUrl";
 import { travellers } from "@/lib/api";
@@ -33,7 +31,6 @@ export default function HomeHub() {
 
 /* ---------------------------------------------------------------- Welcome + quick route finder */
 function Welcome() {
-  const router = useRouter();
   const live = useLiveEvents();
   const evs = live?.events ?? [];
   const stats = [
@@ -41,28 +38,6 @@ function Welcome() {
     { label: "Reports checked", value: String(evs.reduce((n, e) => n + e.evidence.reduce((k, x) => k + Math.max(1, x.covers?.length ?? 0), 0), 0)), accent: false },
     { label: "Fakes rejected", value: String(evs.filter((e) => e.status === "coordinated" || e.status === "ignored").length), accent: false },
   ];
-  const [from, setFrom] = useState(hero.defaultFrom);
-  const [to, setTo] = useState(hero.defaultTo);
-  const [depart, setDepart] = useState<string>(hero.departOptions[0].label);
-  const listId = useId();
-
-  // Both places recognised → straight to Route Results. Otherwise open the planner, pre-filled,
-  // so the traveller only fixes the place that wasn't found.
-  function findRoutes(e: React.FormEvent) {
-    e.preventDefault();
-    const a = findPlace(from);
-    const b = findPlace(to);
-    if (a && b && a.label !== b.label) {
-      const d = hero.departOptions.find((o) => o.label === depart) ?? hero.departOptions[0];
-      router.push(tripHref(travellerFromForm({
-        ...EMPTY_FORM, from: a.label, to: b.label, timeMode: d.mode, time: d.time,
-        priority: "fastest", modes: ["local", "metro", "bus", "auto", "taxi", "cab"],
-      })));
-      return;
-    }
-    router.push(`/plan?from=${encodeURIComponent(a?.label ?? from)}&to=${encodeURIComponent(b?.label ?? to)}`);
-  }
-
   return (
     <section className="relative mt-4 w-full overflow-hidden rounded-2xl bg-container-lowest p-6 shadow-sm">
       <div className="pointer-events-none absolute -right-20 -top-24 h-96 w-96 rounded-full bg-primary-fixed/30 blur-3xl" />
@@ -95,51 +70,14 @@ function Welcome() {
         </div>
       </div>
 
-      <div className="relative z-10 rounded-xl bg-container-low p-4 shadow-sm">
-        <datalist id={listId}>{PLACE_OPTIONS.map((p) => <option key={p.label} value={p.label} />)}</datalist>
-        <form onSubmit={findRoutes} className="grid grid-cols-1 items-center gap-2 md:grid-cols-12">
-          <div className="relative flex items-center rounded-lg bg-container-lowest px-4 py-2 shadow-sm transition-all focus-within:ring-2 focus-within:ring-primary md:col-span-5 xl:col-span-4">
-            <Icon name="trip_origin" className="mr-1 text-primary" />
-            <div className="flex min-w-0 flex-1 flex-col">
-              <label htmlFor="origin" className="text-[11px] font-bold leading-none text-on-surface-variant">From (Origin)</label>
-              <input id="origin" list={listId} autoComplete="off" value={from} onChange={(e) => setFrom(e.target.value)} placeholder="Station, Landmark, or Area"
-                className="w-full truncate bg-transparent pt-0.5 text-sm focus:outline-none" />
-            </div>
-            <button type="button" title="Use current location" className="ml-1 text-outline transition-colors hover:text-primary">
-              <Icon name="my_location" className="text-[18px]" />
-            </button>
-          </div>
-
-          <div className="flex justify-center md:col-span-2 xl:col-span-1">
-            <button type="button" onClick={() => { setFrom(to); setTo(from); }} aria-label="Swap origin and destination"
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-container-high text-on-surface-variant transition-transform hover:rotate-180 hover:bg-container-highest">
-              <Icon name="swap_horiz" className="text-[20px]" />
-            </button>
-          </div>
-
-          <div className="relative flex items-center rounded-lg bg-container-lowest px-4 py-2 shadow-sm transition-all focus-within:ring-2 focus-within:ring-primary md:col-span-5 xl:col-span-4">
-            <Icon name="pin_drop" className="mr-1 text-tertiary" />
-            <div className="flex min-w-0 flex-1 flex-col">
-              <label htmlFor="dest" className="text-[11px] font-bold leading-none text-on-surface-variant">To (Destination)</label>
-              <input id="dest" list={listId} autoComplete="off" value={to} onChange={(e) => setTo(e.target.value)} placeholder="Station, Tech Park, Metro Gate"
-                className="w-full truncate bg-transparent pt-0.5 text-sm focus:outline-none" />
-            </div>
-          </div>
-
-          <div className="flex items-center gap-1 md:col-span-12 xl:col-span-3">
-            <div className="flex min-w-[7.5rem] flex-1 items-center gap-1 rounded-lg bg-container-lowest px-2 py-2 shadow-sm">
-              <Icon name="schedule" className="text-[18px] text-outline" />
-              <select value={depart} onChange={(e) => setDepart(e.target.value)} aria-label="Departure time"
-                className="w-full cursor-pointer bg-transparent text-xs font-semibold focus:outline-none">
-                {hero.departOptions.map((o) => <option key={o.label}>{o.label}</option>)}
-              </select>
-            </div>
-            <button type="submit"
-              className="flex h-12 items-center justify-center gap-1 whitespace-nowrap rounded-lg bg-primary px-4 text-sm font-semibold text-on-primary shadow-sm transition-transform hover:bg-primary-container active:scale-95">
-              Find Routes <Icon name="arrow_forward" className="text-[18px]" />
-            </button>
-          </div>
-        </form>
+      <div className="relative z-10 flex flex-col items-start gap-3 rounded-xl bg-container-low p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-sm text-on-surface-variant">
+          Where to? Set your start, destination, time, budget, walking and accessibility needs — routes are checked against live reports.
+        </p>
+        <Link href="/plan"
+          className="flex h-12 shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-lg bg-primary px-5 text-sm font-semibold text-on-primary shadow-sm transition-transform hover:bg-primary-container active:scale-95">
+          <Icon name="alt_route" className="text-[20px]" /> Plan a trip <Icon name="arrow_forward" className="text-[18px]" />
+        </Link>
       </div>
     </section>
   );
@@ -382,7 +320,7 @@ function DemoTravellers() {
             </div>
             <p className="line-clamp-3 text-[12px] text-on-surface-variant">{t.story}</p>
             <span className="mt-auto flex items-center gap-1 text-[12px] font-semibold text-primary">
-              {t.itinerary ? "Plan the day" : `${t.origin.label} → ${t.destination?.label ?? ""}`} <Icon name="arrow_forward" className="text-[14px]" />
+              <Icon name="play_circle" className="text-[16px]" /> Open story{t.demo ? ` · moment at ${t.demo.moment}` : ""}
             </span>
           </Link>
         ))}

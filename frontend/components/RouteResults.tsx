@@ -8,15 +8,17 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { getBaselinePlan, getClock, getPlan, planRequest, RoutingNotConnected } from "@/lib/api";
+import { getBaselinePlan, getClock, getPlan, planRequest, RoutingNotConnected, stations } from "@/lib/api";
 import { legColor, lineShortName, MODE_LABEL, PLAN_LABEL, pct, placeName, readableRoute } from "@/lib/format";
 import { toMin } from "@/lib/geo";
 import { activeEvents } from "@/lib/network";
 import { startTrip } from "@/lib/savedTrip";
+import { tripHref } from "@/lib/tripUrl";
 import type { Leg, Mode, PlanLabel, PlanResponse, RouteCard, Traveller } from "@/lib/types";
 import { useLiveEvents } from "@/lib/useLiveEvents";
 import Icon from "./Icon";
 import MapView from "./MapView";
+import StoryPanel from "./StoryPanel";
 
 type Plan = PlanResponse & { sample?: boolean };
 type State = { status: "loading" } | { status: "error"; message: string } | { status: "not_connected" } | { status: "ready"; plan: Plan };
@@ -56,6 +58,7 @@ export default function RouteResults({ traveller }: { traveller: Traveller | nul
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [filter, setFilter] = useState("all");
   const [copied, setCopied] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     if (!traveller) return;
@@ -72,7 +75,7 @@ export default function RouteResults({ traveller }: { traveller: Traveller | nul
       });
     getBaselinePlan(traveller).then((b) => !cancelled && setBaseline(b)).catch(() => undefined);
     return () => { cancelled = true; };
-  }, [traveller]);
+  }, [traveller, reloadKey]);
 
   const plan = state.status === "ready" ? state.plan : null;
   const active = useMemo(() => activeEvents(live?.events), [live]);
@@ -146,12 +149,16 @@ export default function RouteResults({ traveller }: { traveller: Traveller | nul
         </div>
       </section>
 
+      {traveller.demo && traveller.traveller_id !== "CUSTOM" && (
+        <StoryPanel traveller={traveller} onReplan={() => setReloadKey((k) => k + 1)} resultsHref={pathname} />
+      )}
+
       {state.status === "loading" && <p className="text-on-surface-variant">Finding routes and checking live reports…</p>}
       {state.status === "error" && <p className="rounded-xl bg-error-container p-3 text-sm text-on-error-container">Couldn’t load routes: {state.message}</p>}
       {state.status === "not_connected" && <NotConnected traveller={traveller} destination={destination} />}
 
       {plan && plan.cards.length === 0 && (
-        <p className="rounded-xl bg-amber-soft p-4 text-sm text-amber-ink">No route fits all your limits. See the rejected options below, or loosen budget / walking / changes.</p>
+        <NoRoute traveller={traveller} rejected={plan.rejected} />
       )}
 
       {plan && plan.cards.length > 0 && (
@@ -237,6 +244,146 @@ export default function RouteResults({ traveller }: { traveller: Traveller | nul
         </>
       )}
     </main>
+  );
+}
+
+/** Nothing fits: explain in plain words what happened, why, and give one-click fixes. */
+const MODE_WORDS: Record<string, string> = { local: "local trains", metro: "metro", bus: "BEST buses", auto: "autos", taxi: "taxis", cab: "app cabs" };
+const ALL_MODES: Mode[] = ["walk", "local", "metro", "bus", "auto", "taxi", "cab"];
+
+function listWords(xs: string[]): string {
+  return xs.length <= 1 ? xs.join("") : `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}`;
+}
+
+type Fix = { label: string; why: string; icon: string; traveller: Traveller; primary?: boolean };
+
+function explainNoRoute(t: Traveller, rejected: PlanResponse["rejected"]) {
+  const reasons: string[] = [];
+  const fixes: Fix[] = [];
+  const base = { ...t, traveller_id: "CUSTOM" };
+  const allowed = t.modes_allowed.filter((m) => m !== "walk");
+  const num = (re: RegExp) => rejected.map((r) => r.reason.match(re)).filter(Boolean).map((m) => Number(m![1]));
+
+  // 1. No connection at all (e.g. only trains allowed and the place is far from a station).
+  if (rejected.some((r) => r.summary === "Any route")) {
+    const usable = Object.values(stations).filter((st) => (allowed as string[]).includes(st.mode));
+    const nearest = (p: { lat: number; lon: number }) => usable
+      .map((st) => ({ st, km: km(p, st) }))
+      .sort((x, y) => x.km - y.km)[0];
+    const ends = [{ who: "start", place: t.origin }, { who: "destination", place: t.destination }]
+      .filter((e) => e.place) as { who: string; place: NonNullable<Traveller["destination"]> }[];
+    for (const e of ends) {
+      const n = nearest(e.place);
+      if (n && n.km > 1.2) {
+        const mins = Math.round(((n.km * 1.3) / (t.step_free || t.heavy_luggage ? 3 : 4.5)) * 60);
+        const kind = allowed.every((m) => m === "local" || m === "metro") ? (allowed.length > 1 ? "train or metro station" : allowed[0] === "metro" ? "metro station" : "train station") : "stop";
+        reasons.push(`${e.place.label} is about ${n.km.toFixed(1)} km from the nearest ${kind} (${n.st.name}) — roughly a ${mins}-minute walk, which is too far.`);
+      }
+    }
+    if (!reasons.length) reasons.push(`There's no connection between these two places using only ${listWords(allowed.map((m) => MODE_WORDS[m] ?? m))}.`);
+    const missing = ALL_MODES.filter((m) => m !== "walk" && !(t.modes_allowed as string[]).includes(m));
+    if (missing.length) {
+      fixes.push({ label: `Add ${listWords(missing.filter((m) => m !== "cab").map((m) => MODE_WORDS[m]))}`, icon: "add_road", primary: true,
+        why: "Use a bus, auto or taxi just for the stretch that's too far to walk.", traveller: { ...base, modes_allowed: ALL_MODES } });
+    }
+  }
+
+  // 2. Routes exist but break one of the traveller's limits.
+  const costs = num(/est\. (\d+) rupees/);
+  if (costs.length && t.max_budget_inr != null) {
+    const need = Math.min(...costs);
+    reasons.push(`The cheapest way costs about ₹${need}, but your budget is ₹${t.max_budget_inr}.`);
+    fixes.push({ label: `Raise budget to ₹${need}`, icon: "payments", why: `₹${need - t.max_budget_inr} more than you set.`, traveller: { ...base, max_budget_inr: need } });
+  }
+  const walks = num(/Walking time (\d+) min/);
+  if (walks.length && t.max_walk_min != null) {
+    const need = Math.min(...walks);
+    reasons.push(`Every route needs at least ${need} minutes of walking; you allowed ${t.max_walk_min}.`);
+    fixes.push({ label: `Allow ${need} min of walking`, icon: "directions_walk", why: `${need - t.max_walk_min} minutes more on foot.`, traveller: { ...base, max_walk_min: need } });
+  }
+  const changes = num(/Requires (\d+) transfers/);
+  if (changes.length && t.max_transfers != null) {
+    const need = Math.min(...changes);
+    reasons.push(`The routes need ${need} change${need === 1 ? "" : "s"} of train or bus; you allowed ${t.max_transfers}.`);
+    fixes.push({ label: `Allow ${need} change${need === 1 ? "" : "s"}`, icon: "sync_alt", why: "One more switch between vehicles.", traveller: { ...base, max_transfers: need } });
+  }
+  const late = rejected.map((r) => r.reason.match(/Arrives at (\d\d:\d\d), after strict deadline/)).filter(Boolean).map((m) => m![1]).sort();
+  if (late.length) {
+    reasons.push(`Leaving now, the earliest arrival is ${late[0]} — after your must-arrive time of ${t.arrive_by}.`);
+    fixes.push({ label: `Arrive by ${late[0]} instead`, icon: "schedule", why: "Keep the trip, accept arriving a bit later.", traveller: { ...base, arrive_by: late[0] } });
+    fixes.push({ label: "Make the arrival time flexible", icon: "flag", why: "Show routes even if they arrive late.", traveller: { ...base, hard_deadline: false } });
+  }
+  if (rejected.some((r) => r.reason.startsWith("Not step-free"))) {
+    reasons.push("The routes we found have stairs somewhere (a station or a change between platforms), and you asked for step-free only.");
+    fixes.push({ label: "Add taxi / cab door-to-door", icon: "local_taxi", why: "Usually the most accessible option.", traveller: { ...base, modes_allowed: [...new Set([...t.modes_allowed, "taxi", "cab"] as Mode[])] } });
+  }
+  const blocked = rejected.filter((r) => r.reason.includes("confirmed by Pakka Check"));
+  if (blocked.length) {
+    reasons.push(`Some routes would go through a problem that commuters and official sources have confirmed (${blocked[0].reason.replace(/^Uses /, "").replace(/ \(confirmed by Pakka Check\)$/, "")}), so we left them out.`);
+  }
+  if (!reasons.length) reasons.push("None of the routes we found fit all the limits you set.");
+  if (fixes.length && !fixes.some((f) => f.primary)) fixes[0].primary = true;   // highlight the most direct fix
+  if (!fixes.length || !fixes.some((f) => f.label.startsWith("Add"))) {
+    fixes.push({ label: "Relax all limits", icon: "tune", why: "No budget cap, up to 25 min walking, up to 3 changes, all transport.",
+      traveller: { ...base, max_budget_inr: null, max_walk_min: Math.max(t.max_walk_min ?? 15, 25), max_transfers: Math.max(t.max_transfers ?? 2, 3), modes_allowed: ALL_MODES } });
+  }
+  return { reasons, fixes };
+}
+
+function NoRoute({ traveller, rejected }: { traveller: Traveller; rejected: PlanResponse["rejected"] }) {
+  const { reasons, fixes } = explainNoRoute(traveller, rejected);
+  const allowed = traveller.modes_allowed.filter((m) => m !== "walk").map((m) => MODE_WORDS[m] ?? m);
+  return (
+    <section className="flex flex-col gap-4 rounded-2xl bg-container-lowest p-5 shadow-sm">
+      <div className="flex items-start gap-3">
+        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-amber-soft text-amber-ink"><Icon name="wrong_location" /></span>
+        <div>
+          <h2 className="text-lg font-semibold">We couldn&apos;t find a route that fits all your choices</h2>
+          <p className="text-sm text-on-surface-variant">
+            You asked for {allowed.length ? listWords(allowed) : "walking only"}
+            {traveller.max_walk_min != null ? `, up to ${traveller.max_walk_min} min of walking` : ""}
+            {traveller.max_budget_inr != null ? `, a ₹${traveller.max_budget_inr} budget` : ""}
+            {traveller.max_transfers != null ? ` and at most ${traveller.max_transfers} change${traveller.max_transfers === 1 ? "" : "s"}` : ""}
+            {traveller.step_free ? ", step-free only" : ""}.
+          </p>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <h3 className="text-[12px] font-bold uppercase tracking-wider text-on-surface-variant">Why</h3>
+        <ul className="flex flex-col gap-1.5">
+          {reasons.map((r) => (
+            <li key={r} className="flex items-start gap-2 rounded-xl bg-amber-soft/60 px-3 py-2 text-sm text-on-surface">
+              <Icon name="info" className="text-[18px] text-amber-ink" /> {r}
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <h3 className="text-[12px] font-bold uppercase tracking-wider text-on-surface-variant">What you can do</h3>
+        <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
+          {fixes.map((f) => (
+            <Link key={f.label} href={tripHref(f.traveller)}
+              className={`flex items-start gap-3 rounded-xl p-3 transition ${f.primary ? "bg-primary text-on-primary hover:bg-primary-container" : "bg-container-low hover:bg-container"}`}>
+              <Icon name={f.icon} className="text-[22px]" />
+              <span className="min-w-0">
+                <span className="block text-sm font-semibold">{f.label}{f.primary ? " (recommended)" : ""}</span>
+                <span className={`block text-[12px] ${f.primary ? "text-on-primary/85" : "text-on-surface-variant"}`}>{f.why}</span>
+              </span>
+            </Link>
+          ))}
+          <Link href={`/plan?from=${encodeURIComponent(traveller.origin.label)}&to=${encodeURIComponent(traveller.destination?.label ?? "")}`}
+            className="flex items-start gap-3 rounded-xl bg-container-low p-3 transition hover:bg-container">
+            <Icon name="edit" className="text-[22px]" />
+            <span>
+              <span className="block text-sm font-semibold">Change the trip myself</span>
+              <span className="block text-[12px] text-on-surface-variant">Open the planner with these two places filled in.</span>
+            </span>
+          </Link>
+        </div>
+      </div>
+    </section>
   );
 }
 

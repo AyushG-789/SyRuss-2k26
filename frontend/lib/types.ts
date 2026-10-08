@@ -47,10 +47,25 @@ export interface Place {
   poi_id?: string | null;
 }
 
+/** How to show a demo traveller's story (data/travellers.json → "demo"). */
+export interface DemoStory {
+  kind: "plan" | "track" | "itinerary";
+  /** Demo-clock time the story starts at. */
+  clock: string;
+  /** Which option to start for a "track" story. */
+  card: "fastest" | "optimal" | "cheapest" | null;
+  /** When the interesting thing happens. */
+  moment: string;
+  /** What to point at. */
+  watch: string;
+}
+
 export interface Traveller {
   traveller_id: string;
   name: string;
   story?: string;
+  demo_hook?: string;
+  demo?: DemoStory;
   origin: Place;
   destination: Place | null;
   leave_at: string | null;

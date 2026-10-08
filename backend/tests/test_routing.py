@@ -30,8 +30,8 @@ def test_tr3_known_mumbai_route():
 
 def test_tr2_cheapest_priority_recommendation():
     seed = load_seed()
-    tr2 = Traveller.model_validate(seed.travellers["TR2"])
-    assert tr2.priority == "cheapest"
+    # A budget traveller who asks for the cheapest option gets it recommended.
+    tr2 = Traveller.model_validate(dict(seed.travellers["TR2"], priority="cheapest"))
 
     res = plan_baseline(tr2)
     assert len(res.cards) >= 1

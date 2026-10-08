@@ -58,9 +58,24 @@ def _mark(card: RouteCard, hits: dict[int, list[Hit]], events: dict[str, Event])
     return card.model_copy(update={"legs": legs})
 
 
-def _join(done: list[Leg], new: RouteCard, label: str, plan_id: str) -> RouteCard:
-    """Completed legs + the new route, with the totals recomputed."""
-    legs = [*done, *new.legs]
+def _join(done: list[Leg], new: RouteCard, label: str, plan_id: str,
+          pivot_stop: str | None = None, committed_delay: int = 0) -> RouteCard:
+    """Completed legs + the new route, with the totals recomputed.
+
+    The new route was planned from the traveller's position, so its "origin" is that station: name
+    it (otherwise the UI shows the trip's original start). A delay on the ride they're already on is
+    added to that ride, so the times read straight through.
+    """
+    done = list(done)
+    if committed_delay and done:
+        last = done[-1]
+        done[-1] = last.model_copy(update={"arrive": add_minutes_hhmm(last.arrive, committed_delay),
+                                           "duration_min": last.duration_min + committed_delay})
+    new_legs = [
+        leg.model_copy(update={"from_id": pivot_stop if leg.from_id == "origin" else leg.from_id})
+        for leg in new.legs
+    ] if pivot_stop else list(new.legs)
+    legs = [*done, *new_legs]
     vehicles = [leg for leg in legs if leg.mode != "walk"]
     return new.model_copy(update={
         "plan_id": plan_id,
@@ -242,7 +257,8 @@ class JourneyStore:
             return True
 
         arrive, _, alt = best
-        new_card = _join(done, alt, j.card.label, f"{j.card.plan_id}_r{len(j.log)}")
+        pivot_stop = None if pivot.from_id == "origin" else pivot.from_id
+        new_card = _join(done, alt, j.card.label, f"{j.card.plan_id}_r{len(j.log)}", pivot_stop, committed_delay)
         # Compared with what the traveller would have got: the delayed arrival, or (if the route is
         # unusable) the arrival they were originally promised.
         delta = {"min": _mins(arrive) - _mins(j.card.legs[-1].arrive if old_blocked else old_arrive),

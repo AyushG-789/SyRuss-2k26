@@ -169,6 +169,20 @@ function LiveTrip({ trip, onTrip }: { trip: SavedTrip; onTrip: (t: SavedTrip | n
         </div>
       </div>
 
+      {/* ---- Demo story (TR1–TR5) ---- */}
+      {traveller.demo?.kind === "track" && clock && phase !== "arrived" && (
+        <div className="mb-2 flex flex-wrap items-center gap-2 rounded-xl border-2 border-primary/30 bg-primary-fixed/20 p-3 text-[13px]">
+          <Icon name="theater_comedy" className="text-[18px] text-primary" />
+          <span className="min-w-0 flex-1"><b>Demo story ({traveller.traveller_id}):</b> the moment is at <b>{traveller.demo.moment}</b>. {traveller.demo.watch}</span>
+          {clock.now < traveller.demo.moment && (
+            <button type="button" onClick={() => updateClock({ set: traveller.demo!.moment }).then(setClock).catch(() => undefined)}
+              className="flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-[12px] font-bold text-on-primary hover:bg-primary-container">
+              <Icon name="fast_forward" className="text-[16px]" /> Jump to {traveller.demo.moment}
+            </button>
+          )}
+        </div>
+      )}
+
       {/* ---- Replan proposal / notice ---- */}
       {journey?.proposal && (
         <ReplanBanner journey={journey} name={name} onDecided={setJourney} />
@@ -615,7 +629,9 @@ function ReplanBanner({ journey, name, onDecided }: { journey: Journey; name: (i
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Only the part that changes (legs already done are kept as they were).
-  const firstNew = p.new_card.legs.findIndex((l, k) => JSON.stringify(l) !== JSON.stringify(journey.card.legs[k]));
+  // (compared by route, not times: a delay on the ride you're on shifts its times but isn't "new")
+  const same = (a?: Leg, b?: Leg) => !!a && !!b && a.mode === b.mode && a.line_id === b.line_id && a.from_id === b.from_id && a.to_id === b.to_id;
+  const firstNew = p.new_card.legs.findIndex((l, k) => !same(l, journey.card.legs[k]));
   const newLegs = firstNew < 0 ? p.new_card.legs : p.new_card.legs.slice(firstNew);
   async function decide(accept: boolean) {
     setBusy(true);

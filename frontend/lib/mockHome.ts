@@ -15,16 +15,6 @@ export const hero = {
   badge: "MMR Unified Mobility",
   title: "Welcome back, Commuter!",
   subtitle: "Plan and track trips across Mumbai Metro, Suburban rail, BEST buses and last-mile autos & taxis — around problems other commuters have reported and Pakka Check has verified.",
-  // Real places from the trip form's list, so "Find Routes" can go straight to results.
-  defaultFrom: "Andheri station",
-  defaultTo: "Jio World Centre, BKC",
-  /** "now" = the demo clock's current time (the backend fills it in). */
-  departOptions: [
-    { label: "Leave Now", mode: "leave", time: "now" },
-    { label: "Depart at 05:30 PM", mode: "leave", time: "17:30" },
-    { label: "Depart at 06:00 PM", mode: "leave", time: "18:00" },
-    { label: "Arrive by 06:30 PM", mode: "arrive", time: "18:30" },
-  ] as const,
 };
 
 /** Quick trips (sample saved places — accounts aren't in the prototype). Each opens live results. */
