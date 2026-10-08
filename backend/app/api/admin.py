@@ -1,10 +1,12 @@
-"""Demo controls: simulated clock. Inject/reset land here later (SPEC.md §10)."""
+"""Demo controls: simulated clock and reset. Inject lands here in B4 (SPEC.md §10)."""
 from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from ..clock import clock, fmt_hhmm, parse_hhmm
+from ..data_loader import load_seed
+from ..verify.store import store
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -36,4 +38,13 @@ def update_clock(body: ClockUpdate) -> dict:
             clock.set_speed(body.speed)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return _state()
+
+
+@router.post("/reset")
+def reset() -> dict:
+    """Reload all seed reports/news/notices and put the clock back to the scenario start (paused)."""
+    store.reset()
+    clock.set(parse_hhmm(load_seed().scenario["start"]))
+    clock.set_speed(0)
     return _state()

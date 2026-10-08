@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 
 from ..clock import parse_hhmm
 from ..data_loader import SeedData, load_seed
-from ..schemas import DisruptionType
+from ..schemas import Affected, DisruptionType, Severity
 from .evidence import RawEvidence
 
 HHMM = re.compile(r"^\d{2}:\d{2}$")
@@ -22,8 +22,18 @@ NOT_SUPPORT = {"running_normally", "not_a_disruption"}
 class SeedEvent:
     event_id: str
     type: DisruptionType | None = None
+    severity: Severity = "medium"
     expected_status: str | None = None
+    affected: Affected = field(default_factory=Affected)
     evidence: list[RawEvidence] = field(default_factory=list)
+
+
+def _add_affected(ev: SeedEvent, affected: dict | None) -> None:
+    if not affected:
+        return
+    for key in ("line_ids", "stop_ids", "transfer_ids"):
+        merged = getattr(ev.affected, key)
+        merged.extend(x for x in affected.get(key, []) if x not in merged)
 
 
 def _event(events: dict[str, SeedEvent], event_id: str) -> SeedEvent:
@@ -41,8 +51,11 @@ def seed_events(seed: SeedData | None = None) -> dict[str, SeedEvent]:
         ev = _event(events, exp["event"])
         contradicts = exp.get("type") in NOT_SUPPORT
         if not contradicts:
-            ev.type = ev.type or exp["type"]
+            if ev.type is None:
+                ev.type = exp["type"]
+                ev.severity = exp.get("severity", "medium")
             ev.expected_status = ev.expected_status or exp.get("status")
+            _add_affected(ev, exp.get("affected"))
         ev.evidence.append(RawEvidence(
             source_type="crowd", ref_id=r["report_id"], at=parse_hhmm(r["reported_at"]),
             reporter_id=r["reporter_id"], text=r["text"], contradicts=contradicts,
