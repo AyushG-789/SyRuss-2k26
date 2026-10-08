@@ -40,8 +40,20 @@ def test_itinerary_orders_stops_within_opening_hours():
     assert {"poi_gateway", "poi_csmvs", "poi_marine_drive"} <= set(names)                # all must-visits
 
 
-def test_itinerary_reports_impossible_days():
+def test_tight_day_plans_what_fits_and_explains_the_rest():
     tr4 = dict(load_seed().travellers["TR4"])
-    tr4["itinerary"] = {**tr4["itinerary"], "day_start": "18:10", "day_end": "19:00"}   # museum already closed
+    tr4["itinerary"] = {**tr4["itinerary"], "day_start": "16:30", "day_end": "19:30"}   # too late for the museum
     r = client.post("/itinerary", json={"traveller": tr4}).json()
-    assert r["feasible"] is False and r["error"]
+    assert r["feasible"] and r["partial"]
+    kept = [s["poi_id"] for s in r["stops"]]
+    assert "poi_marine_drive" in kept                                                  # must-visits kept first
+    csmvs = next(d for d in r["dropped"] if d["poi_id"] == "poi_csmvs")
+    assert csmvs["must_visit"] and "closes at 18:00" in csmvs["reason"]
+
+
+def test_nothing_fits_explains_every_stop():
+    tr4 = dict(load_seed().travellers["TR4"])
+    tr4["itinerary"] = {"day_start": "21:30", "day_end": "22:00",
+                        "stops": [{"poi_id": "poi_csmvs", "must_visit": True}, {"poi_id": "poi_crawford_market", "must_visit": True}]}
+    r = client.post("/itinerary", json={"traveller": tr4}).json()
+    assert r["feasible"] is False and len(r["dropped"]) == 2 and all(d["reason"] for d in r["dropped"])

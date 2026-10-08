@@ -3,15 +3,37 @@
 // Leaflet touches `window`, so this file is only ever loaded with next/dynamic { ssr: false }.
 import "leaflet/dist/leaflet.css";
 import { createLeafletContext, LeafletContext, type LeafletContextInterface } from "@react-leaflet/core";
-import { Map as LeafletMap } from "leaflet";
+import { divIcon, Map as LeafletMap } from "leaflet";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { CircleMarker, Polyline, Popup, TileLayer, Tooltip, useMap } from "react-leaflet";
+import { CircleMarker, Marker, Polyline, Popup, TileLayer, Tooltip, useMap } from "react-leaflet";
 import { lines, stations } from "@/lib/api";
 import { evidenceSummary, eventPosition, eventTitle, legColor, pct, STATUS_STYLE } from "@/lib/format";
 import { legPath, type LatLon } from "@/lib/geo";
 import type { DisruptionEvent, Place, RouteCard } from "@/lib/types";
 
 const MUMBAI: LatLon = [19.05, 72.87];
+
+/** A numbered stop on a day plan (1, 2, 3…) — or "S" for where the day starts. */
+export interface MapStop {
+  lat: number;
+  lon: number;
+  label: string;
+  /** Shown in the pin: a number, or "S" for the start. */
+  badge: string;
+  sub?: string;
+  active?: boolean;
+}
+
+function stopIcon(badge: string, active: boolean, start: boolean) {
+  const bg = start ? "#545f73" : active ? "#8d4b00" : "#006948";
+  const size = active ? 34 : 28;
+  return divIcon({
+    className: "",
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+    html: `<div style="width:${size}px;height:${size}px;border-radius:9999px;background:${bg};color:#fff;display:grid;place-items:center;font:700 ${active ? 15 : 13}px/1 'Plus Jakarta Sans',system-ui,sans-serif;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35)">${badge}</div>`,
+  });
+}
 
 // react-leaflet's MapContainer destroys the Leaflet map whenever its effects are cleaned up. Next 16
 // (cacheComponents) keeps visited pages alive but hidden, and Fast Refresh re-runs effects, so the
@@ -62,6 +84,8 @@ export default function RouteMap({
   events = [],
   showNetwork = false,
   here = null,
+  stops = [],
+  onStopClick,
 }: {
   card?: RouteCard | null;
   origin?: Place | null;
@@ -71,6 +95,9 @@ export default function RouteMap({
   showNetwork?: boolean;
   /** Live position marker (trip tracking). */
   here?: LatLon | null;
+  /** Numbered stops of a day plan; the map fits to all of them. */
+  stops?: MapStop[];
+  onStopClick?: (index: number) => void;
 }) {
   const paths = useMemo(
     () => (card ? card.legs.map((leg) => ({ leg, path: legPath(leg, origin, destination) })) : []),
@@ -86,13 +113,15 @@ export default function RouteMap({
     [showNetwork],
   );
   // Stable reference so the map only re-fits when what we're showing changes.
+  const stopsKey = stops.map((p) => `${p.lat},${p.lon}`).join("|");
   const fitPoints = useMemo(() => {
+    if (stopsKey) return stopsKey.split("|").map((k) => k.split(",").map(Number) as LatLon);
     const all = paths.flatMap((p) => p.path);
     if (all.length > 1) return all;
     const ends = [origin, destination].filter(Boolean).map((p) => [p!.lat, p!.lon] as LatLon);
     if (ends.length) return ends;
     return showNetwork ? network.flatMap((n) => n.path) : [MUMBAI];
-  }, [paths, origin, destination, showNetwork, network]);
+  }, [stopsKey, paths, origin, destination, showNetwork, network]);
 
   return (
     <MapContainer center={MUMBAI} zoom={11} className="h-full w-full" style={{ minHeight: 320 }}>
@@ -151,12 +180,24 @@ export default function RouteMap({
         );
       })}
 
-      {origin && (
+      {stops.length > 1 && (
+        <Polyline positions={stops.map((p) => [p.lat, p.lon] as LatLon)} pathOptions={{ color: "#006948", weight: 2, opacity: 0.45, dashArray: "2 8" }} />
+      )}
+      {stops.map((p, i) => (
+        <Marker key={`${p.badge}-${p.lat}-${p.lon}`} position={[p.lat, p.lon]} icon={stopIcon(p.badge, !!p.active, p.badge === "S")}
+          zIndexOffset={p.active ? 1000 : 0} eventHandlers={onStopClick ? { click: () => onStopClick(i) } : undefined}>
+          <Tooltip direction="top" offset={[0, -14]}>
+            <b>{p.badge === "S" ? "Start" : `${p.badge}.`} {p.label}</b>{p.sub ? <><br />{p.sub}</> : null}
+          </Tooltip>
+        </Marker>
+      ))}
+
+      {origin && stops.length === 0 && (
         <CircleMarker center={[origin.lat, origin.lon]} radius={8} pathOptions={{ color: "#006948", fillColor: "#ffffff", fillOpacity: 1, weight: 3 }}>
           <Tooltip>Start: {origin.label}</Tooltip>
         </CircleMarker>
       )}
-      {destination && (
+      {destination && stops.length === 0 && (
         <CircleMarker center={[destination.lat, destination.lon]} radius={8} pathOptions={{ color: "#8d4b00", fillColor: "#b15f00", fillOpacity: 1, weight: 3 }}>
           <Tooltip>End: {destination.label}</Tooltip>
         </CircleMarker>

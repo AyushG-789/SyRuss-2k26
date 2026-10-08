@@ -106,7 +106,7 @@ def test_fallback_without_key_still_plans_and_checks(monkeypatch):
     r = ask("is metro 1 running?")
     assert r["source"] == "fallback" and "Metro Line 1" in r["reply"]
     r = ask("tell me a joke")
-    assert r["source"] == "fallback" and "offline" in r["reply"]
+    assert r["source"] == "fallback" and "busy" in r["reply"]
 
 
 def test_gemini_error_falls_back(monkeypatch):
@@ -197,3 +197,22 @@ def test_marathi_fallback_answers_in_marathi(monkeypatch):
     assert r["source"] == "fallback" and r["problems"] is not None
     r = ask("मला भूक लागली आहे")                                     # not about travel
     assert "उपलब्ध नाही" in r["reply"]                                # offline message in Marathi
+
+
+# ---- Place info + friendlier problem answers (work without the AI) -----------------------------
+def test_place_opening_hours_without_ai(monkeypatch):
+    monkeypatch.setattr(gemini, "available", lambda: False)
+    r = ask("what are Kala Ghoda opening times")
+    assert "Kala Ghoda" in r["reply"] and "10:00" in r["reply"] and "open now" in r["reply"]
+    r = ask("what time does Wankhede open")
+    assert "event days" in r["reply"]
+    r = ask("काळा घोडा कधी उघडते?")
+    assert "उघडे" in r["reply"]                                     # answered in Marathi
+
+
+def test_problem_answer_is_plain_language(monkeypatch):
+    monkeypatch.setattr(gemini, "available", lambda: False)
+    r = ask("any problem at thane station")
+    assert r["reply"].startswith("Good news") and "not trusted (" not in r["reply"]
+    r = ask("Is Metro 1 running?")
+    assert "confirmed" in r["reply"] and "looks fake" in r["reply"]    # real delay + the fake burst, explained

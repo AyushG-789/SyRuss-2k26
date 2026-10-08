@@ -142,21 +142,75 @@ def plan_itinerary(traveller: Traveller, on: date | None = None) -> dict:
         kept_optional = sum(1 for pid in order if pid in optional)
         return travel + 0.2 * cost - 10 * kept_optional, min_slack, rows
 
-    best = None
-    for k in range(len(optional), -1, -1):
-        for extra in combinations(optional, k):
-            chosen = [*must, *extra]
-            if any(pid in closed for pid in chosen):
-                continue
+    def search(chosen_sets):
+        best = None
+        for chosen in chosen_sets:
             for order in permutations(chosen):
                 r = simulate(order)
                 if r and (best is None or (r[0], -r[1]) < (best[0], -best[1])):
                     best = (*r, order)
-        if best:
-            break  # keeping more optional stops is always better (−10 each), so stop at the first k that fits
+        return best
+
+    open_stops = [pid for pid in stops if pid not in closed]
+    best = None
+    partial = False
+    # 1. All must-visits + as many optional stops as fit (more optional stops are always better).
+    if not any(pid in closed for pid in must):
+        for k in range(len(optional), -1, -1):
+            best = search([[*must, *extra] for extra in combinations([o for o in optional if o not in closed], k)])
+            if best:
+                break
+    # 2. The must-visits can't all fit: plan the largest set of stops that DOES fit (must-visits first)
+    #    and explain each one that was left out.
+    if best is None:
+        partial = True
+        n_must = lambda c: sum(1 for pid in c if pid in must)  # noqa: E731
+        subsets = [c for k in range(len(open_stops), 0, -1) for c in combinations(open_stops, k)]
+        # Keep as many must-visit stops as possible first, then as many stops in total.
+        for key in sorted({(n_must(c), len(c)) for c in subsets}, reverse=True):
+            best = search([c for c in subsets if (n_must(c), len(c)) == key])
+            if best:
+                break
+
+    def why_not(pid: str, kept: tuple[str, ...]) -> str:
+        """Plain reason a stop was left out."""
+        poi, s = pois[pid], stops[pid]
+        name = poi["name"]
+        if pid in closed:
+            days = ", ".join(d.title() for d in poi.get("closed_on", [])) or weekday.title()
+            return f"{name} is closed today ({weekday.title()}) — it's closed on {days}."
+        opens, closes = _hours(poi, weekday)
+        visit = s.visit_min or poi.get("visit_min", 30)
+        est = _estimate(search_key, as_tuple(start_place), as_tuple(_place(pid, poi)), _t(day_start))
+        if est is None:
+            return f"There's no route to {name} with the transport you allowed."
+        earliest = day_start + est[0]
+        hours_txt = "open 24 h" if closes - opens >= 1440 else f"open {_t(opens)}–{_t(closes)}"
+        if s.fixed_time and _m(s.fixed_time) < day_start:
+            return f"You wanted to be at {name} at {s.fixed_time}, before your day starts at {it.day_start}."
+        if s.fixed_time and earliest > _m(s.fixed_time):
+            return f"You wanted to be at {name} at {s.fixed_time}, but the earliest you can get there is {_t(earliest)}."
+        if s.fixed_time and _m(s.fixed_time) >= day_end:
+            return f"You wanted to be at {name} at {s.fixed_time}, after your day ends at {it.day_end}."
+        if s.fixed_time and _m(s.fixed_time) + visit > day_end:
+            return (f"{name} is fixed at {s.fixed_time} for {visit} min, which runs to {_t(_m(s.fixed_time) + visit)} — "
+                    f"after your day ends at {it.day_end}.")
+        if max(earliest, opens) + visit > closes:
+            return (f"{name} closes at {_t(closes)}. A {visit}-min visit means arriving by {_t(closes - visit)}, "
+                    f"but the earliest you can get there is {_t(earliest)}.")
+        if max(earliest, opens) + visit > day_end:
+            return f"A {visit}-min visit to {name} wouldn't finish before your day ends at {it.day_end}."
+        if traveller.max_budget_inr is not None and est[1] > traveller.max_budget_inr:
+            return f"Getting to {name} costs about ₹{est[1]}, more than your ₹{traveller.max_budget_inr} budget."
+        others = [pois[k]["name"] for k in kept]
+        with_txt = f" together with {', '.join(others[:3])}" if others else ""
+        return (f"{name} fits on its own, but not{with_txt} between {it.day_start} and {it.day_end} "
+                f"({hours_txt}, about {visit} min there). A longer day or fewer stops would make room.")
 
     if best is None:
-        return {"feasible": False, "error": "These must-visit stops don't fit the day (opening hours / time window).",
+        return {"feasible": False, "error": "None of these places can be visited in this time window.",
+                "dropped": [{"poi_id": pid, "name": pois[pid]["name"], "must_visit": stops[pid].must_visit,
+                             "reason": why_not(pid, ())} for pid in stops],
                 "closed_today": closed}
 
     # Real, disruption-aware routes for the chosen order, at their real departure times.
@@ -198,11 +252,11 @@ def plan_itinerary(traveller: Traveller, on: date | None = None) -> dict:
         total_cost += card.cost_inr
         now, here = leave, dest
 
-    dropped = [{"poi_id": pid, "name": pois[pid]["name"],
-                "reason": "closed today" if pid in closed else "doesn't fit the day with the must-visit stops"}
-               for pid in optional if pid not in order]
+    dropped = [{"poi_id": pid, "name": pois[pid]["name"], "must_visit": stops[pid].must_visit,
+                "reason": why_not(pid, tuple(order))}
+               for pid in stops if pid not in order]
     return {
-        "feasible": True, "weekday": weekday, "day_start": it.day_start, "day_end": it.day_end,
+        "feasible": True, "partial": partial, "weekday": weekday, "day_start": it.day_start, "day_end": it.day_end,
         "stops": out, "dropped": dropped, "total_travel_min": total_travel, "total_cost_inr": total_cost,
         "ends_at": out[-1]["leave"], "orders_tried": "every order of the chosen stops (≤ 120)",
         "warnings": warnings, "as_of": clock.now().strftime("%H:%M"),

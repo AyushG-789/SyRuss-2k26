@@ -82,14 +82,38 @@ def _problems_text(r: dict, lang: str = "en") -> str:
         return r.get("error", "I couldn't check that.")
     trusted = [p for p in r["problems"] if p["status"] in ("confirmed", "possible")]
     untrusted = [p for p in r["problems"] if p["status"] not in ("confirmed", "possible")]
-    if not trusted and not untrusted:
-        return indic.say("no_problems", lang, now=r["now"])
-    bits = [indic.say("problem", lang, title=p["title"], meaning=indic.meaning(p["status"], p["meaning"], lang),
-                      pct=p["trust_pct"], sources=p["sources"]) for p in trusted[:3]]
-    if untrusted:
-        p = untrusted[0]
-        bits.append(indic.say("ignored", lang, title=p["title"], meaning=indic.meaning(p["status"], p["meaning"], lang)))
-    return " ".join(bits)
+    where = r.get("where") or "there"
+    if trusted:
+        text = " ".join(indic.say("problem", lang, title=p["title"], meaning=indic.meaning(p["status"], p["meaning"], lang),
+                                  pct=p["trust_pct"], sources=p["sources"]) for p in trusted[:3])
+    else:
+        text = indic.say("all_clear", lang, where=where, now=r["now"])
+    burst = next((p for p in untrusted if p["status"] == "coordinated"), None)
+    other = [p for p in untrusted if p["status"] != "coordinated"]
+    if burst:
+        text += indic.say("fake_burst", lang, title=burst["title"], pct=burst["trust_pct"])
+    if other:
+        p = other[0]
+        text += indic.say("untrusted", lang, n=len(other), s="" if len(other) == 1 else "s",
+                          title=p["title"], sources=p["sources"], pct=p["trust_pct"])
+    return text
+
+
+def _place_text(r: dict, lang: str = "en") -> str:
+    if not r.get("ok"):
+        return r.get("error", "I don't have details for that place.")
+    if r["closed_today"]:
+        return indic.say("place_closed", lang, name=r["name"], day=r["today"].title(), closed=", ".join(d.title() for d in r["closed_on"]) or "some days")
+    if r["open_now"] is None:
+        return f"{r['name']} is {r['hours_today']}. Plan about {r.get('visit_min') or 30} min there." + (
+            f" Nearest: {', '.join(r['nearest_stops'])}." if r.get("nearest_stops") else "")
+    state = {"en": " — open now" if r["open_now"] else " — closed right now", "hi": " — अभी खुला है" if r["open_now"] else " — अभी बंद है",
+             "mr": " — आत्ता उघडे आहे" if r["open_now"] else " — आत्ता बंद आहे"}.get(lang, "")
+    ticket = "" if r.get("ticket_inr") is None else (", free entry" if r["ticket_inr"] == 0 else f", ticket about ₹{r['ticket_inr']}")
+    stops = f" Nearest: {', '.join(r['nearest_stops'])}." if r.get("nearest_stops") else ""
+    hours = r["hours_today"] if r["hours_today"] == "open 24 hours" else f"open {r['hours_today'].replace('-', '–')}"
+    return indic.say("place_open", lang, name=r["name"], hours=hours, day=r["today"].title(), state=state,
+                     visit=r.get("visit_min") or 30, ticket=ticket, stops=stops)
 
 
 def _template(calls: list[tuple[str, dict]], lang: str = "en") -> str:
@@ -98,6 +122,8 @@ def _template(calls: list[tuple[str, dict]], lang: str = "en") -> str:
             return _trip_text(r, lang)
         if name == "get_live_problems":
             return _problems_text(r, lang)
+        if name == "get_place_info":
+            return _place_text(r, lang)
         if name == "get_my_journey":
             if not r.get("ok"):
                 return r["error"]
@@ -115,6 +141,7 @@ _TRIP_WORDS = re.compile(r"\s+(?:under|below|max|within|budget|cheapest|fastest|
 _TIME = re.compile(r"\b(?:by|before|till|tak)\s+(\d{1,2}[:.]\d{2})", re.I)
 _STATUS = re.compile(r"\b(running|run|working|problem|problems|issue|delay|delayed|late|closed|close|shut|band|"
                      r"status|open|kya|hai|update|disruption|crowd)\b", re.I)
+_HOURS = re.compile(r"\b(opening|open|opens|close|closes|closing|timings?|hours|times?|kab|khulta|khulega|band hota|ticket|entry|fee)\b", re.I)
 LINE_WORDS = ("metro 1", "metro 3", "western", "central", "harbour", "aqua")
 STATION_WORDS = ("dadar", "andheri", "saki naka", "bandra", "kurla", "ghatkopar", "thane", "csmt", "churchgate")
 
@@ -151,6 +178,11 @@ def detect(message: str) -> tuple[str, dict] | None:
             if (tm := _TIME.search(text)):
                 args["arrive_by"] = tm.group(1).replace(".", ":").zfill(5)
             return "plan_trip", _trip_prefs(text, args)
+    if _HOURS.search(text) or indic.HOURS_WORDS.search(message):
+        place = _HOURS.sub(" ", indic.to_latin(message))
+        p = resolve_place(place)
+        if p and p.poi_id:
+            return "get_place_info", {"place": p.label}
     latin = indic.to_latin(message)
     lowered = latin.lower()
     short = len(text.split()) <= 3

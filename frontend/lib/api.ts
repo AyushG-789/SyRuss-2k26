@@ -389,7 +389,8 @@ export interface ItineraryStopPlan {
 }
 export interface ItineraryPlan {
   feasible: boolean; error?: string; weekday?: string; day_start?: string; day_end?: string;
-  stops?: ItineraryStopPlan[]; dropped?: { poi_id: string; name: string; reason: string }[];
+  partial?: boolean;
+  stops?: ItineraryStopPlan[]; dropped?: { poi_id: string; name: string; reason: string; must_visit?: boolean }[];
   total_travel_min?: number; total_cost_inr?: number; ends_at?: string; warnings?: string[]; as_of?: string;
 }
 export const planItinerary = (traveller: Traveller) => post<ItineraryPlan>("/itinerary", { traveller });

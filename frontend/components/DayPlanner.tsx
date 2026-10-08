@@ -6,7 +6,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import poisMock from "@/mocks/pois.json";
 import { type ItineraryPlan, planItinerary, travellers } from "@/lib/api";
 import { findPlace, PLACE_OPTIONS } from "@/lib/places";
@@ -66,6 +66,15 @@ export default function DayPlanner() {
   useEffect(() => {
     if (demo) Promise.resolve().then(run);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Quick fixes change the form, then re-plan once the new values are in (run is rebuilt from them).
+  const replanAfterChange = useRef(false);
+  useEffect(() => {
+    if (replanAfterChange.current) {
+      replanAfterChange.current = false;
+      Promise.resolve().then(run);
+    }
+  }, [run]);
 
   function loadExample() {
     setStart(tr4.origin.label);
@@ -177,10 +186,15 @@ export default function DayPlanner() {
 
         {/* ---- Result ---- */}
         <section className="flex flex-col gap-4 lg:col-span-8">
-          {plan && !plan.feasible && (
-            <div className="rounded-2xl bg-error-container p-4 text-sm text-on-error-container">
-              <b>This day doesn&apos;t fit.</b> {plan.error} Try a longer day, fewer must-visit stops, or remove a fixed time.
-            </div>
+          {plan && (!plan.feasible || plan.partial) && (plan.dropped?.length ?? 0) > 0 && (
+            <LeftOut plan={plan} onFix={(fix) => { replanAfterChange.current = true; fix(); }}
+              fixes={{
+                longer: () => setDayEnd((e) => addHour(e)),
+                earlier: () => setDayStart((d) => addHour(d, -1)),
+                optional: () => setStops((ss) => ss.map((x) => ({ ...x, must_visit: false }))),
+                noFixed: () => setStops((ss) => ss.map((x) => ({ ...x, fixed_time: "" }))),
+              }}
+              hasFixed={stops.some((x) => x.fixed_time)} />
           )}
           {plan?.feasible && plan.stops && (
             <>
@@ -216,16 +230,31 @@ export default function DayPlanner() {
                   ))}
                 </ol>
                 <div className="flex flex-col gap-3">
+                  <p className="flex items-center gap-1 text-[12px] text-on-surface-variant">
+                    <Icon name="pin_drop" className="text-[16px] text-primary" /> Numbers = visiting order · <b>S</b> = start · click a number to see the route to it
+                  </p>
                   <div className="h-[420px] overflow-hidden rounded-2xl bg-container-lowest shadow-sm">
                     {focused && (
-                      <MapView card={focused.leg.card} origin={focus === 0 ? traveller?.origin ?? null : {
-                        label: plan.stops[focus - 1].name, lat: POIS[plan.stops[focus - 1].poi_id]?.lat ?? 0, lon: POIS[plan.stops[focus - 1].poi_id]?.lon ?? 0 }}
-                        destination={{ label: focused.name, lat: POIS[focused.poi_id]?.lat ?? 0, lon: POIS[focused.poi_id]?.lon ?? 0 }} />
+                      <MapView
+                        card={focused.leg.card}
+                        origin={focus === 0 ? traveller?.origin ?? null : {
+                          label: plan.stops[focus - 1].name, lat: POIS[plan.stops[focus - 1].poi_id]?.lat ?? 0, lon: POIS[plan.stops[focus - 1].poi_id]?.lon ?? 0 }}
+                        destination={{ label: focused.name, lat: POIS[focused.poi_id]?.lat ?? 0, lon: POIS[focused.poi_id]?.lon ?? 0 }}
+                        stops={[
+                          ...(traveller ? [{ lat: traveller.origin.lat, lon: traveller.origin.lon, label: traveller.origin.label, badge: "S", sub: `Leave ${plan.day_start}` }] : []),
+                          ...plan.stops.map((s, i) => ({
+                            lat: POIS[s.poi_id]?.lat ?? 0, lon: POIS[s.poi_id]?.lon ?? 0, label: s.name, badge: String(i + 1),
+                            sub: `Visit ${s.visit_start}–${s.leave}`, active: i === focus,
+                          })),
+                        ]}
+                        onStopClick={(i) => { if (i > 0) setFocus(i - 1); }}
+                      />
                     )}
                   </div>
-                  {(plan.dropped?.length ?? 0) > 0 && (
+                  {!plan.partial && (plan.dropped?.length ?? 0) > 0 && (
                     <div className="rounded-2xl bg-container-lowest p-4 text-[13px] shadow-sm">
-                      <b>Left out:</b> {plan.dropped!.map((d) => `${d.name} (${d.reason})`).join(" · ")}
+                      <b>Optional stops left out:</b>
+                      <ul className="mt-1 flex flex-col gap-1">{plan.dropped!.map((d) => <li key={d.poi_id}>• {d.reason}</li>)}</ul>
                     </div>
                   )}
                   {(plan.warnings?.length ?? 0) > 0 && (
@@ -251,6 +280,67 @@ export default function DayPlanner() {
         </section>
       </div>
     </main>
+  );
+}
+
+function addHour(hhmm: string, by = 1): string {
+  const [h, m] = hhmm.split(":").map(Number);
+  const t = Math.min(23 * 60 + 59, Math.max(0, h * 60 + m + by * 60));
+  return `${String(Math.floor(t / 60)).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`;
+}
+
+/** Not everything fits: what was planned, each place left out with the reason, and quick fixes. */
+function LeftOut({ plan, fixes, onFix, hasFixed }: {
+  plan: ItineraryPlan;
+  fixes: Record<"longer" | "earlier" | "optional" | "noFixed", () => void>;
+  onFix: (fix: () => void) => void;
+  hasFixed: boolean;
+}) {
+  const kept = plan.stops?.length ?? 0;
+  const dropped = plan.dropped ?? [];
+  const mustDropped = dropped.filter((d) => d.must_visit).length;
+  return (
+    <section className="flex flex-col gap-3 rounded-2xl bg-container-lowest p-5 shadow-sm">
+      <div className="flex items-start gap-3">
+        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-amber-soft text-amber-ink"><Icon name="event_busy" /></span>
+        <div>
+          <h2 className="text-lg font-semibold">
+            {kept ? `Not everything fits — here's a plan with ${kept} of your ${kept + dropped.length} places` : "None of these places fit this time window"}
+          </h2>
+          <p className="text-sm text-on-surface-variant">
+            {kept ? "We kept as many must-visit places as possible." : "Here's why each one doesn't work:"}
+            {mustDropped ? ` ${mustDropped} must-visit place${mustDropped === 1 ? "" : "s"} couldn't be included.` : ""}
+          </p>
+        </div>
+      </div>
+      <ul className="flex flex-col gap-1.5">
+        {dropped.map((d) => (
+          <li key={d.poi_id} className="flex items-start gap-2 rounded-xl bg-amber-soft/60 px-3 py-2 text-sm">
+            <Icon name="close" className="text-[18px] text-amber-ink" />
+            <span>
+              {d.must_visit && <span className="mr-1 rounded bg-error-container px-1.5 py-0.5 text-[11px] font-bold text-on-error-container">must-visit</span>}
+              {d.reason}
+            </span>
+          </li>
+        ))}
+      </ul>
+      <div className="flex flex-col gap-2">
+        <span className="text-[12px] font-bold uppercase tracking-wider text-on-surface-variant">Try</span>
+        <div className="flex flex-wrap gap-2">
+          {[
+            { k: "earlier" as const, icon: "wb_sunny", label: "Start 1 hour earlier" },
+            { k: "longer" as const, icon: "more_time", label: "End 1 hour later" },
+            ...(hasFixed ? [{ k: "noFixed" as const, icon: "schedule", label: "Remove fixed times" }] : []),
+            ...(mustDropped ? [{ k: "optional" as const, icon: "checklist", label: "Make every stop optional" }] : []),
+          ].map((f) => (
+            <button key={f.k} type="button" onClick={() => onFix(fixes[f.k])}
+              className="flex items-center gap-1 rounded-xl bg-container-low px-3 py-2 text-[13px] font-semibold hover:bg-container">
+              <Icon name={f.icon} className="text-[18px] text-primary" /> {f.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }
 

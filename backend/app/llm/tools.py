@@ -101,6 +101,46 @@ def plan_trip(origin: str, destination: str, leave_at: str | None = None, arrive
     }
 
 
+SHORT_LINE_NAMES = {"WR_SLOW": "Western Slow", "WR_FAST": "Western Fast", "CR_SLOW": "Central Slow", "CR_FAST": "Central Fast",
+                    "HARBOUR": "the Harbour line", "METRO1": "Metro 1", "METRO3": "Metro 3"}
+DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+
+
+def get_place_info(place: str) -> dict:
+    """Opening hours, whether it's open at the demo time, visit time, ticket, step-free, nearest stops."""
+    from ..data_loader import load_seed
+    from datetime import date
+    from ..config import settings
+
+    p = resolve_place(place)
+    seed = load_seed()
+    poi = seed.pois.get(p.poi_id) if p and p.poi_id else None
+    if not poi:
+        return {"ok": False, "error": f"I only have opening hours for the {len(seed.pois)} places in TravelBuddy (e.g. Gateway of India, CSMVS Museum, Kala Ghoda, Juhu Beach)."}
+    weekday = DAYS[date.fromisoformat(settings.demo_date).weekday()]
+    hours = poi.get("hours", {})
+    today = hours.get(weekday) or hours.get(weekday[:3]) or hours.get("all") or "24h"
+    closed_today = weekday in [d.lower() for d in poi.get("closed_on", [])] or today == "closed"
+    now = fmt_hhmm(clock.now())
+    if closed_today:
+        open_now = False
+    elif today == "24h":
+        open_now = True
+    elif "-" in today:
+        a, b = today.split("-")
+        open_now = a <= now < b
+    else:
+        open_now = None  # e.g. "event": only open for matches / shows
+    stations = seed.stations
+    return {
+        "ok": True, "name": poi["name"], "today": weekday, "hours_today": "open 24 hours" if today == "24h" else "open only on event days (matches / shows)" if today == "event" else today,
+        "closed_today": closed_today, "closed_on": poi.get("closed_on", []), "now": now, "open_now": open_now,
+        "visit_min": poi.get("visit_min"), "ticket_inr": poi.get("ticket_inr"), "step_free": poi.get("step_free"),
+        "nearest_stops": [stations[s]["name"] for s in poi.get("nearest_stops", []) if s in stations][:3],
+        "note": poi.get("special"), "verify": bool(poi.get("verify")),
+    }
+
+
 def get_live_problems(line: str | None = None, station: str | None = None, include_untrusted: bool = True) -> dict:
     net = load_typed_network()
     line_ids = resolve_lines(line) if line else []
@@ -124,7 +164,8 @@ def get_live_problems(line: str | None = None, station: str | None = None, inclu
         out.append(_event_json(ev, net))
     order = {"confirmed": 0, "possible": 1, "coordinated": 2, "ignored": 3}
     out.sort(key=lambda e: (order.get(e["status"], 9), -e["trust_pct"]))
-    return {"ok": True, "now": fmt_hhmm(clock.now()), "line_ids": line_ids, "stop_ids": stop_ids,
+    where = station.strip().title() if station else (SHORT_LINE_NAMES.get(line_ids[0], line) if len(line_ids) == 1 else f"the {line.strip().title()} line")
+    return {"ok": True, "now": fmt_hhmm(clock.now()), "where": where, "line_ids": line_ids, "stop_ids": stop_ids,
             "problems": out[:8], "count": len(out)}
 
 
@@ -192,6 +233,11 @@ DECLARATIONS = [
          "station": {**_STR, "description": "e.g. 'Dadar', 'Andheri', 'Saki Naka'"},
          "include_untrusted": _BOOL,
      }}},
+    {"name": "get_place_info",
+     "description": "Opening hours (today and closed days), whether a place is open now, how long to plan there, ticket price, "
+                    "step-free access and nearest stations — for the places in TravelBuddy (monuments, museums, beaches, stadiums…).",
+     "parameters": {"type": "object", "properties": {"place": {**_STR, "description": "e.g. 'Kala Ghoda', 'CSMVS museum', 'Juhu beach'"}},
+                    "required": ["place"]}},
     {"name": "explain_problem",
      "description": "Why Pakka Check trusts (or doesn't trust) one problem: every piece of evidence, its weight and the thresholds.",
      "parameters": {"type": "object", "properties": {"event_id": _STR}, "required": ["event_id"]}},
@@ -200,5 +246,5 @@ DECLARATIONS = [
      "parameters": {"type": "object", "properties": {"journey_id": _STR}}},
 ]
 
-TOOLS = {"plan_trip": plan_trip, "get_live_problems": get_live_problems,
+TOOLS = {"plan_trip": plan_trip, "get_live_problems": get_live_problems, "get_place_info": get_place_info,
          "explain_problem": explain_problem, "get_my_journey": get_my_journey}

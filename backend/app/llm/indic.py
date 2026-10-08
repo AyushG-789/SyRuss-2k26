@@ -26,7 +26,7 @@ PLACE_WORDS = {
     "बीकेसीला": "BKC",
 }
 # Two-word names written apart.
-PLACE_PHRASES = {"साकी नाका": "Saki Naka", "विले पार्ले": "Vile Parle", "मरीन ड्राइव्ह": "Marine Drive",
+PLACE_PHRASES = {"काळा घोडा": "Kala Ghoda", "काला घोडा": "Kala Ghoda", "साकी नाका": "Saki Naka", "विले पार्ले": "Vile Parle", "मरीन ड्राइव्ह": "Marine Drive",
                  "मरीन ड्राईव्ह": "Marine Drive", "मरीन ड्राइव": "Marine Drive", "हाजी अली": "Haji Ali",
                  "लोअर परेल": "Lower Parel", "लोअर परळ": "Lower Parel", "मुंबई सेंट्रल": "Mumbai Central",
                  "ग्रँट रोड": "Grant Road", "ग्रांट रोड": "Grant Road", "चर्नी रोड": "Charni Road",
@@ -45,8 +45,10 @@ TRAVEL_WORDS = re.compile(r"(जायचे|जायचं|जाऊ|जाय
 STATUS_WORDS = re.compile(r"(समस्या|प्रॉब्लेम|प्रोब्लेम|बंद|उशीर|लेट|देरी|देर|चालू|सुरू|चल रही|चल रहा|गर्दी|भीड़|"
                           r"काय झाले|क्या हुआ|क्या हाल|काय|क्या|है\?|आहे\?)")
 
+HOURS_WORDS = re.compile(r"(कब खुलता|कब खुलेगा|कब बंद|किती वाजता|उघडते|उघडतो|उघडे|वेळ|समय|टाइमिंग|तिकीट|टिकट)")
+
 _DEVANAGARI_DIGITS = str.maketrans("०१२३४५६७८९", "0123456789")
-MARATHI_MARKERS = re.compile(r"(आहे|आहेत|मला|जायचे|जायचं|हून|पासून|काय|कसे|नाही|चालू|उशीर|झाले|पोहोचायचे|गर्दी)")
+MARATHI_MARKERS = re.compile(r"(आहे|आहेत|मला|जायचे|जायचं|हून|पासून|काय|कसे|नाही|चालू|उशीर|झाले|पोहोचायचे|गर्दी|कधी|उघडते|उघडतो|किती|वाजता)")
 HINGLISH_MARKERS = re.compile(r"\b(hai|kya|kaise|jana|jaana|mujhe|se|tak|kab|nahi|chal|raha|rahi|problem hai)\b", re.I)
 
 
@@ -138,13 +140,38 @@ T = {
         "hi": "भरोसेमंद नहीं (अनदेखा): {title}.",
         "mr": "विश्वासार्ह नाही (दुर्लक्षित): {title}.",
     },
+    "all_clear": {
+        "en": "Good news — no confirmed or likely problems at {where} right now ({now}).",
+        "hi": "अच्छी खबर — {where} पर अभी ({now}) कोई पुष्ट या संभावित समस्या नहीं है।",
+        "mr": "चांगली बातमी — {where} येथे सध्या ({now}) कोणतीही खात्रीशीर किंवा संभाव्य समस्या नाही.",
+    },
+    "untrusted": {
+        "en": " We also checked {n} report{s} there but didn't trust it — \"{title}\": only {sources}, too little evidence, so it was ignored ({pct}%).",
+        "hi": " वहां {n} रिपोर्ट भी जांची गईं, पर भरोसेमंद नहीं थीं — जैसे \"{title}\": सिर्फ {sources}, इसलिए अनदेखा किया ({pct}%).",
+        "mr": " तिथल्या {n} रिपोर्ट तपासल्या पण विश्वासार्ह नव्हत्या — उदा. \"{title}\": फक्त {sources}, म्हणून दुर्लक्ष केले ({pct}%).",
+    },
+    "fake_burst": {
+        "en": " A burst of near-identical posts from brand-new accounts (\"{title}\") looks fake and was ignored ({pct}%).",
+        "hi": " नए अकाउंट्स से एक जैसी कई पोस्ट (\"{title}\") नकली लगती हैं, अनदेखा किया ({pct}%).",
+        "mr": " नवीन अकाउंट्सकडून एकसारख्या पोस्ट (\"{title}\") बनावट वाटतात, दुर्लक्ष केले ({pct}%).",
+    },
+    "place_open": {
+        "en": "{name} is {hours} today ({day}){state}. Plan about {visit} min there{ticket}.{stops}",
+        "hi": "{name} आज ({day}) {hours}{state}. वहां लगभग {visit} मिनट रखें{ticket}.{stops}",
+        "mr": "{name} आज ({day}) {hours}{state}. तिथे सुमारे {visit} मिनिटे ठेवा{ticket}.{stops}",
+    },
+    "place_closed": {
+        "en": "{name} is closed today ({day}). It's closed on {closed}.",
+        "hi": "{name} आज ({day}) बंद है। यह {closed} को बंद रहता है।",
+        "mr": "{name} आज ({day}) बंद आहे. ते {closed} रोजी बंद असते.",
+    },
     "no_problems": {
         "en": "No problems reported there as of {now}.",
         "hi": "{now} तक वहां कोई समस्या रिपोर्ट नहीं हुई।",
         "mr": "{now} पर्यंत तिथे कोणतीही समस्या नोंदवलेली नाही.",
     },
     "offline": {
-        "en": "The AI assistant is offline right now. I can still plan “Thane to Wankhede by 18:30” or check “Is Metro 1 running?”.",
+        "en": "The AI assistant is busy right now, so I can only answer simple questions. Try “Thane to Wankhede by 18:30”, “Is Metro 1 running?” or “Kala Ghoda opening times”.",
         "hi": "AI सहायक अभी उपलब्ध नहीं है। फिर भी मैं “ठाणे से वानखेडे” जैसा रास्ता या “मेट्रो 1 चालू है?” बता सकता हूं।",
         "mr": "AI सहाय्यक सध्या उपलब्ध नाही. तरीही मी “ठाण्याहून वानखेडेला” असा मार्ग किंवा “मेट्रो 1 चालू आहे का?” सांगू शकतो.",
     },
