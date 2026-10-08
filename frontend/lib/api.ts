@@ -204,3 +204,31 @@ export interface ChatReply {
 
 export const sendChat = (messages: ChatMessage[], journeyId?: string | null) =>
   post<ChatReply>("/chat", { messages, journey_id: journeyId ?? null });
+
+// ---- Voice (SPEC.md §7, POST /voice/stt & POST /voice/tts) ----------------------------------
+export interface VoiceSTTResponse {
+  text: string;
+  language: "en" | "hi" | "mr";
+}
+
+export interface VoiceTTSResponse {
+  audio_base64: string | null;
+  mime: string;
+  cached?: boolean;
+  fallback_to_browser?: boolean;
+}
+
+export async function sendVoiceSTT(audioBlob: Blob): Promise<VoiceSTTResponse> {
+  const form = new FormData();
+  form.append("file", audioBlob, "voice.webm");
+  const res = await fetch(`${API_URL}/voice/stt`, {
+    method: "POST",
+    body: form,
+  });
+  if (!res.ok) throw new Error(`/voice/stt failed: ${res.status} ${await res.text()}`);
+  return res.json() as Promise<VoiceSTTResponse>;
+}
+
+export async function getVoiceTTS(text: string, language?: string): Promise<VoiceTTSResponse> {
+  return post<VoiceTTSResponse>("/voice/tts", { text, language: language ?? null });
+}

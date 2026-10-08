@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .api import admin, chat, events, journeys, plan, reports
+from .api import admin, chat, events, journeys, plan, reports, voice
 from .clock import clock, fmt_hhmm
 from .config import settings
 from .data_loader import load_seed
@@ -38,6 +38,7 @@ app.include_router(events.router)
 app.include_router(journeys.router)
 app.include_router(plan.router)
 app.include_router(reports.router)
+app.include_router(voice.router)
 
 
 @app.get("/health")
