@@ -51,9 +51,8 @@ export function planRequest(traveller: Traveller) {
 }
 
 export async function getPlan(traveller: Traveller): Promise<PlanResponse> {
-  if (USE_MOCKS) {
+  if (USE_MOCKS && mockPlans[traveller.traveller_id]) {
     const load = mockPlans[traveller.traveller_id];
-    if (!load) throw new RoutingNotConnected();
     return (await load()).default as PlanResponse;
   }
   return post<PlanResponse>("/plan", planRequest(traveller));

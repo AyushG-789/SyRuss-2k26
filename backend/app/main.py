@@ -4,7 +4,7 @@ from __future__ import annotations
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .api import admin, events, reports
+from .api import admin, events, plan, reports
 from .clock import clock, fmt_hhmm
 from .config import settings
 from .data_loader import load_seed
@@ -18,6 +18,7 @@ app.add_middleware(
 )
 app.include_router(admin.router)
 app.include_router(events.router)
+app.include_router(plan.router)
 app.include_router(reports.router)
 
 
