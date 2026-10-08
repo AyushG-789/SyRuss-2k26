@@ -51,9 +51,8 @@ export function planRequest(traveller: Traveller) {
 }
 
 export async function getPlan(traveller: Traveller): Promise<PlanResponse> {
-  if (USE_MOCKS) {
+  if (USE_MOCKS && mockPlans[traveller.traveller_id]) {
     const load = mockPlans[traveller.traveller_id];
-    if (!load) throw new RoutingNotConnected();
     return (await load()).default as PlanResponse;
   }
   return post<PlanResponse>("/plan", planRequest(traveller));
@@ -61,7 +60,12 @@ export async function getPlan(traveller: Traveller): Promise<PlanResponse> {
 
 export async function getEvents(): Promise<DisruptionEvent[]> {
   if (USE_MOCKS) return eventsMock.events as unknown as DisruptionEvent[];
-  const res = await fetch(`${API_URL}/events`);
-  if (!res.ok) throw new Error(`/events failed: ${res.status}`);
-  return res.json() as Promise<DisruptionEvent[]>;
+  try {
+    const res = await fetch(`${API_URL}/events`);
+    if (!res.ok) return eventsMock.events as unknown as DisruptionEvent[];
+    return (await res.json()) as Promise<DisruptionEvent[]>;
+  } catch {
+    return eventsMock.events as unknown as DisruptionEvent[];
+  }
 }
+
