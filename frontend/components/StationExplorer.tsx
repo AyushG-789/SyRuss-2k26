@@ -123,7 +123,7 @@ export default function StationExplorer() {
             <div className="flex flex-wrap items-center justify-between gap-1 bg-container-low p-4">
               <div className="flex items-center gap-1">
                 <Icon name="map" className="text-[20px] text-primary" />
-                <span className="text-sm font-bold">Andheri Hub Schematic &amp; Live Wayfinding</span>
+                <span className="text-sm font-bold">Andheri Hub Schematic &amp; Wayfinding (sample)</span>
               </div>
               <div className="flex items-center gap-1 rounded-lg bg-container-lowest p-1">
                 {mapLayers.map((l) => (
@@ -175,7 +175,7 @@ export default function StationExplorer() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1">
                 <Icon name="room_preferences" className="text-[20px] text-primary" />
-                <span className="text-lg font-bold">Live Hub Facilities Status</span>
+                <span className="text-lg font-bold">Hub Facilities (sample)</span>
               </div>
               <span className="rounded-full bg-primary-fixed px-2 py-0.5 text-[11px] font-bold text-on-primary-fixed">All Operational</span>
             </div>

@@ -50,13 +50,20 @@ export function planRequest(traveller: Traveller) {
   return { traveller, mode: "aware" as const };
 }
 
-export async function getPlan(traveller: Traveller): Promise<PlanResponse> {
-  if (USE_MOCKS && mockPlans[traveller.traveller_id]) {
+/** Plan with Pakka Check's live events (aware). The 5 demo travellers fall back to their saved
+ *  sample plans only if the backend can't be reached. */
+export async function getPlan(traveller: Traveller): Promise<PlanResponse & { sample?: boolean }> {
+  try {
+    return await post<PlanResponse>("/plan", planRequest(traveller));
+  } catch (err) {
     const load = mockPlans[traveller.traveller_id];
-    return (await load()).default as PlanResponse;
+    if (load) return { ...((await load()).default as PlanResponse), sample: true };
+    throw USE_MOCKS ? new RoutingNotConnected() : err;
   }
-  return post<PlanResponse>("/plan", planRequest(traveller));
 }
+
+/** What a schedule-only app would show for the same trip (reports ignored) — for comparison. */
+export const getBaselinePlan = (traveller: Traveller) => post<PlanResponse>("/plan", { traveller, mode: "baseline" });
 
 export async function getEvents(): Promise<DisruptionEvent[]> {
   return (await getLiveEvents()).events;
@@ -246,3 +253,68 @@ export const saveJourney = (traveller: Traveller, card: RouteCard) => post<Journ
 export const getJourney = (id: string) => fetchJson<Journey>(`/journeys/${id}`, 3000);
 export const decideReplan = (id: string, accept: boolean) =>
   post<Journey>(`/journeys/${id}/replan/${accept ? "accept" : "reject"}`, {});
+
+// ---- Disruption detail, transparency, evaluation, day planner --------------------------------
+export interface EvidenceRow {
+  ref_id: string;
+  source_type: "crowd" | "news" | "official" | "weather";
+  reporter_id: string | null;
+  at: string;
+  text: string;
+  weight: number;
+  contradicts: boolean;
+  note: string;
+  covers: string[];
+}
+export interface EventDetail {
+  event: DisruptionEvent;
+  breakdown: { support: number; decay: number; contradiction: number; summary: string; evidence: EvidenceRow[] };
+}
+export const getEventDetail = (id: string) => fetchJson<EventDetail>(`/events/${id}`, 4000);
+
+export interface Transparency {
+  as_of: string;
+  sources: { id: string; name: string; weight: number; how: string; data: string; mode: string }[];
+  policy: Record<string, unknown> & {
+    source_weight: Record<string, number>;
+    thresholds?: Record<string, number>;
+  };
+  formula: string;
+  routing: Record<string, string>;
+  assumptions: string[];
+  data: Record<string, unknown> & { stations: number; lines: number; pois: number; transfers: number; reporters: number };
+  ai: { chatbot: string; model: string; number_check: boolean; fallback: string };
+  event_log: { event_id: string; type: string; status: DisruptionEvent["status"]; confidence: number; first_seen: string;
+    last_seen: string; expires_at: string; flags: string[]; summary: string }[];
+  decisions: { journey_id: string; traveller: string; at: string; kind: string; event_ids: string[]; detail: string }[];
+}
+export const getTransparency = () => fetchJson<Transparency>("/transparency", 5000);
+
+export interface EvalSide { route: string; cost_inr: number; walk_min: number; late: boolean; planned_arrive: string;
+  real_arrive: string; extra_min: number; hit_by: { event: string; effect: string; extra_min: number }[] }
+export interface EvalTrip { traveller_id: string; name: string; label: string; from: string; to: string | null;
+  leave_at: string; arrive_by: string | null; replans: { at: string; events: string[]; message: string; caused_by_fake_report: boolean }[];
+  schedule_only: EvalSide; travelbuddy: EvalSide }
+export interface EvalResult {
+  travellers: number; trips_compared: number;
+  schedule_only: { late_or_failed: number; avg_extra_min: number; total_cost_inr: number; total_walk_min: number };
+  travelbuddy: { late_or_failed: number; avg_extra_min: number; total_cost_inr: number; total_walk_min: number;
+    replans: number; false_reroutes_from_fake_reports: number };
+  extra_cost_inr: number; extra_walk_min: number;
+  classification: { checked_at: string; correct: number; total: number; mismatches: unknown[] };
+  trips: EvalTrip[]; method: string;
+}
+export const getEval = () => fetchJson<EvalResult>("/eval", 30000);
+
+export interface ItineraryStopPlan {
+  poi_id: string; name: string; must_visit: boolean; fixed_time: string | null; opens: string | null; closes: string | null;
+  arrive: string; visit_start: string; leave: string; wait_min: number; visit_min: number; slack_min: number; tight: boolean;
+  leg: { route: string; depart: string; arrive: string; duration_min: number; cost_inr: number; reliability: number;
+    event_ids: string[]; card: RouteCard };
+}
+export interface ItineraryPlan {
+  feasible: boolean; error?: string; weekday?: string; day_start?: string; day_end?: string;
+  stops?: ItineraryStopPlan[]; dropped?: { poi_id: string; name: string; reason: string }[];
+  total_travel_min?: number; total_cost_inr?: number; ends_at?: string; warnings?: string[]; as_of?: string;
+}
+export const planItinerary = (traveller: Traveller) => post<ItineraryPlan>("/itinerary", { traveller });

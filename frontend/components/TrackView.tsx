@@ -592,7 +592,7 @@ function RouteProblems({ hits, connected, journeyId }: { hits: LegHit[]; connect
           {unique.map((h) => (
             <li key={h.event_id} className="flex items-center justify-between gap-2 rounded-lg bg-container-low p-2">
               <span className="min-w-0">
-                <span className="block truncate text-[13px] font-semibold">{h.title}</span>
+                <Link href={`/events/${h.event_id}`} className="block truncate text-[13px] font-semibold hover:text-primary hover:underline">{h.title}</Link>
                 <span className="text-[11px] text-on-surface-variant">
                   {h.blocked ? "Blocks this route" : h.delay_min ? `About +${h.delay_min} min` : "May slow you down"}
                   {h.status === "possible" ? " · not confirmed yet, no action needed" : ""}

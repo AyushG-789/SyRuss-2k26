@@ -65,7 +65,7 @@ export interface Traveller {
   heavy_luggage: boolean;
   avoid_crowds: boolean;
   language: "en" | "hi" | "mr";
-  itinerary?: { day_start: string; day_end: string; stops: { poi_id: string; must_visit: boolean }[] } | null;
+  itinerary?: { day_start: string; day_end: string; stops: { poi_id: string; must_visit: boolean; fixed_time?: string | null; visit_min?: number | null }[] } | null;
 }
 
 export interface Leg {

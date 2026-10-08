@@ -1,0 +1,221 @@
+"use client";
+
+// Day Itinerary (A9, PS requirement): pick up to 5 places for one day; TravelBuddy finds the best
+// order that fits opening hours, closed days and fixed times (e.g. Marine Drive at sunset), with
+// the live, disruption-aware route for each hop. POST /itinerary.
+
+import Link from "next/link";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import poisMock from "@/mocks/pois.json";
+import { type ItineraryPlan, planItinerary, travellers } from "@/lib/api";
+import { findPlace, PLACE_OPTIONS } from "@/lib/places";
+import type { Traveller } from "@/lib/types";
+import Icon from "./Icon";
+import MapView from "./MapView";
+
+const POIS = poisMock.pois as unknown as Record<string, { name: string; lat: number; lon: number }>;
+type Stop = { poi_id: string; must_visit: boolean; fixed_time: string };
+const MAX_STOPS = 5;
+
+export default function DayPlanner() {
+  const tr4 = travellers.find((t) => t.traveller_id === "TR4")!;
+  const [start, setStart] = useState(tr4.origin.label);
+  const [dayStart, setDayStart] = useState(tr4.itinerary?.day_start ?? "13:30");
+  const [dayEnd, setDayEnd] = useState(tr4.itinerary?.day_end ?? "19:30");
+  const [budget, setBudget] = useState(String(tr4.max_budget_inr ?? ""));
+  const [stops, setStops] = useState<Stop[]>(
+    (tr4.itinerary?.stops ?? []).map((s) => ({ poi_id: s.poi_id, must_visit: s.must_visit, fixed_time: s.fixed_time ?? "" })),
+  );
+  const [plan, setPlan] = useState<ItineraryPlan | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [focus, setFocus] = useState(0);
+
+  const traveller = useMemo<Traveller | null>(() => {
+    const origin = start === tr4.origin.label ? tr4.origin : findPlace(start);
+    if (!origin || stops.length === 0) return null;
+    return {
+      ...tr4, traveller_id: "CUSTOM", name: "Your day",
+      origin: { label: origin.label, lat: origin.lat, lon: origin.lon, poi_id: origin.poi_id ?? null },
+      leave_at: dayStart, max_budget_inr: budget ? Number(budget) : null,
+      itinerary: { day_start: dayStart, day_end: dayEnd, stops: stops.map((s) => ({ poi_id: s.poi_id, must_visit: s.must_visit, fixed_time: s.fixed_time || null })) },
+    };
+  }, [start, dayStart, dayEnd, budget, stops, tr4]);
+
+  const run = useCallback(async () => {
+    if (!traveller) return;
+    setBusy(true);
+    setError(null);
+    try {
+      setPlan(await planItinerary(traveller));
+      setFocus(0);
+    } catch {
+      setError("Can't reach the TravelBuddy server — start the backend on port 8000.");
+    } finally {
+      setBusy(false);
+    }
+  }, [traveller]);
+
+  // Plan the Kulkarni family's day once on load.
+  useEffect(() => {
+    Promise.resolve().then(run);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const toggle = (id: string) =>
+    setStops((s) => (s.some((x) => x.poi_id === id) ? s.filter((x) => x.poi_id !== id)
+      : s.length >= MAX_STOPS ? s : [...s, { poi_id: id, must_visit: true, fixed_time: "" }]));
+  const update = (id: string, patch: Partial<Stop>) => setStops((s) => s.map((x) => (x.poi_id === id ? { ...x, ...patch } : x)));
+
+  const focused = plan?.stops?.[focus];
+
+  return (
+    <main className="flex w-full flex-col gap-4 px-4 pb-16 pt-4 md:px-6">
+      <header className="flex flex-col gap-1">
+        <span className="flex items-center gap-1 text-[12px] font-bold uppercase tracking-wider text-primary"><Icon name="event_note" className="text-[16px]" /> Day Itinerary</span>
+        <h1 className="text-2xl font-semibold">Plan a day of stops</h1>
+        <p className="max-w-3xl text-sm text-on-surface-variant">
+          Choose up to {MAX_STOPS} places. TravelBuddy tries every order, keeps each visit inside opening hours, respects fixed times
+          (like sunset at Marine Drive), and routes each hop around live problems.
+        </p>
+      </header>
+
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-12">
+        {/* ---- Form ---- */}
+        <section className="flex flex-col gap-4 rounded-2xl bg-container-lowest p-5 shadow-sm lg:col-span-4">
+          <datalist id="day-places">{PLACE_OPTIONS.map((p) => <option key={p.label} value={p.label} />)}</datalist>
+          <label className="flex flex-col gap-1 text-[13px] font-semibold">
+            Start from
+            <input list="day-places" value={start} onChange={(e) => setStart(e.target.value)}
+              className="rounded-xl bg-container-low px-3 py-2.5 font-normal focus:outline-none focus:ring-2 focus:ring-primary" />
+          </label>
+          <div className="grid grid-cols-3 gap-2">
+            <label className="flex flex-col gap-1 text-[13px] font-semibold">From
+              <input type="time" value={dayStart} onChange={(e) => setDayStart(e.target.value)} className="rounded-xl bg-container-low px-2 py-2 font-normal" />
+            </label>
+            <label className="flex flex-col gap-1 text-[13px] font-semibold">Until
+              <input type="time" value={dayEnd} onChange={(e) => setDayEnd(e.target.value)} className="rounded-xl bg-container-low px-2 py-2 font-normal" />
+            </label>
+            <label className="flex flex-col gap-1 text-[13px] font-semibold">Budget ₹
+              <input inputMode="numeric" value={budget} onChange={(e) => setBudget(e.target.value.replace(/\D/g, ""))} placeholder="any"
+                className="rounded-xl bg-container-low px-2 py-2 font-normal" />
+            </label>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <span className="text-[13px] font-semibold">Your stops ({stops.length}/{MAX_STOPS})</span>
+            {stops.map((s) => (
+              <div key={s.poi_id} className="flex flex-col gap-2 rounded-xl bg-container-low p-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[13px] font-semibold">{POIS[s.poi_id]?.name ?? s.poi_id}</span>
+                  <button type="button" onClick={() => toggle(s.poi_id)} aria-label="Remove" className="rounded p-0.5 text-outline hover:text-error"><Icon name="close" className="text-[18px]" /></button>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 text-[12px]">
+                  <button type="button" onClick={() => update(s.poi_id, { must_visit: !s.must_visit })}
+                    className={`rounded-full px-2 py-0.5 font-bold ${s.must_visit ? "bg-primary text-on-primary" : "bg-container-high text-on-surface-variant"}`}>
+                    {s.must_visit ? "Must visit" : "Optional"}
+                  </button>
+                  <label className="flex items-center gap-1">at <input type="time" value={s.fixed_time} onChange={(e) => update(s.poi_id, { fixed_time: e.target.value })}
+                    className="rounded bg-container-lowest px-1 py-0.5" /> <span className="text-outline">(optional)</span></label>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <details className="text-[13px]">
+            <summary className="cursor-pointer font-semibold text-primary">Add places</summary>
+            <div className="mt-2 flex max-h-56 flex-wrap gap-1.5 overflow-y-auto">
+              {Object.entries(POIS).filter(([id]) => !stops.some((s) => s.poi_id === id)).map(([id, p]) => (
+                <button key={id} type="button" onClick={() => toggle(id)} disabled={stops.length >= MAX_STOPS}
+                  className="rounded-full bg-container-low px-2.5 py-1 text-[12px] hover:bg-primary-fixed disabled:opacity-40">+ {p.name}</button>
+              ))}
+            </div>
+          </details>
+
+          <button type="button" onClick={run} disabled={busy || !traveller}
+            className="flex items-center justify-center gap-1 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-on-primary hover:bg-primary-container disabled:opacity-50">
+            <Icon name="auto_awesome" className="text-[18px]" /> {busy ? "Planning the day…" : "Plan my day"}
+          </button>
+          {!traveller && <p className="text-[12px] text-error">Pick a start place from the list and at least one stop.</p>}
+          {error && <p className="rounded-xl bg-amber-soft p-2 text-[13px] text-amber-ink">{error}</p>}
+        </section>
+
+        {/* ---- Result ---- */}
+        <section className="flex flex-col gap-4 lg:col-span-8">
+          {plan && !plan.feasible && (
+            <div className="rounded-2xl bg-error-container p-4 text-sm text-on-error-container">
+              <b>This day doesn&apos;t fit.</b> {plan.error} Try a longer day, fewer must-visit stops, or remove a fixed time.
+            </div>
+          )}
+          {plan?.feasible && plan.stops && (
+            <>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <Mini label="Stops" value={`${plan.stops.length}`} />
+                <Mini label="Travel time" value={`${plan.total_travel_min} min`} />
+                <Mini label="Fares" value={`₹${plan.total_cost_inr}`} />
+                <Mini label="Day ends" value={plan.ends_at ?? ""} />
+              </div>
+              <div className="grid grid-cols-[minmax(0,1fr)] gap-4 xl:grid-cols-2">
+                <ol className="flex flex-col rounded-2xl bg-container-lowest p-5 shadow-sm">
+                  {plan.stops.map((s, i) => (
+                    <li key={s.poi_id} className="relative flex gap-3 pb-5 last:pb-0">
+                      {i < plan.stops!.length - 1 && <span className="absolute bottom-0 left-4 top-9 w-0.5 bg-primary/30" />}
+                      <span className="z-10 grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary text-sm font-bold text-on-primary">{i + 1}</span>
+                      <button type="button" onClick={() => setFocus(i)}
+                        className={`flex min-w-0 flex-1 flex-col gap-1 rounded-xl p-2 text-left transition ${focus === i ? "bg-primary-fixed/30" : "hover:bg-container-low"}`}>
+                        <span className="flex items-center gap-1 text-[12px] text-on-surface-variant">
+                          <Icon name="alt_route" className="text-[14px]" /> {s.leg.depart} {s.leg.route} · {s.leg.duration_min} min · ₹{s.leg.cost_inr}
+                          {s.leg.event_ids.length > 0 && <span className="rounded bg-tertiary-fixed px-1 font-bold text-tertiary">⚠ {Math.round(s.leg.reliability * 100)}%</span>}
+                        </span>
+                        <span className="font-semibold">{s.name}</span>
+                        <span className="text-[13px]">
+                          Arrive {s.arrive}{s.wait_min > 0 ? ` · wait ${s.wait_min} min` : ""} · visit <b>{s.visit_start}–{s.leave}</b>
+                          {s.fixed_time ? <span className="ml-1 rounded bg-secondary-container px-1 text-[11px] font-bold">fixed {s.fixed_time}</span> : null}
+                        </span>
+                        <span className={`text-[12px] ${s.tight ? "font-semibold text-error" : "text-on-surface-variant"}`}>
+                          {s.opens ? `Open ${s.opens}–${s.closes}` : "Open 24 h"} · {s.tight ? `only ${s.slack_min} min to spare!` : `${s.slack_min >= 999 ? "plenty of" : s.slack_min + " min"} slack`}
+                          {!s.must_visit ? " · optional" : ""}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ol>
+                <div className="flex flex-col gap-3">
+                  <div className="h-[420px] overflow-hidden rounded-2xl bg-container-lowest shadow-sm">
+                    {focused && (
+                      <MapView card={focused.leg.card} origin={focus === 0 ? traveller?.origin ?? null : {
+                        label: plan.stops[focus - 1].name, lat: POIS[plan.stops[focus - 1].poi_id]?.lat ?? 0, lon: POIS[plan.stops[focus - 1].poi_id]?.lon ?? 0 }}
+                        destination={{ label: focused.name, lat: POIS[focused.poi_id]?.lat ?? 0, lon: POIS[focused.poi_id]?.lon ?? 0 }} />
+                    )}
+                  </div>
+                  {(plan.dropped?.length ?? 0) > 0 && (
+                    <div className="rounded-2xl bg-container-lowest p-4 text-[13px] shadow-sm">
+                      <b>Left out:</b> {plan.dropped!.map((d) => `${d.name} (${d.reason})`).join(" · ")}
+                    </div>
+                  )}
+                  {(plan.warnings?.length ?? 0) > 0 && (
+                    <div className="rounded-2xl bg-tertiary-fixed p-4 text-[13px] text-tertiary">
+                      {plan.warnings!.map((w) => <p key={w} className="flex items-start gap-1"><Icon name="warning" className="text-[16px]" /> {w}</p>)}
+                    </div>
+                  )}
+                  <p className="text-[12px] text-outline">
+                    Planned on {plan.weekday} (demo day). Each hop uses the live, disruption-aware router. <Link href="/transparency" className="font-semibold text-primary">How it works →</Link>
+                  </p>
+                </div>
+              </div>
+            </>
+          )}
+          {!plan && busy && <p className="text-sm text-on-surface-variant">Planning the day…</p>}
+        </section>
+      </div>
+    </main>
+  );
+}
+
+function Mini({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl bg-container-lowest p-4 shadow-sm">
+      <span className="block text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">{label}</span>
+      <span className="text-xl font-bold">{value}</span>
+    </div>
+  );
+}

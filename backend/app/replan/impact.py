@@ -4,7 +4,8 @@ Matching rules (kept in step with the frontend's network view):
 - Transfer events (e.g. the Dadar FOB) hit ONLY the transfer walk between those two stops,
   never trains that merely pass through the station.
 - Line events hit rides on that line; with stops too, only rides whose stretch includes a stop.
-- Stop-only events hit rides passing that stop and walks/rides starting or ending there.
+- Stop-only events hit rides passing that stop and walks/cabs starting or ending there; line events
+  never hit legs without a line (a WR Slow delay doesn't slow a cab to Andheri station).
 - lift_out only matters to step-free / heavy-luggage travellers, at boarding/alighting stops.
 """
 from __future__ import annotations
@@ -60,7 +61,10 @@ def touches(leg: Leg, ev: Event, lines: dict[str, Line], transfers: dict[str, Tr
             return bool(set(ride_stops(leg, lines)) & set(aff.stop_ids))
         return bool(aff.line_ids)
 
-    # Walks, autos, taxis and other legs without a line: only their end stops.
+    # Walks, autos, taxis and other legs without a line: only station-wide problems at their end
+    # stops (waterlogging, a closed station). A delay ON a line doesn't slow a cab to that station.
+    if aff.line_ids:
+        return False
     return bool(ends & set(aff.stop_ids))
 
 

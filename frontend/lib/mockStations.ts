@@ -7,7 +7,7 @@ type Tone = "ok" | "warn" | "neutral";
 
 export const hub = {
   breadcrumb: ["MMR Transit Network", "Western Corridor & Line 1", "Andheri Multi-Modal Hub"],
-  feeds: "42 Live Telemetry Feeds Active",
+  feeds: "Station layout: sample · problems: live Pakka Check",
   search: "Andheri Transit Hub (Line 1 & WR)",
   radii: ["500m", "1km", "1.5km", "2km", "5km"],
   defaultRadius: "1.5km",
@@ -49,7 +49,7 @@ export const stationCards: Station[] = [
       { icon: "wifi", text: "High-Speed Wi-Fi", iconCls: "text-primary" },
       { icon: "elevator", text: "4 Escalators • 2 Lifts", iconCls: "text-primary" },
       { icon: "water_drop", text: "RO Drinking Water", iconCls: "text-primary" },
-      { icon: "credit_card", text: "NCMC Tap & Go", iconCls: "text-primary" },
+      { icon: "accessible", text: "Step-free entry (Gate 3)", iconCls: "text-primary" },
     ],
   },
   {
@@ -98,8 +98,8 @@ export const gates = [
 ];
 
 export const facilities = [
-  { icon: "contactless", title: "NCMC Top-up Kiosks", text: "Concourse A & Platform 1 East", foot: "Wait Time: 0 min" },
-  { icon: "ev_station", title: "EV Fast Chargers (60kW)", text: "Gate 5 Parking Area", foot: "4 of 6 Plugs Free" },
+  { icon: "confirmation_number", title: "Ticket Counters & UTS Kiosks", text: "Concourse A & Platform 1 East", foot: "Open 04:00–01:00" },
+  { icon: "ev_station", title: "EV Chargers", text: "Gate 5 Parking Area", foot: "Sample — no live charger feed" },
   { icon: "accessible_forward", title: "Universal Accessibility", text: "Braille maps, audio escalators", foot: "Assistance Booth: Gate 2" },
   { icon: "medical_services", title: "First Aid & Transit Police", text: "RPF/GRP Booth, Central FOB", foot: "Emergency: Dial 139" },
 ];

@@ -5,9 +5,9 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { shell } from "@/lib/mockHome";
-import { LiveEventsProvider } from "@/lib/useLiveEvents";
+import { LiveEventsProvider, useLiveEvents } from "@/lib/useLiveEvents";
 import ChatAssistant from "./ChatAssistant";
 import Icon from "./Icon";
 
@@ -20,7 +20,11 @@ const NAV: NavItem[] = [
   { href: "/track", label: "Live Trip Tracking", icon: "fmd_good", match: (p) => p.startsWith("/track") },
   { href: "/report", label: "Report Incident", icon: "campaign", match: (p) => p.startsWith("/report") },
   { href: "/stations", label: "Station Explorer & Nearby", icon: "near_me", match: (p) => p.startsWith("/stations") },
-  { href: "/dashboard", label: "Commuter Dashboard & Passes", icon: "badge", match: (p) => p.startsWith("/dashboard") },
+  { href: "/itinerary", label: "Day Itinerary", icon: "event_note", match: (p) => p.startsWith("/itinerary") },
+];
+const TRUST: NavItem[] = [
+  { href: "/transparency", label: "Transparency", icon: "visibility", match: (p) => p.startsWith("/transparency") || p.startsWith("/events") },
+  { href: "/compare", label: "Compare: Normal app vs Us", icon: "compare_arrows", match: (p) => p.startsWith("/compare") },
 ];
 const PRESENTER: NavItem[] = [
   { href: "/admin", label: "Demo control", icon: "tune", match: (p) => p.startsWith("/admin") },
@@ -50,6 +54,8 @@ function NavList({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <nav className="mt-2 flex flex-col gap-1 px-4" aria-label="Main">
       {NAV.map(item)}
+      <p className="mt-4 px-4 text-[11px] font-bold uppercase tracking-wider text-outline">Trust &amp; results</p>
+      {TRUST.map(item)}
       <p className="mt-4 px-4 text-[11px] font-bold uppercase tracking-wider text-outline">Presenter</p>
       {PRESENTER.map(item)}
     </nav>
@@ -70,7 +76,23 @@ function Brand() {
   );
 }
 
+/** Real Pakka Check counts instead of a made-up uptime figure. */
+function useNetworkStatus(): { label: string; value: string; tone: "ok" | "warn" | "bad" | "off" } {
+  const live = useLiveEvents();
+  if (!live) return { label: "Pakka Check", value: "…", tone: "off" };
+  if (live.source !== "backend") return { label: "Pakka Check", value: "Sample data", tone: "off" };
+  const confirmed = live.events.filter((e) => e.status === "confirmed").length;
+  const possible = live.events.filter((e) => e.status === "possible").length;
+  if (confirmed) return { label: `Live · ${live.asOf}`, value: `${confirmed} confirmed`, tone: "bad" };
+  if (possible) return { label: `Live · ${live.asOf}`, value: `${possible} possible`, tone: "warn" };
+  return { label: `Live · ${live.asOf}`, value: "All clear", tone: "ok" };
+}
+
+const TONE_DOT = { ok: "bg-primary", warn: "bg-tertiary", bad: "bg-error", off: "bg-outline" } as const;
+const TONE_TEXT = { ok: "text-primary", warn: "text-tertiary", bad: "text-error", off: "text-outline" } as const;
+
 function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
+  const status = useNetworkStatus();
   return (
     <>
       <div className="flex flex-col">
@@ -80,13 +102,16 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
         <div className="px-4 py-2">
           <div className="flex items-center justify-between rounded-lg bg-container-low px-4 py-1">
             <div className="flex items-center gap-1">
-              <span className="h-2 w-2 animate-pulse rounded-full bg-primary" />
-              <span className="text-[11px] font-medium text-on-surface-variant">{shell.networkStatus.label}</span>
+              <span className={`h-2 w-2 animate-pulse rounded-full ${TONE_DOT[status.tone]}`} />
+              <span className="text-[11px] font-medium text-on-surface-variant">{status.label}</span>
             </div>
-            <span className="text-[11px] font-bold uppercase text-primary">{shell.networkStatus.value}</span>
+            <Link href="/transparency" className={`text-[11px] font-bold uppercase hover:underline ${TONE_TEXT[status.tone]}`}>{status.value}</Link>
           </div>
         </div>
-        <NavList onNavigate={onNavigate} />
+        {/* usePathname() must sit inside Suspense on runtime routes like /events/[id] (Next 16). */}
+        <Suspense fallback={<nav className="mt-2 h-96 px-4" aria-label="Main" />}>
+          <NavList onNavigate={onNavigate} />
+        </Suspense>
       </div>
       <div className="p-4">
         <div className="flex flex-col gap-1 rounded-xl bg-container-low p-4">
@@ -135,6 +160,18 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   );
 }
 
+/** Whether pages show live backend data or the bundled sample (backend offline). */
+function FeedPill() {
+  const live = useLiveEvents();
+  const on = live?.source === "backend";
+  return (
+    <div className="flex items-center gap-1 rounded-lg bg-container-low px-2 py-1.5" title={on ? "Connected to the TravelBuddy server" : "Server offline — showing sample data"}>
+      <span className={`h-2 w-2 rounded-full ${on ? "bg-primary" : "bg-outline"}`} />
+      <span className="hidden text-[11px] font-bold text-on-surface-variant sm:inline">{on ? `Live data · ${live?.asOf}` : "Offline · sample data"}</span>
+    </div>
+  );
+}
+
 function Shell({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   return (
@@ -174,10 +211,7 @@ function Shell({ children }: { children: React.ReactNode }) {
               <span className="text-xs font-semibold">{shell.city}</span>
               <Icon name="keyboard_arrow_down" className="text-[16px] text-outline" />
             </button>
-            <div className="flex items-center gap-1 rounded-lg bg-container-low px-2 py-1.5">
-              <span className="h-2 w-2 rounded-full bg-primary" />
-              <span className="hidden text-[11px] font-bold text-on-surface-variant sm:inline">{shell.feed}</span>
-            </div>
+            <FeedPill />
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary" aria-label="Account">
               <Icon name="person" className="text-[18px] text-on-primary" />
             </div>

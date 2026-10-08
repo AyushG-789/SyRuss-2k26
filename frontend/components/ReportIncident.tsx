@@ -534,6 +534,7 @@ function NearbyFeed({ events, backend }: { events: DisruptionEvent[]; backend: b
                   {burst ? "Suspicious burst — ignored" : official ? "Verified by official notice" : style.label === "Confirmed" ? "Community confirmed" : style.label}
                 </div>
                 <div className="flex items-center gap-2">
+                  {backend && <Link href={`/events/${ev.event_id}`} className="text-[11px] font-bold text-primary hover:underline">Why?</Link>}
                   {confirmed[ev.event_id] && <span className="text-[11px] font-bold text-primary">{confirmed[ev.event_id]}</span>}
                   <button type="button" onClick={() => seeToo(ev)} disabled={!backend || burst} title="I see this too"
                     className="flex items-center gap-1 rounded bg-container-lowest px-2 py-0.5 text-[11px] font-bold shadow-sm transition-colors hover:bg-container-high disabled:opacity-50">

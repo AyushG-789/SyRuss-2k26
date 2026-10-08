@@ -12,9 +12,15 @@ export function activeEvents(events: DisruptionEvent[] | undefined): DisruptionE
   return (events ?? []).filter((e) => ACTIVE.includes(e.status));
 }
 
-/** Lines an event touches: its own line_ids, plus every line serving one of its stops. */
+/**
+ * Lines an event touches: its own line_ids; or, for a station-wide problem with no line named
+ * (e.g. waterlogging at CSMT), every line serving that station. A closed transfer/foot-overbridge
+ * touches NO line — trains still run, only the walk between platforms is affected
+ * (same rule as backend/app/replan/impact.py).
+ */
 export function eventLines(ev: DisruptionEvent): Set<string> {
   const out = new Set(ev.affected.line_ids);
+  if (ev.affected.transfer_ids.length > 0 || out.size > 0) return out;
   for (const [lid, line] of Object.entries(lines)) {
     if (ev.affected.stop_ids.some((s) => line.stations.includes(s))) out.add(lid);
   }
