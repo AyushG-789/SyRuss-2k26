@@ -5,7 +5,10 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useId, useState } from "react";
+import { findPlace, PLACE_OPTIONS } from "@/lib/places";
+import { EMPTY_FORM, travellerFromForm } from "@/lib/tripForm";
+import { tripHref } from "@/lib/tripUrl";
 import { frequentTrips, hero, liveMap, modes, pulse, recentJourneys, TONE } from "@/lib/mockHome";
 import Icon from "./Icon";
 import MapView from "./MapView";
@@ -32,11 +35,24 @@ function Welcome() {
   const router = useRouter();
   const [from, setFrom] = useState(hero.defaultFrom);
   const [to, setTo] = useState(hero.defaultTo);
-  const [depart, setDepart] = useState(hero.departOptions[0]);
+  const [depart, setDepart] = useState<string>(hero.departOptions[0].label);
+  const listId = useId();
 
+  // Both places recognised → straight to Route Results. Otherwise open the planner, pre-filled,
+  // so the traveller only fixes the place that wasn't found.
   function findRoutes(e: React.FormEvent) {
     e.preventDefault();
-    router.push(`/plan?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`);
+    const a = findPlace(from);
+    const b = findPlace(to);
+    if (a && b && a.label !== b.label) {
+      const d = hero.departOptions.find((o) => o.label === depart) ?? hero.departOptions[0];
+      router.push(tripHref(travellerFromForm({
+        ...EMPTY_FORM, from: a.label, to: b.label, timeMode: d.mode, time: d.time,
+        priority: "fastest", modes: ["local", "metro", "bus", "auto", "taxi", "cab"],
+      })));
+      return;
+    }
+    router.push(`/plan?from=${encodeURIComponent(a?.label ?? from)}&to=${encodeURIComponent(b?.label ?? to)}`);
   }
 
   return (
@@ -71,12 +87,13 @@ function Welcome() {
       </div>
 
       <div className="relative z-10 rounded-xl bg-container-low p-4 shadow-sm">
+        <datalist id={listId}>{PLACE_OPTIONS.map((p) => <option key={p.label} value={p.label} />)}</datalist>
         <form onSubmit={findRoutes} className="grid grid-cols-1 items-center gap-2 md:grid-cols-12">
           <div className="relative flex items-center rounded-lg bg-container-lowest px-4 py-2 shadow-sm transition-all focus-within:ring-2 focus-within:ring-primary md:col-span-5 xl:col-span-4">
             <Icon name="trip_origin" className="mr-1 text-primary" />
             <div className="flex min-w-0 flex-1 flex-col">
               <label htmlFor="origin" className="text-[11px] font-bold leading-none text-on-surface-variant">From (Origin)</label>
-              <input id="origin" value={from} onChange={(e) => setFrom(e.target.value)} placeholder="Station, Landmark, or Area"
+              <input id="origin" list={listId} autoComplete="off" value={from} onChange={(e) => setFrom(e.target.value)} placeholder="Station, Landmark, or Area"
                 className="w-full truncate bg-transparent pt-0.5 text-sm focus:outline-none" />
             </div>
             <button type="button" title="Use current location" className="ml-1 text-outline transition-colors hover:text-primary">
@@ -95,7 +112,7 @@ function Welcome() {
             <Icon name="pin_drop" className="mr-1 text-tertiary" />
             <div className="flex min-w-0 flex-1 flex-col">
               <label htmlFor="dest" className="text-[11px] font-bold leading-none text-on-surface-variant">To (Destination)</label>
-              <input id="dest" value={to} onChange={(e) => setTo(e.target.value)} placeholder="Station, Tech Park, Metro Gate"
+              <input id="dest" list={listId} autoComplete="off" value={to} onChange={(e) => setTo(e.target.value)} placeholder="Station, Tech Park, Metro Gate"
                 className="w-full truncate bg-transparent pt-0.5 text-sm focus:outline-none" />
             </div>
           </div>
@@ -105,7 +122,7 @@ function Welcome() {
               <Icon name="schedule" className="text-[18px] text-outline" />
               <select value={depart} onChange={(e) => setDepart(e.target.value)} aria-label="Departure time"
                 className="w-full cursor-pointer bg-transparent text-xs font-semibold focus:outline-none">
-                {hero.departOptions.map((o) => <option key={o}>{o}</option>)}
+                {hero.departOptions.map((o) => <option key={o.label}>{o.label}</option>)}
               </select>
             </div>
             <button type="submit"
@@ -117,6 +134,17 @@ function Welcome() {
       </div>
     </section>
   );
+}
+
+/** Route Results for two known places leaving "now"; falls back to the planner, pre-filled. */
+function quickTripHref(from: string, to: string): string {
+  const a = findPlace(from);
+  const b = findPlace(to);
+  if (!a || !b || a.label === b.label) return `/plan?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
+  return tripHref(travellerFromForm({
+    ...EMPTY_FORM, from: a.label, to: b.label, priority: "fastest",
+    modes: ["local", "metro", "bus", "auto", "taxi", "cab"],
+  }));
 }
 
 /* ---------------------------------------------------------------- Daily frequent trips */
@@ -132,7 +160,7 @@ function FrequentTrips() {
       </div>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         {frequentTrips.map((t) => (
-          <Link key={t.id} href={`/plan?from=${encodeURIComponent(t.from)}&to=${encodeURIComponent(t.to)}`}
+          <Link key={t.id} href={quickTripHref(t.from, t.to)}
             className="group flex flex-col justify-between rounded-xl bg-container-lowest p-4 shadow-sm transition-all hover:shadow-md">
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-2">

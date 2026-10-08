@@ -1,15 +1,31 @@
 """FastAPI entry point. Run from backend/:  uvicorn app.main:app --reload --port 8000"""
 from __future__ import annotations
 
+import asyncio
+import contextlib
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .api import admin, events, plan, reports
+from .api import admin, events, journeys, plan, reports
 from .clock import clock, fmt_hhmm
 from .config import settings
 from .data_loader import load_seed
 
-app = FastAPI(title="TravelBuddy API", version="0.1.0")
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    # Live alerts: watch the clock, events and saved journeys; push changes over /ws/alerts.
+    task = asyncio.create_task(journeys.hub.run())
+    yield
+    task.cancel()
+    with contextlib.suppress(asyncio.CancelledError):
+        await task
+
+
+app = FastAPI(title="TravelBuddy API", version="0.1.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
@@ -18,6 +34,7 @@ app.add_middleware(
 )
 app.include_router(admin.router)
 app.include_router(events.router)
+app.include_router(journeys.router)
 app.include_router(plan.router)
 app.include_router(reports.router)
 

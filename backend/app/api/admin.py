@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 
 from ..clock import clock, fmt_hhmm, parse_hhmm
 from ..data_loader import load_seed
+from ..replan.monitor import journeys
 from ..verify.store import DemoMode, store
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -84,6 +85,7 @@ def reset(body: ResetIn | None = None) -> dict:
     manual: only pre-16:30 history is loaded; use /admin/inject to make things happen.
     """
     store.reset((body or ResetIn()).mode)
+    journeys.reset()
     clock.set(parse_hhmm(load_seed().scenario["start"]))
     clock.set_speed(0)
     return _state()

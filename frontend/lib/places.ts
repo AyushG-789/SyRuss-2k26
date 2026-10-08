@@ -18,7 +18,39 @@ export const PLACE_OPTIONS: PlaceOption[] = [
     .map(([, s]) => ({ label: `${s.name} station`, lat: s.lat, lon: s.lon, poi_id: null, kind: "station" as const })),
 ].sort((a, b) => a.label.localeCompare(b.label));
 
+const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+const core = (p: PlaceOption) => norm(p.label).replace(/ station$/, "");
+const words = (s: string) => norm(s).split(" ").filter((w) => w.length >= 3);
+
+/**
+ * Match what someone typed to a known place, forgivingly:
+ * exact name → "<name> station" → a place whose name starts with the text → text that starts with
+ * a place name ("Andheri West (SV Road)" → Andheri station) → most words in common ("BKC").
+ * Ties go to the shorter (more general) name. Returns undefined if nothing is close.
+ */
 export function findPlace(label: string): PlaceOption | undefined {
-  const key = label.trim().toLowerCase();
-  return PLACE_OPTIONS.find((p) => p.label.toLowerCase() === key);
+  const q = norm(label);
+  if (!q) return undefined;
+  const shortest = (list: PlaceOption[]) => [...list].sort((a, b) => a.label.length - b.label.length)[0];
+  const tiers: ((p: PlaceOption) => boolean)[] = [
+    (p) => norm(p.label) === q,
+    (p) => core(p) === q,
+    (p) => core(p).startsWith(`${q} `),
+    (p) => q.startsWith(`${core(p)} `),
+  ];
+  for (const tier of tiers) {
+    const hits = PLACE_OPTIONS.filter(tier);
+    if (hits.length) return shortest(hits);
+  }
+  const qw = new Set(words(label));
+  let best: PlaceOption | undefined;
+  let bestScore = 0;
+  for (const p of PLACE_OPTIONS) {
+    const score = words(p.label).filter((w) => qw.has(w)).length;
+    if (score > bestScore || (score === bestScore && best && score > 0 && p.label.length < best.label.length)) {
+      best = p;
+      bestScore = score;
+    }
+  }
+  return bestScore > 0 ? best : undefined;
 }

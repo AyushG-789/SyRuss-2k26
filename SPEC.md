@@ -358,15 +358,29 @@ plan_itinerary(traveller) -> ItineraryPlan
 
 ---
 
-## 8. Replanning (`backend/app/replan/monitor.py`)
-1. On every event transition to `confirmed` (and each clock tick), find saved journeys
-   (status `active` or `upcoming`) with a leg whose line/stop/transfer is affected and whose
-   time window overlaps the event.
-2. Replan from the traveller's current position (the start of the first not-yet-completed leg).
-3. Push over WebSocket `/ws/alerts`:
-   `{type:"replan_proposal", journey_id, affected_leg_idx:[..], event, old_card, new_card, delta:{min, inr}}`
-4. Plan changes **only** after `POST /journeys/{id}/replan/accept`. `reject` keeps the old plan.
-   Both decisions are logged for evaluation.
+## 8. Replanning (`backend/app/replan/monitor.py`, `impact.py`)
+1. `POST /journeys` saves the card the traveller chose. On every check (each `/journeys` read,
+   and once a second while a client is connected to `/ws/alerts`) the monitor looks at journeys
+   that aren't `completed` and finds **confirmed** events that hit a leg not yet finished.
+   `possible` events never trigger a replan.
+   - Matching (`impact.py`): transfer events hit only that transfer walk (not trains passing
+     through); line events hit rides on that line (with stops: only rides whose stretch includes
+     one); stop-only events hit rides passing the stop and legs starting/ending there;
+     `lift_out` only matters to step-free / heavy-luggage travellers.
+   - closure / mega_block / (lift_out for step-free) = **blocked**; other types add
+     `expected_delay_min`. Confirmed delays under 5 min are ignored.
+2. Replan from the traveller's position: the start of the first unfinished leg — or, if they are
+   already riding a train/bus, where that ride stops (they stay on it). Remaining budget =
+   `max_budget_inr` − money already spent. Alternatives are checked against the same events
+   (blocked dropped, delays added) until routing does this itself (A5).
+3. Propose only if the old route is blocked, or an alternative arrives ≥ 3 min earlier.
+   Otherwise the journey gets a `notice` ("delay on your route; it is still the best option" /
+   "no working alternative found"). Events are asked about once.
+4. Proposal: `{proposal_id, event_ids, affected_leg_idx, from_label, old_card (hit legs carry
+   event_ids + risk), new_card (completed legs + new route), delta:{min, inr}, old_blocked, message}`.
+   Pushed over WebSocket `/ws/alerts` as `{type:"replan_proposal", journey_id, proposal}`.
+5. Plan changes **only** after `POST /journeys/{id}/replan/accept`. `reject` keeps the old plan.
+   Both decisions are logged in `journey.log` for evaluation. `/admin/reset` clears journeys.
 
 ---
 
@@ -391,9 +405,10 @@ plan_itinerary(traveller) -> ItineraryPlan
 | POST | `/parse-request` | `{text, language}` → `{traveller: partial Traveller, missing: [field]}` |
 | POST | `/plan` | `{traveller, mode:"aware"|"baseline"}` → `{cards: RouteCard[3], rejected: [{legs, reason}]}` |
 | POST | `/itinerary` | `{traveller}` → `ItineraryPlan` |
-| POST | `/journeys` | `{traveller_id, card}` → `{journey_id}` |
-| GET | `/journeys/{id}` | → journey + current card + pending proposal |
-| POST | `/journeys/{id}/replan/accept` · `/reject` | → updated journey |
+| POST | `/journeys` | `{traveller, card}` → `Journey` (`journey_id`, status `upcoming\|active\|completed`, card, proposal, notice, log) |
+| GET | `/journeys` | → all saved journeys |
+| GET | `/journeys/{id}` | → journey + current card + pending proposal (polling fallback for the socket) |
+| POST | `/journeys/{id}/replan/accept` · `/reject` | → updated journey (409 if nothing pending) |
 | POST | `/voice/stt` | audio → `{text, language}` |
 | POST | `/voice/tts` | `{text, language}` → `{audio_base64, mime}` |
 | GET | `/eval` | → metrics table (§12) |
@@ -403,7 +418,7 @@ plan_itinerary(traveller) -> ItineraryPlan
 | POST | `/admin/inject` | `{ref_ids?: ["R04","N01"], preset?: "fake_burst"}` → copies of seed items arrive *now* on the demo clock, joining their seed event |
 | GET | `/admin/presets` | → one-click inject buttons `[{id, label, refs, expect}]` |
 | GET | `/admin/timeline` | → scenario items with state `history \| done \| upcoming \| not_injected \| other_day` |
-| WS | `/ws/alerts` | server → client: `event_update`, `replan_proposal`, `clock` |
+| WS | `/ws/alerts` | server → client: `clock {now}`, `event_update {event_id, status, confidence}`, `replan_proposal {journey_id, proposal}`, `journey_notice {journey_id, notice}` |
 
 Backend runs on `:8000`, frontend on `:3000`, CORS allows `http://localhost:3000`.
 Frontend reads `NEXT_PUBLIC_API_URL`.

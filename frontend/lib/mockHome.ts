@@ -22,9 +22,16 @@ export const hero = {
     { label: "Transit Efficiency", value: "96.4%", accent: true },
     { label: "Active Services", value: "3,842", accent: false },
   ],
-  defaultFrom: "Andheri West (SV Road)",
-  defaultTo: "BKC G-Block, Platina Towers",
-  departOptions: ["Leave Now", "Depart at 08:30 AM", "Depart at 09:00 AM", "Arrive by 10:00 AM"],
+  // Real places from the trip form's list, so "Find Routes" can go straight to results.
+  defaultFrom: "Andheri station",
+  defaultTo: "Jio World Centre, BKC",
+  /** "now" = the demo clock's scenario time (same as the Journey Planner). */
+  departOptions: [
+    { label: "Leave Now", mode: "leave", time: "17:00" },
+    { label: "Depart at 05:30 PM", mode: "leave", time: "17:30" },
+    { label: "Depart at 06:00 PM", mode: "leave", time: "18:00" },
+    { label: "Arrive by 06:30 PM", mode: "arrive", time: "18:30" },
+  ] as const,
 };
 
 /** backend: saved places per user (not in PS scope yet) */

@@ -19,6 +19,18 @@ export const MODE_LABEL: Record<Mode, string> = {
 };
 
 /** Short line names for leg chips, e.g. "CR Fast", "Metro 3", "BEST". */
+/** "Via WR_SLOW -> METRO3" → "Via WR Slow → Metro 3" (route summaries from the planner). */
+export function readableRoute(summary: string): string {
+  return summary
+    .split(" -> ")
+    .map((part, i) => {
+      const via = i === 0 && part.startsWith("Via ") ? "Via " : "";
+      const id = via ? part.slice(4) : part;
+      return via + (/^[A-Z0-9_]+$/.test(id) ? lineShortName(id) : id);
+    })
+    .join(" → ");
+}
+
 export function lineShortName(lineId: string): string {
   const known: Record<string, string> = {
     WR_SLOW: "WR Slow", WR_FAST: "WR Fast", CR_SLOW: "CR Slow", CR_FAST: "CR Fast",

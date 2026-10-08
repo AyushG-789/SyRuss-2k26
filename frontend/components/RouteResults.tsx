@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { getPlan, planRequest, RoutingNotConnected, USE_MOCKS } from "@/lib/api";
-import { legColor, lineShortName, MODE_LABEL, PLAN_LABEL, pct, placeName } from "@/lib/format";
+import { legColor, lineShortName, MODE_LABEL, PLAN_LABEL, pct, placeName, readableRoute } from "@/lib/format";
 import { saveTrip } from "@/lib/savedTrip";
 import type { PlanLabel, PlanResponse, RouteCard, Traveller } from "@/lib/types";
 import { activeEvents } from "@/lib/network";
@@ -146,7 +146,7 @@ export default function RouteResults({ traveller }: { traveller: Traveller | nul
                   <ul className="flex flex-col divide-y divide-hairline-soft text-sm">
                     {plan.rejected.map((r) => (
                       <li key={r.summary} className="py-2">
-                        <span className="font-semibold">{r.summary}</span>
+                        <span className="font-semibold">{readableRoute(r.summary)}</span>
                         <span className="block text-on-surface-variant">{r.reason}</span>
                       </li>
                     ))}

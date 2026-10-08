@@ -34,14 +34,20 @@ const STRATEGIES = [
   { value: "cheapest", label: "Cheapest", hint: "Budget rail & regular buses" },
 ] as const;
 
+/** Text from the URL, replaced by the known place it matches (so it shows as recognised). */
+function snap(text: string | null): string | null {
+  if (text == null) return null;
+  return findPlace(text)?.label ?? text;
+}
+
 export default function JourneyPlanner() {
   const router = useRouter();
   const params = useSearchParams();
   const listId = useId();
   const [form, setForm] = useState<FormState>(() => ({
     ...EMPTY_FORM,
-    from: params.get("from") ?? defaults.from,
-    to: params.get("to") ?? defaults.to,
+    from: snap(params.get("from")) ?? defaults.from,
+    to: snap(params.get("to")) ?? defaults.to,
     priority: "fastest",
     modes: ["local", "metro", "bus", "auto", "taxi", "cab"],
   }));

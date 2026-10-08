@@ -157,3 +157,44 @@ class PlanResponse(BaseModel):
     destination: Place | None = None
     notes: list[str] = []
 
+
+
+# ---- Saved journeys + replanning (B9, SPEC.md §8) ------------------------------------------
+JourneyStatus = Literal["upcoming", "active", "completed"]
+
+
+class ReplanProposal(BaseModel):
+    proposal_id: str
+    created_at: str
+    event_ids: list[str]
+    affected_leg_idx: list[int]
+    from_label: str                      # where the new route starts (traveller's position)
+    old_card: RouteCard                  # current plan, with the hit legs marked (event_ids, risk)
+    new_card: RouteCard                  # completed legs + the new route from the position
+    delta: dict                          # {min, inr}: new minus old (old includes the delay)
+    old_blocked: bool
+    message: str
+
+
+class JourneyLogEntry(BaseModel):
+    at: str
+    kind: Literal["saved", "proposed", "accepted", "rejected", "notice"]
+    event_ids: list[str] = []
+    detail: str = ""
+
+
+class Journey(BaseModel):
+    journey_id: str
+    traveller: Traveller
+    card: RouteCard
+    status: JourneyStatus
+    saved_at: str
+    proposal: ReplanProposal | None = None
+    notice: str | None = None            # e.g. "Delay on your route; it is still the best option"
+    handled_event_ids: list[str] = []
+    log: list[JourneyLogEntry] = []
+
+
+class JourneyIn(BaseModel):
+    traveller: Traveller
+    card: RouteCard
