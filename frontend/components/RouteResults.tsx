@@ -86,7 +86,7 @@ export default function RouteResults({ traveller }: { traveller: Traveller | nul
           <p className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-on-surface-variant">
             <span>{traveller.traveller_id === "CUSTOM" ? "Your trip" : traveller.name}</span>
             {plan?.as_of && <span className="flex items-center gap-1"><Icon name="sensors" className="text-[16px]" /> reports as of {plan.as_of}</span>}
-            {USE_MOCKS && plan && <span className="rounded-full bg-amber-soft px-2 py-0.5 font-semibold text-amber-ink">Sample route numbers</span>}
+            {USE_MOCKS && plan && traveller.traveller_id !== "CUSTOM" && <span className="rounded-full bg-amber-soft px-2 py-0.5 font-semibold text-amber-ink">Sample route numbers</span>}
           </p>
         </div>
         <div className="flex w-full flex-wrap gap-1.5 xl:w-auto">

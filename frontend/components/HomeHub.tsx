@@ -6,7 +6,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { card, frequentTrips, hero, liveMap, modes, pulse, recentJourneys, TONE } from "@/lib/mockHome";
+import { frequentTrips, hero, liveMap, modes, pulse, recentJourneys, TONE } from "@/lib/mockHome";
 import Icon from "./Icon";
 import MapView from "./MapView";
 
@@ -21,7 +21,6 @@ export default function HomeHub() {
         <LiveMap />
       </section>
       <section className="mt-6 grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-12">
-        <MobilityCard />
         <RecentJourneys />
       </section>
     </main>
@@ -320,53 +319,10 @@ function LiveMap() {
   );
 }
 
-/* ---------------------------------------------------------------- NCMC card */
-function MobilityCard() {
-  return (
-    <div className="flex flex-col justify-between rounded-xl bg-container-lowest p-5 shadow-sm lg:col-span-5">
-      <div>
-        <div className="mb-4 flex items-center justify-between">
-          <div className="flex items-center gap-1">
-            <Icon name="contactless" className="text-[22px] text-primary" />
-            <span className="text-lg font-semibold">{card.title}</span>
-          </div>
-          <span className="rounded bg-primary-fixed px-1 py-0.5 text-[11px] font-bold uppercase text-on-primary-fixed">{card.badge}</span>
-        </div>
-        <div className="relative flex h-44 w-full flex-col justify-between overflow-hidden rounded-xl bg-gradient-to-tr from-primary to-primary-container p-4 text-on-primary shadow-md">
-          <div className="pointer-events-none absolute -bottom-12 -right-12 h-48 w-48 rounded-full bg-white/10" />
-          <div className="relative z-10 flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-widest opacity-90">{card.network}</span>
-            <Icon name="wifi_tethering" className="text-[26px]" />
-          </div>
-          <div className="relative z-10 flex items-baseline gap-2">
-            <span className="text-[13px] opacity-80">Bal:</span>
-            <span className="text-[32px] font-bold leading-10 tracking-tight">{card.balance}</span>
-          </div>
-          <div className="relative z-10 flex items-end justify-between">
-            <div className="flex flex-col">
-              <span className="text-[11px] font-bold opacity-75">Card Holder</span>
-              <span className="text-xs font-semibold uppercase tracking-wide">{card.holder}</span>
-            </div>
-            <span className="text-[11px] font-bold opacity-90">{card.autoTopup}</span>
-          </div>
-        </div>
-      </div>
-      <div className="mt-4 grid grid-cols-2 gap-2">
-        <button type="button" className="flex h-11 items-center justify-center gap-1 rounded-lg bg-primary text-xs font-semibold text-on-primary shadow-sm transition-colors hover:bg-primary-container">
-          <Icon name="add_circle" className="text-[18px]" /> Quick Recharge
-        </button>
-        <button type="button" className="flex h-11 items-center justify-center gap-1 rounded-lg bg-container text-xs font-semibold transition-colors hover:bg-container-high">
-          <Icon name="receipt_long" className="text-[18px]" /> Pass Details
-        </button>
-      </div>
-    </div>
-  );
-}
-
 /* ---------------------------------------------------------------- Recent journeys */
 function RecentJourneys() {
   return (
-    <div className="flex flex-col justify-between rounded-xl bg-container-lowest p-5 shadow-sm lg:col-span-7">
+    <div className="flex flex-col justify-between rounded-xl bg-container-lowest p-5 shadow-sm lg:col-span-12">
       <div className="mb-4 flex items-center justify-between">
         <div>
           <h2 className="text-lg font-semibold">Recent Journey Activity</h2>

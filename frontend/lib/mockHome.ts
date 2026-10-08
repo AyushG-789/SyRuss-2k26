@@ -7,7 +7,6 @@ export type Tone = "ok" | "warn" | "bad" | "neutral";
 /** backend: GET /events → latest confirmed event (Pakka Check) */
 export const shell = {
   networkStatus: { label: "Network Status", value: "Live 99.8%" },
-  alert: "Alert: Ghatkopar Metro Line 1 running with 3-min peak headway",
   city: "Mumbai MMR",
   feed: "Feed Sync OK",
   activeCity: { name: "Mumbai Transit Region (MMR)", lines: "Metro • Western • Central • BEST", badge: "Unified" },
@@ -78,16 +77,6 @@ export const liveMap = {
   ],
   center: [19.075, 72.855] as [number, number],
   nearest: { title: "Nearest: Andheri Interchange", sub: "Metro L1 Gate 3 • 180m walk", from: "Andheri station" },
-};
-
-/** backend: none yet (payments are outside the PS scope) */
-export const card = {
-  title: "NCMC Unified Card",
-  badge: "Active • RuPay",
-  network: "National Common Mobility Card",
-  balance: "₹420.50",
-  holder: "R. SHARMA • 8842",
-  autoTopup: "Auto-Topup ON",
 };
 
 /** backend: saved journeys (B9 /journeys) */

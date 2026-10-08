@@ -2,14 +2,49 @@
 
 // Leaflet touches `window`, so this file is only ever loaded with next/dynamic { ssr: false }.
 import "leaflet/dist/leaflet.css";
-import { useEffect, useMemo } from "react";
-import { CircleMarker, MapContainer, Polyline, Popup, TileLayer, Tooltip, useMap } from "react-leaflet";
+import { createLeafletContext, LeafletContext, type LeafletContextInterface } from "@react-leaflet/core";
+import { Map as LeafletMap } from "leaflet";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { CircleMarker, Polyline, Popup, TileLayer, Tooltip, useMap } from "react-leaflet";
 import { lines, stations } from "@/lib/api";
 import { evidenceSummary, eventPosition, eventTitle, legColor, pct, STATUS_STYLE } from "@/lib/format";
 import { legPath, type LatLon } from "@/lib/geo";
 import type { DisruptionEvent, Place, RouteCard } from "@/lib/types";
 
 const MUMBAI: LatLon = [19.05, 72.87];
+
+// react-leaflet's MapContainer destroys the Leaflet map whenever its effects are cleaned up. Next 16
+// (cacheComponents) keeps visited pages alive but hidden, and Fast Refresh re-runs effects, so the
+// layers then get re-added to a destroyed map ("this.getPane() is undefined"). This container only
+// destroys the map once its <div> has really left the page, and re-measures when shown again.
+function MapContainer({ center, zoom, className, style, children }: {
+  center: LatLon; zoom: number; className?: string; style?: React.CSSProperties; children: React.ReactNode;
+}) {
+  const [context, setContext] = useState<LeafletContextInterface | null>(null);
+  const nodeRef = useRef<HTMLDivElement | null>(null);
+  const mapRef = useCallback((node: HTMLDivElement | null) => {
+    if (!node || nodeRef.current) return;
+    nodeRef.current = node;
+    const map = new LeafletMap(node, { scrollWheelZoom: true }).setView(center, zoom);
+    setContext(createLeafletContext(map));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- create the map once, like react-leaflet
+  }, []);
+  useEffect(() => {
+    if (!context) return;
+    const { map } = context;
+    map.invalidateSize();
+    return () => {
+      setTimeout(() => {
+        if (!nodeRef.current?.isConnected) map.remove();
+      }, 0);
+    };
+  }, [context]);
+  return (
+    <div ref={mapRef} className={className} style={style}>
+      {context && <LeafletContext value={context}>{children}</LeafletContext>}
+    </div>
+  );
+}
 
 function FitTo({ points }: { points: LatLon[] }) {
   const map = useMap();
@@ -60,7 +95,7 @@ export default function RouteMap({
   }, [paths, origin, destination, showNetwork, network]);
 
   return (
-    <MapContainer center={MUMBAI} zoom={11} scrollWheelZoom className="h-full w-full" style={{ minHeight: 320 }}>
+    <MapContainer center={MUMBAI} zoom={11} className="h-full w-full" style={{ minHeight: 320 }}>
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

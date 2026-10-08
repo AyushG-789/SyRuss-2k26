@@ -166,10 +166,6 @@ function Shell({ children }: { children: React.ReactNode }) {
           </div>
           <div className="hidden max-w-2xl flex-1 items-center gap-5 md:flex">
             <SearchBox />
-            <div className="hidden items-center gap-1 rounded-full bg-tertiary-fixed px-4 py-1.5 text-[11px] font-bold text-tertiary xl:flex">
-              <Icon name="warning" className="text-[16px]" />
-              <span className="max-w-xs truncate">{shell.alert}</span>
-            </div>
           </div>
           <div className="flex items-center gap-4">
             <button type="button" className="hidden items-center gap-1 rounded-lg bg-container px-4 py-1.5 transition-colors hover:bg-container-high sm:flex">
