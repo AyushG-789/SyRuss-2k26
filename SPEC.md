@@ -230,13 +230,16 @@ orange/red alert is active).
 
 ```
 support      = 1 − Π(1 − w_i)                    over independent, non-contradicting evidence
-decay        = exp(−age_min / τ_type)            age = now − last_seen
+decay        = exp(−max(0, age_min − 15) / τ_type)   age = now − last_seen; no fading for 15 min
 contradiction= max weight of contradicting evidence from a source with HIGHER trust
                than the strongest supporting source (official > traffic > news > crowd)
 confidence   = clamp(support × decay − contradiction, 0, 1)
 ```
 `τ_type` (minutes): delay 60 · closure 240 · lift_out 1440 · diversion 120 · crowding 30 ·
 waterlogging 120 · mega_block = until announced end.
+The 15-minute grace period stops a just-confirmed event from slipping back to "possible" while
+nothing has changed. Only evidence with `at ≤ now` is used, so the demo clock can be replayed.
+All weights, τ, lifetimes and thresholds live in `backend/app/verify/policy.py`.
 
 ### 4.6 Thresholds and effect on routing
 | Confidence | Status | Routing effect |
@@ -257,8 +260,10 @@ extends it. Expired events stay visible (greyed) on the transparency page.
 - 1 crowd + rain prior → `1 − 0.75 × 0.8 = 0.40` → **possible**
 - 1 official alone → 0.8 → **confirmed**
 - Crowd "line fully shut" + official "running normally" → **ignored**, flagged `contradicted`
-Every report in `reports_seed.json` has `expected.status`; the test replays
-`scenarios/demo.json` and compares.
+Every report in `reports_seed.json` has `expected.status`; `tests/test_verify_seed.py` scores each
+event at `check_at` and compares. One official notice can contradict one event and support
+another (`expected.also_supports`, e.g. O02 contradicts "WR fully shut" but confirms the Andheri
+delay). See the verdicts with `python scripts/score_seed_reports.py [--at HH:MM | --timeline]`.
 
 ---
 
