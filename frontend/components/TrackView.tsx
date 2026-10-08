@@ -1,389 +1,598 @@
 "use client";
 
+// Live Trip Tracking — built from the team's design (stitch: mobilink_web_live_trip_tracking_console).
+// Frontend only: content is sample data from lib/mockTracking.ts. "Dispatch Report" still sends a
+// real crowd report to Pakka Check when the backend is running.
+
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { getPlan, getTraveller, lines, stations, submitReport, updateClock, type ReportOut } from "@/lib/api";
-import { eventTitle, evidenceSummary, legColor, lineShortName, MODE_LABEL, PLAN_LABEL, pct, placeName, STATUS_STYLE, TYPE_LABEL } from "@/lib/format";
-import { positionAt, toMin } from "@/lib/geo";
-import { activeEvents } from "@/lib/network";
-import { clearTrip, loadTrip, type SavedTrip } from "@/lib/savedTrip";
-import type { DisruptionEvent, Leg } from "@/lib/types";
-import { useLiveEvents, useRefreshLiveEvents } from "@/lib/useLiveEvents";
+import { useEffect, useState } from "react";
+import { submitReport, type ReportOut } from "@/lib/api";
+import { pct, STATUS_STYLE } from "@/lib/format";
+import { mapInfo, platforms, reportCategories, reportTarget, share, steps, trip, vehicle, velocity, type StepState } from "@/lib/mockTracking";
+import { useRefreshLiveEvents } from "@/lib/useLiveEvents";
 import Icon from "./Icon";
-import MapView from "./MapView";
 
-type Phase = "done" | "now" | "next";
-
-const hhmm = (m: number) => `${String(Math.floor(m / 60) % 24).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
-
-/** Stops a leg passes through (for matching disruptions). */
-function legStops(leg: Leg): string[] {
-  const line = leg.line_id ? lines[leg.line_id] : undefined;
-  if (line) {
-    const a = line.stations.indexOf(leg.from_id);
-    const b = line.stations.indexOf(leg.to_id);
-    if (a >= 0 && b >= 0) return line.stations.slice(Math.min(a, b), Math.max(a, b) + 1);
-  }
-  return [leg.from_id, leg.to_id].filter((s) => stations[s]);
-}
-
-function hits(ev: DisruptionEvent, leg: Leg): boolean {
-  // A closed transfer (e.g. Dadar FOB) only affects the walk that uses it, not trains passing through.
-  if (ev.affected.transfer_ids.length > 0) {
-    return ev.affected.transfer_ids.some(
-      (t) => t === `T_${leg.from_id}__${leg.to_id}` || t === `T_${leg.to_id}__${leg.from_id}`,
-    );
-  }
-  if (leg.line_id && ev.affected.line_ids.includes(leg.line_id) && ev.affected.stop_ids.length === 0) return true;
-  const stops = legStops(leg);
-  return ev.affected.stop_ids.some((s) => stops.includes(s)) && (!leg.line_id || ev.affected.line_ids.length === 0 || ev.affected.line_ids.includes(leg.line_id));
-}
+type Modal = null | "report" | "share" | "sos" | "qr";
 
 export default function TrackView() {
-  const live = useLiveEvents();
-  const [trip, setTrip] = useState<SavedTrip | null>(null);
-  const [example, setExample] = useState(false);
-  const [reporting, setReporting] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    async function load(): Promise<{ trip: SavedTrip; example: boolean } | null> {
-      const saved = loadTrip();   // sessionStorage: browser only, so read after mount
-      if (saved) return { trip: saved, example: false };
-      // Nothing chosen yet: show Arjun's recommended route as an example.
-      const t = getTraveller("TR3");
-      if (!t) return null;
-      const plan = await getPlan(t);
-      const card = plan.cards.find((c) => c.recommended) ?? plan.cards[0];
-      return { trip: { traveller: t, destination: plan.destination ?? t.destination, card, resultsHref: "/routes/TR3", savedAt: "" }, example: true };
-    }
-    load()
-      .then((r) => {
-        if (cancelled || !r) return;
-        setTrip(r.trip);
-        setExample(r.example);
-      })
-      .catch(() => undefined);
-    return () => { cancelled = true; };
-  }, []);
-
-  const clockLive = live?.source === "backend" && Boolean(live.asOf);
-  const legs = trip?.card.legs ?? [];
-  const nowMin = clockLive ? toMin(live!.asOf!) : legs.length ? toMin(legs[0].depart) : 0;
-  const phases: Phase[] = legs.map((l) => (nowMin >= toMin(l.arrive) ? "done" : nowMin >= toMin(l.depart) ? "now" : "next"));
-  const events = useMemo(() => live?.events ?? [], [live]);
-  const ahead = legs.flatMap((leg, i) =>
-    phases[i] === "done" ? [] : events.filter((e) => e.status === "confirmed" && hits(e, leg)).map((e) => ({ e, i })),
-  );
-
-  if (!trip) return <p className="mx-auto w-full max-w-7xl px-6 py-6 text-on-surface-variant">Loading trip…</p>;
-
-  const { traveller, card, destination } = trip;
-  const start = toMin(legs[0].depart);
-  const end = toMin(legs[legs.length - 1].arrive);
-  const arrived = nowMin >= end;
-  const notStarted = nowMin < start;
-  const current = legs.findIndex((_, i) => phases[i] === "now");
-  const remaining = Math.max(0, end - Math.max(nowMin, start));
-  const deadline = traveller.arrive_by ? toMin(traveller.arrive_by) : null;
-  const here = destination ? positionAt(card, nowMin, traveller.origin, destination) : null;
-  const paid = legs.filter((_, i) => phases[i] !== "next").reduce((s, l) => s + l.cost_inr, 0);
+  const [modal, setModal] = useState<Modal>(null);
+  const [alarm, setAlarm] = useState(true);
+  const speed = useWobblingSpeed(vehicle.speed);
 
   return (
-    <main className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 py-6 md:px-6">
-      {example && (
-        <p className="flex items-center gap-2 rounded-xl bg-secondary-container px-4 py-2.5 text-sm text-on-secondary-container">
-          <Icon name="info" /> Showing an example trip. Pick a route on <Link href="/routes/TR3" className="font-semibold underline">Route Results</Link> and press <b>Start trip</b> to track your own.
-        </p>
-      )}
-
-      {/* ---- Header ---- */}
-      <section className="flex flex-wrap items-start gap-4">
-        <span className="grid h-12 w-12 place-items-center rounded-xl bg-primary text-on-primary"><Icon name="navigation" /></span>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-bold">Live trip</h1>
-            <span className={`flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase ${
-              arrived ? "bg-container-high text-on-surface-variant" : notStarted ? "bg-secondary-container text-on-secondary-container" : "bg-primary-fixed text-on-primary-fixed"}`}>
-              {!arrived && !notStarted && <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />}
-              {arrived ? "Arrived" : notStarted ? "Not started" : "Tracking"}
-            </span>
+    <main className="flex w-full flex-col px-4 pb-6 md:px-6">
+      {/* ---- Top control bar ---- */}
+      <div className="flex flex-col justify-between gap-4 py-4 lg:flex-row lg:items-center">
+        <div className="flex items-center gap-4">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary text-on-primary shadow-sm">
+            <Icon name="directions_subway" className="text-[26px]" />
           </div>
-          <p className="text-sm text-on-surface-variant">
-            {traveller.origin.label} → {destination?.label} · {PLAN_LABEL[card.label]} plan ·{" "}
-            {legs.filter((l) => l.mode !== "walk").map((l) => (l.line_id ? lineShortName(l.line_id) : MODE_LABEL[l.mode])).join(" → ")}
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {clockLive && (
-            <button onClick={() => updateClock({ advance_min: 5 })} className="btn-secondary" title="Move the demo clock forward">
-              <Icon name="fast_forward" className="text-[18px]" /> +5 min
-            </button>
-          )}
-          <Link href={trip.resultsHref} className="btn-secondary"><Icon name="alt_route" className="text-[18px]" /> Other routes</Link>
-          {!example && (
-            <Link href={trip.resultsHref} onClick={clearTrip} className="btn-secondary text-error"><Icon name="stop_circle" className="text-[18px]" /> End trip</Link>
-          )}
-        </div>
-      </section>
-
-      {/* ---- Stats ---- */}
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Remaining time" icon="timer" value={arrived ? "0" : String(remaining)} unit="min"
-          foot={clockLive ? `Demo clock ${live!.asOf}` : "Start the backend to follow the demo clock"} />
-        <StatCard label="Est. arrival" icon="flag" value={hhmm(end)}
-          foot={deadline != null ? (end <= deadline ? `On time for ${traveller.arrive_by} (${deadline - end} min spare)` : `${end - deadline} min late for ${traveller.arrive_by}`) : "No deadline set"}
-          tone={deadline != null && end > deadline ? "bad" : "ok"} />
-        <StatCard label="Fare" icon="payments" value={`₹${card.cost_inr}`} foot={`₹${paid} spent so far · ${card.transfers} change${card.transfers === 1 ? "" : "s"}`} />
-        <button onClick={() => setReporting(true)}
-          className="flex flex-col justify-between gap-2 rounded-2xl border border-tertiary-fixed bg-tertiary-fixed/50 p-4 text-left transition hover:bg-tertiary-fixed">
-          <span className="flex items-start justify-between">
-            <span>
-              <span className="text-[11px] font-bold uppercase tracking-wider text-tertiary">Seen a problem?</span>
-              <span className="block text-xl font-bold">Report issue</span>
-            </span>
-            <span className="grid h-10 w-10 place-items-center rounded-xl bg-tertiary text-white"><Icon name="report" /></span>
-          </span>
-          <span className="flex items-center justify-between text-[13px] font-semibold text-tertiary">
-            Delay · closure · lift · crowding <Icon name="arrow_forward" className="text-[18px]" />
-          </span>
-        </button>
-      </section>
-
-      {/* ---- Disruption ahead ---- */}
-      {ahead.length > 0 && (
-        <section className="flex flex-wrap items-center gap-3 rounded-2xl border border-error/30 bg-error-container p-4 text-on-error-container">
-          <Icon name="warning" className="text-[28px]" fill />
-          <div className="min-w-0 flex-1">
-            <p className="font-bold">Confirmed disruption ahead on your route</p>
-            <p className="text-sm">
-              {ahead.map(({ e, i }) => `${eventTitle(e)} (step ${i + 1}, ${pct(e.confidence)}: ${evidenceSummary(e)})`).join(" · ")}
-            </p>
-          </div>
-          <Link href={trip.resultsHref} className="btn-primary !bg-error">See alternatives</Link>
-        </section>
-      )}
-
-      {/* ---- Current step strip ---- */}
-      {current >= 0 && (
-        <section className="card flex flex-wrap items-center gap-3 p-4">
-          <span className="rounded-lg px-2.5 py-1 text-[12px] font-bold text-white" style={{ backgroundColor: legColor(legs[current]) }}>
-            {legs[current].line_id ? lineShortName(legs[current].line_id!) : MODE_LABEL[legs[current].mode]}
-          </span>
-          <p className="min-w-0 flex-1 text-sm">
-            <b>Now:</b> {placeName(legs[current].from_id, traveller, destination?.label)} → {placeName(legs[current].to_id, traveller, destination?.label)}
-            <span className="text-on-surface-variant"> · arrive {legs[current].arrive} ({toMin(legs[current].arrive) - nowMin} min)</span>
-          </p>
-        </section>
-      )}
-
-      <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
-        {/* ---- Milestones ---- */}
-        <section className="card p-5">
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">Step by step</p>
-              <h2 className="text-xl font-semibold">Journey milestones</h2>
+          <div className="flex flex-col">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-lg font-semibold">Live Mission Console</span>
+              <span className="flex items-center gap-1 rounded-full bg-primary-fixed px-1 py-0.5 text-[11px] font-bold uppercase text-on-primary-fixed">
+                <span className="h-1.5 w-1.5 animate-ping rounded-full bg-primary" /> Telemetry Stream Active
+              </span>
+              <span className="font-mono text-[13px] text-on-surface-variant">{trip.id}</span>
             </div>
-            <span className="rounded-full bg-container-low px-2.5 py-1 text-[12px] font-semibold">{legs.length} steps</span>
+            <p className="text-[13px] text-on-surface-variant">{trip.corridor}</p>
           </div>
-          <ol className="relative flex flex-col gap-3">
-            {legs.map((leg, i) => {
-              const p = phases[i];
-              const warn = events.filter((e) => (e.status === "confirmed" || e.status === "possible") && hits(e, leg));
-              return (
-                <li key={i} className="flex gap-3">
-                  <div className="flex flex-col items-center">
-                    <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full ${
-                      p === "done" ? "bg-primary text-on-primary" : p === "now" ? "bg-primary-fixed text-primary ring-4 ring-primary-soft" : "bg-container-low text-on-surface-variant"}`}>
-                      <Icon name={p === "done" ? "check" : leg.mode === "walk" ? "directions_walk" : leg.mode === "taxi" || leg.mode === "cab" || leg.mode === "auto" ? "local_taxi" : leg.mode === "bus" ? "directions_bus" : "train"} className="text-[20px]" />
-                    </span>
-                    {i < legs.length - 1 && (
-                      <span className={`mt-1 w-0.5 flex-1 ${leg.mode === "walk" ? "border-l-2 border-dashed border-outline-variant" : p === "done" ? "bg-primary" : "bg-container-highest"}`} />
-                    )}
-                  </div>
-                  <div className={`mb-1 min-w-0 flex-1 rounded-xl p-3 ${p === "now" ? "bg-primary-soft" : "bg-container-low/60"}`}>
-                    <p className="flex flex-wrap items-center gap-2 font-semibold">
-                      {leg.mode === "walk" ? "Walk" : leg.line_id ? lineShortName(leg.line_id) : MODE_LABEL[leg.mode]}
-                      <span className="font-normal text-on-surface-variant">to</span> {placeName(leg.to_id, traveller, destination?.label)}
-                      {p === "now" && <span className="rounded bg-primary px-1.5 py-0.5 text-[10px] font-bold text-on-primary">LIVE</span>}
-                    </p>
-                    <p className="font-mono text-[12px] text-on-surface-variant">
-                      {leg.depart}–{leg.arrive} · {leg.duration_min} min{leg.walk_m ? ` · ${leg.walk_m} m` : ""}{leg.cost_inr ? ` · ₹${leg.cost_inr}` : ""}
-                    </p>
-                    <p className="text-[13px] text-on-surface-variant">From {placeName(leg.from_id, traveller, destination?.label)}{leg.step_free ? " · step-free" : ""}</p>
-                    {warn.map((e) => (
-                      <p key={e.event_id} className={`mt-1.5 flex items-center gap-1 text-[12px] font-semibold ${e.status === "confirmed" ? "text-error" : "text-amber-ink"}`}>
-                        <Icon name="warning" className="text-[16px]" /> {eventTitle(e)} · {STATUS_STYLE[e.status].label} {pct(e.confidence)}
-                      </p>
-                    ))}
-                  </div>
-                </li>
-              );
-            })}
-          </ol>
-        </section>
-
-        {/* ---- Map ---- */}
-        <section className="flex flex-col gap-3 lg:sticky lg:top-20 lg:self-start">
-          <div className="card relative h-[520px] overflow-hidden">
-            {destination && <MapView card={card} origin={traveller.origin} destination={destination} events={activeEvents(events)} here={here} />}
-            <span className="absolute right-3 top-3 z-[500] flex items-center gap-1.5 rounded-full bg-primary-fixed px-3 py-1 text-[12px] font-bold text-on-primary-fixed shadow-card">
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
-              {arrived ? "Trip complete" : notStarted ? `Starts ${legs[0].depart}` : `Demo time ${hhmm(nowMin)}`}
-            </span>
-          </div>
-          <p className="text-[12px] text-outline">
-            Position is estimated from the timetable and the demo clock; dots are Pakka Check disruptions {clockLive ? "(live)" : "(sample)"}.
-          </p>
-        </section>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <button onClick={() => setModal("sos")} className="flex items-center gap-1 rounded-xl bg-error px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition-transform hover:opacity-95 active:scale-95">
+            <Icon name="emergency" className="text-[18px]" /> Emergency SOS
+          </button>
+          <button onClick={() => setModal("share")} className="flex items-center gap-1 rounded-xl bg-container-lowest px-4 py-2.5 text-xs font-semibold shadow-sm transition-colors hover:bg-container">
+            <Icon name="share" className="text-[18px] text-primary" /> Share Live Link
+          </button>
+          <button onClick={() => setModal("qr")} className="flex items-center gap-1 rounded-xl bg-primary px-4 py-2.5 text-xs font-semibold text-on-primary shadow-sm transition-colors hover:bg-primary-container">
+            <Icon name="qr_code_2" className="text-[18px]" /> NCMC QR Ticket
+          </button>
+        </div>
       </div>
 
-      {reporting && <ReportIssue legs={legs} traveller={trip.traveller} destinationLabel={destination?.label} clockLive={clockLive} onClose={() => setReporting(false)} />}
+      {/* ---- 4 metric cards ---- */}
+      <div className="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <MetricCard label="Remaining Time" icon="schedule" iconCls="bg-primary-fixed/40 text-primary"
+          value={<><span className="text-[32px] font-bold leading-10 tracking-tight">{trip.remainingMin}</span><span className="text-lg font-bold text-primary">mins</span></>}
+          footLeft={<span className="flex items-center gap-1 text-primary"><Icon name="trending_flat" className="text-[16px]" /> Continuous recalculation</span>}
+          footRight={<span className="font-mono text-[11px] font-bold text-outline">{trip.tripNo}</span>} />
+        <MetricCard label="Est. Arrival" icon="sports_score" iconCls="bg-secondary-container text-on-secondary-container"
+          value={<><span className="text-[32px] font-bold leading-10 tracking-tight">{trip.arrival.time}</span><span className="text-lg font-bold text-on-surface-variant">{trip.arrival.ampm}</span></>}
+          footLeft={<span className="flex items-center gap-1 font-semibold text-primary"><Icon name="check_circle" className="text-[16px]" /> {trip.arrival.status}</span>}
+          footRight={<span className="text-[11px] font-bold">{trip.arrival.where}</span>} />
+        <MetricCard label="Left to Pay / Fare Due" icon="contactless" iconCls="bg-tertiary-fixed text-tertiary"
+          value={<><span className="text-[32px] font-bold leading-10 tracking-tight">{trip.fare.due}</span><span className="text-xs font-semibold text-on-surface-variant">{trip.fare.total}</span></>}
+          footLeft={<span className="flex items-center gap-1 text-on-surface-variant"><span className="h-2 w-2 rounded-full bg-primary" /> {trip.fare.note}</span>}
+          footRight={<span className="text-[11px] font-bold text-tertiary">{trip.fare.tag}</span>} />
+        <button onClick={() => setModal("report")}
+          className="group flex flex-col justify-between rounded-xl bg-gradient-to-br from-tertiary-fixed to-container p-5 text-left shadow-sm transition-all hover:shadow-md">
+          <div className="flex w-full items-start justify-between">
+            <div className="flex flex-col">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-tertiary">Transit Copilot</span>
+              <span className="mt-1 text-xl font-semibold transition-colors group-hover:text-tertiary">Report Issue</span>
+            </div>
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-tertiary text-white transition-transform group-hover:scale-105">
+              <Icon name="report_problem" className="text-[22px]" />
+            </div>
+          </div>
+          <div className="mt-4 flex w-full items-center justify-between pt-1">
+            <span className="text-[13px] text-tertiary">Crowd • Delay • Escalator Defect</span>
+            <Icon name="arrow_forward" className="text-[18px] text-tertiary transition-transform group-hover:translate-x-1" />
+          </div>
+        </button>
+      </div>
+
+      {/* ---- Vehicle sensor strip ---- */}
+      <div className="mt-4 flex flex-col items-start justify-between gap-4 rounded-xl bg-container-lowest p-4 shadow-sm lg:flex-row lg:items-center">
+        <div className="flex min-w-0 flex-1 items-center gap-4">
+          <div className="flex shrink-0 items-center gap-1 rounded-lg bg-primary px-2 py-1 text-[11px] font-bold uppercase text-on-primary">
+            <Icon name="subway" className="text-[16px]" /> {vehicle.line}
+          </div>
+          <div className="flex min-w-0 flex-col">
+            <div className="flex flex-wrap items-center gap-1">
+              <span className="truncate text-sm font-semibold">{vehicle.title}</span>
+              <span className="text-outline">•</span>
+              <span className="text-xs font-bold text-primary">{vehicle.platform}</span>
+              <span className="text-outline">•</span>
+              <span className="font-mono text-[13px] text-on-surface-variant">{vehicle.train}</span>
+            </div>
+            <div className="mt-0.5 flex flex-wrap items-center gap-1 text-[13px] text-on-surface-variant">
+              <span className="font-semibold text-on-surface">Next Station:</span>
+              <span className="font-bold text-primary">{vehicle.next}</span>
+              <span>{vehicle.nextEta}</span>
+            </div>
+          </div>
+        </div>
+        <div className="grid w-full shrink-0 grid-cols-2 gap-4 sm:grid-cols-4 lg:flex lg:w-auto lg:items-center lg:gap-5">
+          <Sensor icon="speed" iconCls="bg-container text-primary" value={<><span className="font-mono">{speed}</span> <span className="text-[11px] font-bold text-on-surface-variant">km/h</span></>} label="Speed" />
+          <Sensor icon="timer" iconCls="bg-primary-fixed/40 text-primary" value={<span className="font-bold text-primary">{vehicle.variance}</span>} label="Ahead of Sched" />
+          <Sensor icon="ac_unit" iconCls="bg-container text-secondary" value={<span className="font-mono">{vehicle.temp}</span>} label={vehicle.coach} />
+          <Sensor icon="groups" iconCls="bg-tertiary-fixed text-tertiary" value={<span className="font-bold text-tertiary">{vehicle.seatsFree}</span>} label="Seats Free" />
+        </div>
+      </div>
+
+      {/* ---- Split panes ---- */}
+      <div className="mt-4 grid grid-cols-[minmax(0,1fr)] items-start gap-4 lg:grid-cols-12">
+        {/* Left: milestones + platform conditions */}
+        <div className="flex flex-col gap-4 lg:col-span-5">
+          <div className="flex flex-col rounded-xl bg-container-lowest p-5 shadow-sm">
+            <div className="flex items-center justify-between pb-2">
+              <div className="flex flex-col">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">Dynamic Multi-Hop Ledger</span>
+                <span className="text-lg font-semibold">Journey Milestones</span>
+              </div>
+              <span className="rounded-full bg-container px-2 py-1 font-mono text-[11px] font-bold text-on-surface-variant">{steps.length} Steps Total</span>
+            </div>
+
+            <div className="relative mt-4 flex flex-col">
+              {steps.map((s, i) => <Milestone key={s.title} step={s} last={i === steps.length - 1} />)}
+            </div>
+
+            <div className="mt-5 flex flex-col gap-2 pt-4">
+              <div className="flex items-center justify-between rounded-xl bg-container p-4">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-container-lowest text-primary shadow-sm">
+                    <Icon name="notifications_active" className="text-[20px]" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-xs font-semibold">Station Proximity Alarms</span>
+                    <span className="text-[13px] text-on-surface-variant">Alert 1 station prior to transfer (Goregaon)</span>
+                  </div>
+                </div>
+                <button type="button" role="switch" aria-checked={alarm} aria-label="Station proximity alarms" onClick={() => setAlarm((v) => !v)}
+                  className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${alarm ? "bg-primary" : "bg-container-highest"}`}>
+                  <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${alarm ? "left-[22px]" : "left-0.5"}`} />
+                </button>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <button type="button" className="flex items-center justify-center gap-1.5 rounded-xl bg-container px-2 py-2.5 text-xs font-semibold shadow-sm transition-colors hover:bg-container-high">
+                  <Icon name="download" className="text-[18px]" /> Save Offline Pass
+                </button>
+                <Link href="/routes/TR3" className="flex items-center justify-center gap-1.5 rounded-xl bg-container px-2 py-2.5 text-xs font-semibold shadow-sm transition-colors hover:bg-container-high">
+                  <Icon name="alt_route" className="text-[18px]" /> Find Alt Route
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col rounded-xl bg-container-lowest p-5 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1">
+                <Icon name="density_medium" className="text-[20px] text-primary" />
+                <span className="text-sm font-semibold">Upcoming Platform Conditions</span>
+              </div>
+              <span className="text-[11px] font-bold text-primary">CCTV AI Verified</span>
+            </div>
+            <div className="mt-4 grid grid-cols-3 gap-2">
+              {platforms.map((p) => (
+                <div key={p.where} className="flex flex-col items-center rounded-lg bg-container-low p-2 text-center">
+                  <span className="text-[11px] font-bold text-on-surface-variant">{p.where}</span>
+                  <span className={`mt-1 text-sm font-bold ${p.cls}`}>{p.level}</span>
+                  <span className="mt-0.5 text-[13px] text-outline">{p.sub}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Right: live map + velocity */}
+        <div className="flex flex-col gap-4 lg:col-span-7">
+          <div className="relative flex flex-col overflow-hidden rounded-xl bg-container-lowest shadow-sm">
+            <div className="z-20 flex items-center justify-between bg-container-lowest p-4 shadow-sm">
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 rounded-full bg-primary-fixed px-2 py-1 text-[11px] font-bold text-on-primary-fixed">
+                  <span className="h-2 w-2 animate-ping rounded-full bg-primary" /> {mapInfo.beacon}
+                </div>
+                <span className="hidden text-[13px] text-on-surface-variant sm:inline">{mapInfo.accuracy}</span>
+              </div>
+              <div className="flex items-center gap-1">
+                {[["my_location", "Center on vehicle"], ["layers", "Toggle layers"], ["fullscreen", "Fullscreen map"]].map(([icon, title]) => (
+                  <button key={icon} type="button" title={title} aria-label={title}
+                    className="flex h-8 w-8 items-center justify-center rounded-lg bg-container transition-colors hover:bg-container-high">
+                    <Icon name={icon} className="text-[18px]" />
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <CorridorMap />
+
+            <div className="flex flex-wrap items-center justify-between gap-2 bg-container-lowest p-4">
+              <div className="flex flex-wrap items-center gap-4">
+                {mapInfo.legend.map((l) => (
+                  <div key={l.label} className="flex items-center gap-1">
+                    <span className={l.cls} /> <span className="text-[13px]">{l.label}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-center gap-1 text-[13px] text-on-surface-variant">
+                <Icon name="satellite_alt" className="text-[16px] text-primary" /> {mapInfo.feed}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col rounded-xl bg-container-lowest p-5 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div className="flex flex-col">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">Trip Velocity Profile</span>
+                <span className="text-lg font-semibold">Speed &amp; Elevation Telemetry</span>
+              </div>
+              <span className="rounded bg-container px-1 py-0.5 font-mono text-[11px] font-bold text-on-surface-variant">{velocity.window}</span>
+            </div>
+            <div className="relative mt-4 flex h-28 w-full items-end">
+              <svg className="h-full w-full" fill="none" preserveAspectRatio="none" viewBox="0 0 500 100" aria-label="Speed over the last 12 minutes" role="img">
+                <defs>
+                  <linearGradient id="speedGrad" x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="0%" stopColor="#006948" stopOpacity="0.3" />
+                    <stop offset="100%" stopColor="#006948" stopOpacity="0" />
+                  </linearGradient>
+                </defs>
+                <path d="M 0,90 Q 50,40 100,50 T 200,30 T 300,35 T 400,20 L 400,100 L 0,100 Z" fill="url(#speedGrad)" />
+                <path d="M 0,90 Q 50,40 100,50 T 200,30 T 300,35 T 400,20" stroke="#006948" strokeLinecap="round" strokeWidth="3" />
+                <path d="M 400,20 Q 450,50 500,85" stroke="#6d7a72" strokeDasharray="4 4" strokeLinecap="round" strokeWidth="2" />
+                <circle cx="400" cy="20" fill="#006948" r="5" stroke="#ffffff" strokeWidth="2" />
+              </svg>
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-[11px] font-bold text-on-surface-variant">
+              {velocity.labels.map((l, i) => <span key={l} className={i === 2 ? "text-primary" : ""}>{l}</span>)}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {modal === "report" && <ReportModal onClose={() => setModal(null)} />}
+      {modal === "share" && <ShareModal onClose={() => setModal(null)} />}
+      {modal === "sos" && <SosModal onClose={() => setModal(null)} />}
+      {modal === "qr" && <QrModal onClose={() => setModal(null)} />}
     </main>
   );
 }
 
-function StatCard({ label, icon, value, unit, foot, tone = "ok" }: { label: string; icon: string; value: string; unit?: string; foot: string; tone?: "ok" | "bad" }) {
+/* ---------------------------------------------------------------- pieces */
+
+/** Small simulated speed wobble, like the design's demo script (42–56 km/h). */
+function useWobblingSpeed(base: number): number {
+  const [speed, setSpeed] = useState(base);
+  useEffect(() => {
+    const id = setInterval(() => setSpeed((s) => Math.min(56, Math.max(42, s + Math.floor(Math.random() * 5) - 2))), 3500);
+    return () => clearInterval(id);
+  }, []);
+  return speed;
+}
+
+function MetricCard({ label, icon, iconCls, value, footLeft, footRight }: {
+  label: string; icon: string; iconCls: string; value: React.ReactNode; footLeft: React.ReactNode; footRight: React.ReactNode;
+}) {
   return (
-    <div className="card flex flex-col justify-between gap-2 p-4">
+    <div className="flex flex-col justify-between rounded-xl bg-container-lowest p-5 shadow-sm">
       <div className="flex items-start justify-between">
-        <div>
-          <p className="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">{label}</p>
-          <p className="text-3xl font-bold tabular-nums">{value}{unit && <span className="ml-1 text-lg text-primary">{unit}</span>}</p>
+        <div className="flex flex-col">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">{label}</span>
+          <div className="mt-1 flex items-baseline gap-1">{value}</div>
         </div>
-        <span className="grid h-10 w-10 place-items-center rounded-xl bg-primary-soft text-primary"><Icon name={icon} /></span>
+        <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${iconCls}`}>
+          <Icon name={icon} className="text-[22px]" />
+        </div>
       </div>
-      <p className={`text-[13px] font-semibold ${tone === "bad" ? "text-error" : "text-primary-ink"}`}>{foot}</p>
+      <div className="mt-4 flex items-center justify-between gap-2 pt-1 text-[13px]">
+        {footLeft}
+        {footRight}
+      </div>
     </div>
   );
 }
 
-const REPORT_TYPES = ["delay", "closure", "lift_out", "crowding", "waterlogging", "diversion"] as const;
-
-function reporterId(): string {
-  try {
-    const existing = localStorage.getItem("travelbuddy.reporter");
-    if (existing) return existing;
-    const id = `web_${Math.random().toString(36).slice(2, 8)}`;
-    localStorage.setItem("travelbuddy.reporter", id);
-    return id;
-  } catch {
-    return "web_anonymous";
-  }
+function Sensor({ icon, iconCls, value, label }: { icon: string; iconCls: string; value: React.ReactNode; label: string }) {
+  return (
+    <div className="flex items-center gap-1">
+      <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${iconCls}`}>
+        <Icon name={icon} className="text-[18px]" />
+      </div>
+      <div className="flex flex-col">
+        <span className="text-sm font-semibold">{value}</span>
+        <span className="text-[11px] font-bold text-on-surface-variant">{label}</span>
+      </div>
+    </div>
+  );
 }
 
-function ReportIssue({ legs, traveller, destinationLabel, clockLive, onClose }: {
-  legs: Leg[]; traveller: SavedTrip["traveller"]; destinationLabel?: string; clockLive: boolean; onClose: () => void;
-}) {
-  const refresh = useRefreshLiveEvents();
-  const stops = useMemo(() => {
-    const out: { id: string; line: string | null }[] = [];
-    for (const leg of legs) {
-      for (const s of legStops(leg)) {
-        if (!out.some((o) => o.id === s)) out.push({ id: s, line: leg.line_id && lines[leg.line_id]?.stations.includes(s) ? leg.line_id : null });
-      }
-    }
-    return out;
-  }, [legs]);
-  const [stop, setStop] = useState(stops[0]?.id ?? "");
-  const [type, setType] = useState<(typeof REPORT_TYPES)[number]>("delay");
-  const [severity, setSeverity] = useState<"low" | "medium" | "high">("medium");
-  const [text, setText] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [result, setResult] = useState<ReportOut | null>(null);
-  const [error, setError] = useState<string | null>(null);
+const NODE: Record<StepState, string> = {
+  done: "bg-primary text-on-primary shadow-sm",
+  now: "bg-primary-fixed text-primary shadow-sm",
+  next: "bg-container-high text-on-surface-variant",
+  final: "bg-container text-on-surface shadow-sm",
+};
+const BOX: Record<StepState, string> = {
+  done: "bg-container-low/70",
+  now: "bg-primary-fixed/20",
+  next: "bg-container-low/40",
+  final: "",
+};
 
-  async function send(e: React.FormEvent) {
-    e.preventDefault();
-    if (text.trim().length < 3) { setError("Describe what you see (a few words is enough)."); return; }
+function Milestone({ step, last }: { step: (typeof steps)[number]; last: boolean }) {
+  const s = step;
+  return (
+    <div className={`relative flex items-start gap-4 ${last ? "" : "pb-5"}`}>
+      {!last && <div className={`absolute bottom-0 left-4 top-8 w-0.5 ${s.state === "done" || s.state === "now" ? "bg-primary" : "bg-container-highest"}`} />}
+      <div className={`relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${NODE[s.state]}`}>
+        {s.state === "now" ? (
+          <>
+            <span className="absolute h-3 w-3 animate-ping rounded-full bg-primary" />
+            <span className="relative h-3 w-3 rounded-full bg-primary" />
+          </>
+        ) : (
+          <Icon name={s.icon} className="text-[16px]" />
+        )}
+      </div>
+      <div className={`flex min-w-0 flex-1 flex-col rounded-xl p-2 ${BOX[s.state]}`}>
+        <div className="flex flex-wrap items-center justify-between gap-1">
+          <div className="flex items-center gap-1">
+            {s.tagLine && <span className="rounded bg-container-highest px-1.5 py-0.5 text-[11px] font-bold">{s.tagLine}</span>}
+            <span className={`text-sm ${s.state === "now" ? "font-bold text-primary" : s.state === "final" ? "font-bold" : "font-semibold"}`}>{s.title}</span>
+            {s.state === "now" && <span className="rounded-full bg-primary px-1 py-0.5 text-[11px] font-bold uppercase text-on-primary">LIVE</span>}
+          </div>
+          <span className={`font-mono text-[11px] font-bold ${s.state === "now" ? "text-primary" : "text-on-surface-variant"}`}>{s.time}</span>
+        </div>
+        <p className={`mt-0.5 text-[13px] ${s.state === "now" ? "text-on-surface" : "text-on-surface-variant"}`}>{s.text}</p>
+        {(s.tag || s.note) && (
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            {s.tag && (
+              <span className={`px-2 py-0.5 text-[11px] font-bold ${s.state === "final" ? "rounded-full bg-primary-fixed text-on-primary-fixed" : s.state === "done" ? "rounded bg-container text-primary" : "rounded bg-container"}`}>
+                {s.tag}
+              </span>
+            )}
+            {s.note && (
+              <span className={`flex items-center gap-1 text-[13px] ${s.note.cls}`}>
+                {s.note.icon && <Icon name={s.note.icon} className="text-[16px]" />} {s.note.text}
+              </span>
+            )}
+          </div>
+        )}
+        {s.extra && (
+          <div className="mt-1 flex items-center justify-between gap-2 rounded-lg bg-container p-1.5">
+            <span className="flex items-center gap-1 text-[13px]">
+              <Icon name={s.extra.icon} className="text-[16px] text-primary" /> {s.extra.text}
+            </span>
+            <span className="shrink-0 text-[11px] font-bold">{s.extra.right}</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** The design's schematic corridor (SVG) with its floating cards. */
+function CorridorMap() {
+  return (
+    <div className="relative h-[520px] w-full overflow-hidden bg-container">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,var(--primary-soft),transparent_55%),radial-gradient(circle_at_80%_80%,var(--tertiary-fixed),transparent_50%)] opacity-70" />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-container-lowest/90 via-container-lowest/30 to-container-lowest/80" />
+      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+        <svg className="h-full max-h-[480px] w-full max-w-2xl" fill="none" viewBox="0 0 600 440" aria-hidden>
+          <path d="M 80,70 L 190,130 L 310,210 L 410,280 L 520,380" stroke="#bccac0" strokeLinecap="round" strokeLinejoin="round" strokeWidth="8" />
+          <path d="M 80,70 L 190,130 L 260,175" stroke="#006948" strokeLinecap="round" strokeLinejoin="round" strokeWidth="8" />
+          <path className="animate-pulse" d="M 260,175 L 310,210" stroke="#00855d" strokeDasharray="10 8" strokeLinecap="round" strokeLinejoin="round" strokeWidth="8" />
+          <path d="M 310,210 L 335,235" stroke="#545f73" strokeDasharray="6 4" strokeLinecap="round" strokeWidth="4" />
+          <circle cx="80" cy="70" fill="#006948" r="10" stroke="#ffffff" strokeWidth="3" />
+          <circle cx="190" cy="130" fill="#006948" r="8" stroke="#ffffff" strokeWidth="2.5" />
+          <g transform="translate(260, 175)">
+            <circle className="animate-ping" cx="0" cy="0" fill="#006948" fillOpacity="0.25" r="18" />
+            <circle cx="0" cy="0" fill="#006948" r="12" stroke="#ffffff" strokeWidth="3" />
+            <circle cx="0" cy="0" fill="#ffffff" r="4" />
+          </g>
+          <circle cx="310" cy="210" fill="#191c1e" r="9" stroke="#ffffff" strokeWidth="2.5" />
+          <circle cx="335" cy="235" fill="#545f73" r="7" stroke="#ffffff" strokeWidth="2" />
+          <circle cx="520" cy="380" fill="#8d4b00" r="11" stroke="#ffffff" strokeWidth="3" />
+        </svg>
+      </div>
+
+      <div className="absolute left-12 top-12 flex items-center gap-1.5 rounded-lg bg-container-lowest/95 px-2 py-1 shadow-sm backdrop-blur-md">
+        <span className="h-2 w-2 rounded-full bg-primary" />
+        <span className="text-[11px] font-bold">{mapInfo.passed}</span>
+      </div>
+      <div className="absolute left-[38%] top-[36%] z-30 flex -translate-x-1/2 -translate-y-full flex-col gap-1 rounded-xl bg-container-lowest/95 p-2 shadow-md backdrop-blur-md">
+        <div className="flex items-center gap-1">
+          <span className="rounded bg-primary px-1.5 py-0.5 text-[11px] font-bold text-on-primary">{mapInfo.card.train}</span>
+          <span className="text-[11px] font-bold">{mapInfo.card.where}</span>
+        </div>
+        <div className="flex items-center justify-between gap-4 text-[13px] text-on-surface-variant">
+          <span>{mapInfo.card.speed}</span>
+          <span className="font-bold text-primary">{mapInfo.card.eta}</span>
+        </div>
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-container-high">
+          <div className="h-full rounded-full bg-primary" style={{ width: `${mapInfo.card.progress}%` }} />
+        </div>
+      </div>
+      <div className="absolute left-[54%] top-[48%] flex items-center gap-2 rounded-lg bg-container-lowest/95 px-2 py-1 shadow-sm backdrop-blur-md">
+        <div className="h-2.5 w-2.5 animate-pulse rounded-full bg-primary" />
+        <div className="flex flex-col">
+          <span className="text-[11px] font-bold">{mapInfo.transfer.title}</span>
+          <span className="text-[11px] font-bold text-tertiary">{mapInfo.transfer.sub}</span>
+        </div>
+      </div>
+      <div className="absolute bottom-12 right-12 hidden items-center gap-2 rounded-xl bg-container-lowest/95 p-2 shadow-sm backdrop-blur-md sm:flex">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-tertiary-fixed text-tertiary">
+          <Icon name="flag" className="text-[18px]" />
+        </div>
+        <div className="flex flex-col">
+          <span className="text-[11px] font-bold">{mapInfo.destination.title}</span>
+          <span className="text-[13px] text-on-surface-variant">{mapInfo.destination.sub}</span>
+        </div>
+      </div>
+      <div className="absolute bottom-4 left-4 right-4 flex flex-col gap-1 rounded-xl bg-container-lowest/95 p-2 shadow-sm backdrop-blur-md sm:right-auto sm:max-w-xs">
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-bold uppercase text-on-surface-variant">{mapInfo.grid.title}</span>
+          <span className="text-[11px] font-bold text-primary">{mapInfo.grid.status}</span>
+        </div>
+        <div className="flex items-center justify-between gap-3 text-[13px]">
+          <span>Headway Interval:</span>
+          <span className="font-mono font-semibold">{mapInfo.grid.headway}</span>
+        </div>
+        <div className="flex items-center justify-between gap-3 text-[13px]">
+          <span>{mapInfo.grid.connecting}</span>
+          <span className="font-bold text-primary">{mapInfo.grid.connectingStatus}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------- modals */
+
+function ModalShell({ title, sub, icon, iconCls, onClose, children }: {
+  title: string; sub: string; icon: string; iconCls: string; onClose: () => void; children: React.ReactNode;
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+  return (
+    <div className="fixed inset-0 z-[1300] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label={title}>
+      <button className="absolute inset-0 bg-[#2d3133]/40 backdrop-blur-sm" aria-label="Close" onClick={onClose} />
+      <div className="relative flex w-full max-w-lg flex-col gap-4 rounded-2xl bg-container-lowest p-6 shadow-xl">
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-2">
+            <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${iconCls}`}><Icon name={icon} className="text-[24px]" /></div>
+            <div className="flex flex-col">
+              <span className="text-lg font-semibold">{title}</span>
+              <span className="text-[13px] text-on-surface-variant">{sub}</span>
+            </div>
+          </div>
+          <button onClick={onClose} aria-label="Close" className="flex h-8 w-8 items-center justify-center rounded-lg text-outline hover:bg-container">
+            <Icon name="close" className="text-[20px]" />
+          </button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function ReportModal({ onClose }: { onClose: () => void }) {
+  const refresh = useRefreshLiveEvents();
+  const [cat, setCat] = useState<(typeof reportCategories)[number]["id"]>("delay");
+  const [details, setDetails] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<{ ok: true; out: ReportOut | null } | { ok: false; msg: string } | null>(null);
+
+  async function dispatch() {
+    const c = reportCategories.find((x) => x.id === cat)!;
+    if (c.type === null) { setResult({ ok: true, out: null }); return; }
     setBusy(true);
-    setError(null);
     try {
-      const s = stops.find((x) => x.id === stop);
-      const res = await submitReport({
-        reporter_id: reporterId(), text: text.trim(), type, severity,
-        affected: { stop_ids: [stop], line_ids: s?.line ? [s.line] : [], transfer_ids: [] },
+      const out = await submitReport({
+        reporter_id: "web_demo",
+        text: details.trim() || `${c.label} near ${reportTarget.label}`,
+        type: c.type, severity: "medium",
+        affected: { stop_ids: [reportTarget.stop_id], line_ids: [reportTarget.line_id], transfer_ids: [] },
       });
-      setResult(res);
+      setResult({ ok: true, out });
       refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+    } catch {
+      setResult({ ok: false, msg: "Couldn't reach Pakka Check — start the backend to send reports." });
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <div className="fixed inset-0 z-[1300] grid place-items-end sm:place-items-center" role="dialog" aria-modal="true" aria-labelledby="report-title">
-      <button className="absolute inset-0 bg-slate/40" aria-label="Close" onClick={onClose} />
-      <form onSubmit={send} className="relative flex w-full max-w-lg flex-col gap-4 rounded-t-2xl bg-container-lowest p-5 shadow-float sm:rounded-2xl">
-        <div className="flex items-start justify-between">
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-wider text-tertiary">Crowd report</p>
-            <h2 id="report-title" className="text-xl font-bold">Report an issue on your route</h2>
-          </div>
-          <button type="button" onClick={onClose} aria-label="Close" className="rounded-lg p-1 hover:bg-container-low"><Icon name="close" /></button>
+    <ModalShell title="Submit Transit Report" sub="Live Mumbai Unified Operations Center" icon="flag" iconCls="bg-tertiary-fixed text-tertiary" onClose={onClose}>
+      {result ? (
+        <div className="flex flex-col gap-3">
+          {result.ok ? (
+            <p className="flex items-start gap-2 rounded-xl bg-primary-soft p-3 text-sm text-primary-ink">
+              <Icon name="check_circle" />
+              {result.out
+                ? `Received by Pakka Check at ${result.out.reported_at}. Current verdict: ${STATUS_STYLE[result.out.status].label} (${pct(result.out.confidence)}). New reporters start with a low weight until others confirm.`
+                : "Logged. Facility defects don't change routes, so they aren't scored by Pakka Check."}
+            </p>
+          ) : (
+            <p className="rounded-xl bg-amber-soft p-3 text-sm text-amber-ink">{result.msg}</p>
+          )}
+          <button onClick={onClose} className="self-end rounded-xl bg-primary px-5 py-2.5 text-xs font-semibold text-on-primary">Done</button>
         </div>
-
-        {result ? (
-          <div className="flex flex-col gap-3">
-            <p className="flex items-center gap-2 rounded-xl bg-primary-soft p-3 text-sm text-primary-ink">
-              <Icon name="check_circle" /> Received at {result.reported_at}. {result.created_event ? "This starts a new report." : "It joined an existing report."}
-            </p>
-            <p className="text-sm">
-              Current verdict: <b>{STATUS_STYLE[result.status].label}</b> at <b>{pct(result.confidence)}</b>.
-            </p>
-            <p className="text-[13px] text-on-surface-variant">
-              New reporters start with a low weight so one account can&apos;t reroute everyone. It rises when other commuters, news or an
-              official notice say the same thing.
-            </p>
-            <button type="button" onClick={onClose} className="btn-primary">Done</button>
+      ) : (
+        <>
+          <p className="text-[13px] text-on-surface-variant">
+            This report is filed against <b>{reportTarget.label}</b>, the next stop on this trip.
+          </p>
+          <div className="flex flex-col gap-1">
+            <span className="text-[11px] font-bold uppercase">Issue Category</span>
+            <div className="grid grid-cols-2 gap-2">
+              {reportCategories.map((c) => (
+                <button key={c.id} type="button" onClick={() => setCat(c.id)} aria-pressed={cat === c.id}
+                  className={`flex items-center gap-2 rounded-xl p-2 text-left text-xs font-semibold transition-colors ${cat === c.id ? "bg-primary-fixed text-on-primary-fixed" : "bg-container hover:bg-primary-fixed hover:text-on-primary-fixed"}`}>
+                  <Icon name={c.icon} className={`text-[18px] ${c.iconCls}`} /> {c.label}
+                </button>
+              ))}
+            </div>
           </div>
-        ) : (
-          <>
-            {!clockLive && (
-              <p className="rounded-xl bg-amber-soft p-3 text-sm text-amber-ink">Start the backend to send reports to Pakka Check.</p>
-            )}
-            <label className="flex flex-col gap-1.5 text-sm">
-              <span className="font-semibold">Where?</span>
-              <select value={stop} onChange={(e) => setStop(e.target.value)} className="rounded-xl border border-hairline bg-container-lowest px-3 py-3">
-                {stops.map((s) => <option key={s.id} value={s.id}>{placeName(s.id, traveller, destinationLabel)}{s.line ? ` (${lineShortName(s.line)})` : ""}</option>)}
-              </select>
-            </label>
-            <div className="flex flex-col gap-1.5 text-sm">
-              <span className="font-semibold">What&apos;s happening?</span>
-              <div className="flex flex-wrap gap-2">
-                {REPORT_TYPES.map((t) => (
-                  <button key={t} type="button" onClick={() => setType(t)} aria-pressed={type === t}
-                    className={`rounded-full px-3 py-1.5 text-[13px] font-semibold ${type === t ? "bg-tertiary text-white" : "bg-container-low"}`}>
-                    {TYPE_LABEL[t] ?? t}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="flex flex-col gap-1.5 text-sm">
-              <span className="font-semibold">How bad?</span>
-              <div className="flex rounded-xl bg-container-low p-1">
-                {(["low", "medium", "high"] as const).map((s) => (
-                  <button key={s} type="button" onClick={() => setSeverity(s)} aria-pressed={severity === s}
-                    className={`flex-1 rounded-lg py-2 text-[13px] font-semibold capitalize ${severity === s ? "bg-container-lowest shadow-card" : "text-on-surface-variant"}`}>{s}</button>
-                ))}
-              </div>
-            </div>
-            <label className="flex flex-col gap-1.5 text-sm">
-              <span className="font-semibold">Describe it (any language)</span>
-              <textarea value={text} onChange={(e) => setText(e.target.value)} rows={3} maxLength={500}
-                placeholder="e.g. Platform 2 pe 20 min se train nahi aayi"
-                className="rounded-xl border border-hairline bg-container-lowest px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary" />
-            </label>
-            {error && <p role="alert" className="text-sm text-error">{error}</p>}
-            <button type="submit" disabled={busy || !clockLive} className="btn-primary disabled:opacity-50">
-              <Icon name="send" /> {busy ? "Sending…" : "Send report"}
+          <label className="flex flex-col gap-1">
+            <span className="text-[11px] font-bold uppercase">Details (Optional)</span>
+            <textarea value={details} onChange={(e) => setDetails(e.target.value)} rows={3} maxLength={500}
+              placeholder="e.g. Coach 4 rear air vent blowing warm air, or heavy queue at exit turnstile..."
+              className="w-full resize-none rounded-xl bg-container p-2 text-[13px] placeholder:text-outline focus:outline-none focus:ring-2 focus:ring-primary" />
+          </label>
+          <div className="flex items-center justify-end gap-2 pt-1">
+            <button onClick={onClose} className="rounded-xl bg-container px-4 py-2.5 text-xs font-semibold hover:bg-container-high">Cancel</button>
+            <button onClick={dispatch} disabled={busy} className="rounded-xl bg-primary px-5 py-2.5 text-xs font-semibold text-on-primary shadow-sm hover:bg-primary-container disabled:opacity-50">
+              {busy ? "Sending…" : "Dispatch Report"}
             </button>
-          </>
-        )}
-      </form>
-    </div>
+          </div>
+        </>
+      )}
+    </ModalShell>
+  );
+}
+
+function ShareModal({ onClose }: { onClose: () => void }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <ModalShell title="Share Live Tracking" sub="Family & Colleague Safety Link" icon="share_location" iconCls="bg-primary-fixed text-primary" onClose={onClose}>
+      <p className="text-[13px] text-on-surface-variant">{share.note}</p>
+      <div className="flex items-center justify-between gap-2 rounded-xl bg-container p-2">
+        <span className="truncate font-mono text-[13px]">{share.link}</span>
+        <button onClick={() => { navigator.clipboard?.writeText(share.link).catch(() => undefined); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
+          className="shrink-0 rounded-lg bg-primary px-2 py-1.5 text-[11px] font-bold text-on-primary">{copied ? "Copied!" : "Copy Link"}</button>
+      </div>
+      <div className="flex items-center justify-between text-[11px] font-bold text-on-surface-variant">
+        <span className="flex items-center gap-1"><Icon name="info" className="text-[16px] text-primary" /> Sample link — sharing isn&apos;t live yet</span>
+        <span className="text-primary">{share.expiry}</span>
+      </div>
+    </ModalShell>
+  );
+}
+
+function SosModal({ onClose }: { onClose: () => void }) {
+  return (
+    <ModalShell title="Emergency SOS" sub="Prototype — no alert is sent" icon="emergency" iconCls="bg-error text-white" onClose={onClose}>
+      <p className="text-sm">
+        This button is a design placeholder. <b>It does not contact anyone.</b> In a real emergency, call:
+      </p>
+      <div className="grid grid-cols-2 gap-2">
+        <a href="tel:112" className="flex flex-col rounded-xl bg-error-container p-3 text-on-error-container">
+          <span className="text-2xl font-bold">112</span><span className="text-[13px]">Police / emergency</span>
+        </a>
+        <a href="tel:139" className="flex flex-col rounded-xl bg-container p-3">
+          <span className="text-2xl font-bold">139</span><span className="text-[13px]">Railway helpline</span>
+        </a>
+      </div>
+      <button onClick={onClose} className="self-end rounded-xl bg-container px-4 py-2.5 text-xs font-semibold hover:bg-container-high">Close</button>
+    </ModalShell>
+  );
+}
+
+function QrModal({ onClose }: { onClose: () => void }) {
+  return (
+    <ModalShell title="NCMC QR Ticket" sub="Sample ticket — not valid for travel" icon="qr_code_2" iconCls="bg-primary text-on-primary" onClose={onClose}>
+      <div className="flex flex-col items-center gap-2 rounded-xl bg-container-low p-6">
+        <Icon name="qr_code_2" className="text-[140px] text-slate" />
+        <span className="font-mono text-[13px] text-on-surface-variant">Token #SAMPLE-0000</span>
+      </div>
+      <p className="text-[13px] text-on-surface-variant">Ticketing isn&apos;t part of this prototype; this shows where the pass would appear.</p>
+      <button onClick={onClose} className="self-end rounded-xl bg-container px-4 py-2.5 text-xs font-semibold hover:bg-container-high">Close</button>
+    </ModalShell>
   );
 }
