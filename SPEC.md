@@ -418,11 +418,12 @@ left sidebar + top bar (latest confirmed Pakka Check alert, live/sample feed sta
 
 | Route | Content |
 |---|---|
-| `/` | Home hub: quick From/To search, 5 example trips (demo travellers), transport-mode status and per-line status table from live events, disruption map |
+| `/` | Home & Transit Hub — design-faithful copy of the team design (welcome + quick route finder, daily frequent trips, 5 transport modes, network pulse table, live transit map, NCMC card, recent journeys). **Frontend-only: all content is sample data from `frontend/lib/mockHome.ts`**; each block notes the backend call that will replace it |
 | `/plan` | Journey planner: full trip form (places, leave/arrive, modes, priority, budget/walk/changes, step-free, language), network map of all lines, live advisories. `?from=&to=` prefill |
 | `/routes/[TR1..TR5]`, `/routes?t=<json>` | Route results: Optimal / Fastest / Cheapest cards (time, fare, changes, walk, reliability, reason, steps), map with selected route, trade-off matrix, rejected options. Custom trips show a "routing not connected" panel until `POST /plan` exists |
 | `/track` | Live trip tracking of the route chosen with "Start trip" (sessionStorage until B9 `/journeys`): milestones driven by the demo clock, remaining time / arrival vs deadline / fare, "disruption ahead" banner for confirmed events on upcoming legs, "Report issue" → `POST /reports` |
 | `/admin` | Demo control (presenter): demo clock + slider, scripted ↔ manual, inject presets, live disruptions, story timeline |
+| `/stations`, `/dashboard` | "Coming soon" placeholders for the design's Station Explorer and Commuter Dashboard menu items |
 | `/radar`, `/itinerary`, `/eval`, `/transparency` | Not built yet |
 
 Only real data is shown — panels in the design with no data source (card balance, vehicle speed,
