@@ -46,7 +46,7 @@ export default function EventDetail({ id }: { id: string }) {
 
   return (
     <main className="flex w-full flex-col gap-4 px-4 pb-16 pt-4 md:px-6">
-      <nav className="flex items-center gap-1 text-[13px] text-on-surface-variant">
+      <nav className="flex items-center gap-1 text-small text-on-surface-variant">
         <Link href="/report" className="hover:text-primary">Live reports</Link>
         <Icon name="chevron_right" className="text-[16px]" />
         <span className="font-semibold text-on-surface">{ev.event_id}</span>
@@ -56,15 +56,15 @@ export default function EventDetail({ id }: { id: string }) {
       <section className="flex flex-col gap-4 rounded-2xl bg-container-lowest p-5 shadow-sm lg:flex-row lg:items-center">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full px-2.5 py-1 text-[12px] font-bold text-white" style={{ background: style.color }}>{style.label}</span>
-            <span className="rounded-full bg-container px-2.5 py-1 text-[12px] font-bold">{TYPE_LABEL[ev.type] ?? ev.type} · {ev.severity}</span>
+            <span className="rounded-full px-2.5 py-1 text-caption font-bold text-white" style={{ background: style.color }}>{style.label}</span>
+            <span className="rounded-full bg-container px-2.5 py-1 text-caption font-bold">{TYPE_LABEL[ev.type] ?? ev.type} · {ev.severity}</span>
             {ev.flags.map((f) => (
-              <span key={f} className="rounded-full bg-error-container px-2.5 py-1 text-[12px] font-bold text-on-error-container">{f.replace(/_/g, " ")}</span>
+              <span key={f} className="rounded-full bg-error-container px-2.5 py-1 text-caption font-bold text-on-error-container">{f.replace(/_/g, " ")}</span>
             ))}
           </div>
           <h1 className="mt-2 text-2xl font-semibold">{eventTitle(ev)}</h1>
           <p className="mt-1 text-sm text-on-surface-variant">{b.summary}</p>
-          <p className="mt-1 text-[13px] text-on-surface-variant">
+          <p className="mt-1 text-small text-on-surface-variant">
             First seen {ev.first_seen} · last report {ev.last_seen} · {ev.status === "expired" ? "expired" : `expires ${ev.expires_at}`}
             {ev.expected_delay_min ? ` · about +${ev.expected_delay_min} min for routes` : ""}
           </p>
@@ -82,16 +82,16 @@ export default function EventDetail({ id }: { id: string }) {
               return (
                 <li key={`${e.ref_id}-${e.at}`} className={`flex flex-col gap-1 rounded-xl p-3 ${e.contradicts ? "bg-primary-soft/50" : "bg-container-low"}`}>
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className={`flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-bold ${s.cls}`}>
+                    <span className={`flex items-center gap-1 rounded-md px-2 py-0.5 text-micro font-bold ${s.cls}`}>
                       <Icon name={s.icon} className="text-[14px]" /> {s.label}
                     </span>
-                    <span className="font-mono text-[12px] text-on-surface-variant">{e.ref_id}{e.reporter_id ? ` · ${e.reporter_id}` : ""} · {e.at}</span>
-                    {e.contradicts && <span className="rounded-md bg-primary px-2 py-0.5 text-[11px] font-bold text-on-primary">says it&apos;s running normally</span>}
-                    <span className="ml-auto rounded-md bg-container-lowest px-2 py-0.5 font-mono text-[12px] font-bold">weight {e.weight.toFixed(2)}</span>
+                    <span className="font-mono text-caption text-on-surface-variant">{e.ref_id}{e.reporter_id ? ` · ${e.reporter_id}` : ""} · {e.at}</span>
+                    {e.contradicts && <span className="rounded-md bg-primary px-2 py-0.5 text-micro font-bold text-on-primary">says it&apos;s running normally</span>}
+                    <span className="ml-auto rounded-md bg-container-lowest px-2 py-0.5 font-mono text-caption font-bold">weight {e.weight.toFixed(2)}</span>
                   </div>
-                  <p className="text-[13px]">“{e.text}”</p>
+                  <p className="text-small">“{e.text}”</p>
                   {(e.note || e.covers.length > 1) && (
-                    <p className="flex items-center gap-1 text-[12px] text-on-surface-variant">
+                    <p className="flex items-center gap-1 text-caption text-on-surface-variant">
                       <Icon name="info" className="text-[14px]" />
                       {e.note}{e.covers.length > 1 ? ` · stands for ${e.covers.length} reports (${e.covers.join(", ")})` : ""}
                     </p>
@@ -115,12 +115,12 @@ export default function EventDetail({ id }: { id: string }) {
               <span className="h-full bg-tertiary-fixed" style={{ width: "30%" }} title="Possible 40–69%" />
               <span className="h-full bg-error-container" style={{ width: "30%" }} title="Confirmed from 70%" />
             </div>
-            <div className="relative h-4 text-[11px] font-bold text-on-surface-variant">
+            <div className="relative h-4 text-micro font-bold text-on-surface-variant">
               <span className="absolute left-0">0</span><span className="absolute left-[40%] -translate-x-1/2">40 possible</span>
               <span className="absolute left-[70%] -translate-x-1/2">70 confirmed</span><span className="absolute right-0">100</span>
               <span className="absolute -top-6 h-5 w-0.5 bg-on-surface" style={{ left: `${Math.min(99, confPct)}%` }} />
             </div>
-            <p className="text-[12px] text-on-surface-variant">
+            <p className="text-caption text-on-surface-variant">
               Only <b>confirmed</b> problems change routes. <b>Possible</b> ones lower a route&apos;s reliability. Below 40% they&apos;re ignored.{" "}
               <Link href="/transparency" className="font-semibold text-primary">All rules →</Link>
             </p>
@@ -140,8 +140,8 @@ function Row({ label, value, hint, strong = false }: { label: string; value: str
   return (
     <div className={`flex items-center justify-between gap-2 rounded-lg px-3 py-2 ${strong ? "bg-primary-soft" : "bg-container-low"}`}>
       <span className="min-w-0">
-        <span className={`block text-[13px] ${strong ? "font-bold" : "font-semibold"}`}>{label}</span>
-        <span className="block text-[11px] text-on-surface-variant">{hint}</span>
+        <span className={`block text-small ${strong ? "font-bold" : "font-semibold"}`}>{label}</span>
+        <span className="block text-micro text-on-surface-variant">{hint}</span>
       </span>
       <span className={`font-mono tabular-nums ${strong ? "text-lg font-bold text-primary" : "font-semibold"}`}>{value}</span>
     </div>
@@ -160,7 +160,7 @@ function TrustGauge({ pct: p, color }: { pct: number; color: string }) {
       </svg>
       <div className="text-center">
         <span className="block text-2xl font-bold">{p}%</span>
-        <span className="text-[11px] font-bold uppercase text-on-surface-variant">trust</span>
+        <span className="text-micro font-bold uppercase text-on-surface-variant">trust</span>
       </div>
     </div>
   );

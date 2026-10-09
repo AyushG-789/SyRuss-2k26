@@ -98,7 +98,7 @@ export default function ChatAssistant() {
               </span>
               <div className="leading-tight">
                 <p className="text-sm font-semibold">Ask TravelBuddy</p>
-                <p className="text-[11px] opacity-80">Routes + live Pakka Check · English, हिंदी, मराठी</p>
+                <p className="text-micro opacity-80">Routes + live Pakka Check · English, हिंदी, मराठी</p>
               </div>
             </div>
             <div className="flex items-center gap-1">
@@ -118,11 +118,11 @@ export default function ChatAssistant() {
                   Hi! Ask me to plan a trip, or whether a line or station has a problem right now.
                   I only quote times, fares and trust % from TravelBuddy&apos;s live data.
                 </div>
-                <p className="px-1 text-[11px] font-bold uppercase tracking-wider text-outline">Try</p>
+                <p className="px-1 eyebrow text-outline">Try</p>
                 <div className="flex flex-wrap gap-2">
                   {SUGGESTIONS.map((s) => (
                     <button key={s} type="button" onClick={() => ask(s)}
-                      className="rounded-full bg-container-lowest px-3 py-1.5 text-left text-[13px] font-medium text-primary shadow-card hover:bg-primary-fixed">
+                      className="rounded-full bg-container-lowest px-3 py-1.5 text-left text-small font-medium text-primary shadow-card hover:bg-primary-fixed">
                       {s}
                     </button>
                   ))}
@@ -185,7 +185,7 @@ function Thinking() {
           <span key={d} className="h-1.5 w-1.5 animate-bounce rounded-full bg-outline" style={{ animationDelay: `${d}ms` }} />
         ))}
       </span>
-      <span className="text-[12px] text-on-surface-variant">{STEPS[step]}</span>
+      <span className="text-caption text-on-surface-variant">{STEPS[step]}</span>
     </div>
   );
 }
@@ -203,7 +203,7 @@ function AssistantBubble({ entry, onClose }: { entry: Extract<Entry, { role: "as
         <div className="flex flex-col gap-1.5">
           {r.trip.options.map((o) => <OptionCard key={o.label} option={o} />)}
           <Link href={tripHref(r.trip.traveller)} onClick={onClose}
-            className="flex items-center justify-center gap-1 rounded-xl bg-primary px-3 py-2 text-[13px] font-semibold text-on-primary hover:bg-primary-container">
+            className="flex items-center justify-center gap-1 rounded-xl bg-primary px-3 py-2 text-small font-semibold text-on-primary hover:bg-primary-container">
             Open full route details <Icon name="arrow_forward" className="text-[16px]" />
           </Link>
         </div>
@@ -216,7 +216,7 @@ function AssistantBubble({ entry, onClose }: { entry: Extract<Entry, { role: "as
       )}
 
       {r && r.source !== "gemini" && (
-        <p className="flex items-center gap-1 px-1 text-[11px] text-outline">
+        <p className="flex items-center gap-1 px-1 text-micro text-outline">
           <Icon name="info" className="text-[14px]" />
           {r.source === "fallback" ? "AI is busy or offline, so this is a basic answer from live data."
                 : r.note?.includes("slow") ? "AI was slow, so this is a quick answer from live data." : "Answer simplified so every number matches live data."}
@@ -231,17 +231,17 @@ function OptionCard({ option: o }: { option: ChatOption }) {
   return (
     <div className={`rounded-xl bg-container-lowest p-2.5 shadow-card ${o.recommended ? "ring-2 ring-primary" : ""}`}>
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[11px] font-bold uppercase tracking-wide text-primary">
+        <span className="text-micro font-bold uppercase tracking-wide text-primary">
           {PLAN_LABEL[o.label]}{o.recommended ? " · recommended" : ""}
         </span>
-        <span className="text-[13px] font-semibold">{o.duration_min} min · ₹{o.cost_inr}</span>
+        <span className="text-small font-semibold">{o.duration_min} min · ₹{o.cost_inr}</span>
       </div>
-      <p className="mt-0.5 text-[13px] font-medium">{o.route}</p>
-      <p className="text-[12px] text-on-surface-variant">
+      <p className="mt-0.5 text-small font-medium">{o.route}</p>
+      <p className="text-caption text-on-surface-variant">
         {o.depart} → {o.arrive} · {o.changes} change{o.changes === 1 ? "" : "s"} · {o.walk_min} min walk
       </p>
       {problem && (
-        <p className={`mt-1.5 rounded-md px-2 py-1 text-[11px] font-semibold ${STATUS_STYLE[problem.status] ?? ""}`}>
+        <p className={`mt-1.5 rounded-md px-2 py-1 text-micro font-semibold ${STATUS_STYLE[problem.status] ?? ""}`}>
           {o.blocked_by_confirmed_problem ? "Blocked: " : ""}{problem.title} · {problem.status} {problem.trust_pct}%
         </p>
       )}
@@ -253,10 +253,10 @@ function ProblemRow({ p }: { p: ChatProblem }) {
   return (
     <li className="flex items-center justify-between gap-2 rounded-xl bg-container-lowest px-2.5 py-2 shadow-card">
       <span className="min-w-0">
-        <span className="block truncate text-[13px] font-medium">{p.title}</span>
-        <span className="block truncate text-[11px] text-on-surface-variant">{p.sources}</span>
+        <span className="block truncate text-small font-medium">{p.title}</span>
+        <span className="block truncate text-micro text-on-surface-variant">{p.sources}</span>
       </span>
-      <span className={`shrink-0 rounded-md px-2 py-0.5 text-[11px] font-bold ${STATUS_STYLE[p.status] ?? ""}`}>
+      <span className={`shrink-0 rounded-md px-2 py-0.5 text-micro font-bold ${STATUS_STYLE[p.status] ?? ""}`}>
         {p.status === "coordinated" ? "fake burst" : p.status} {p.trust_pct}%
       </span>
     </li>

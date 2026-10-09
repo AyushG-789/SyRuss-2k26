@@ -116,11 +116,13 @@ export default function RouteResults({ traveller }: { traveller: Traveller | nul
       <section className="flex flex-col gap-3 rounded-2xl bg-container-lowest p-4 shadow-sm lg:flex-row lg:items-center">
         <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-primary text-on-primary"><Icon name="swap_calls" /></span>
         <div className="min-w-0 flex-1">
-          <h1 className="flex flex-wrap items-center gap-2 text-xl font-semibold md:text-2xl">
-            {traveller.origin.label} <Icon name="arrow_forward" className="text-primary" /> {destination?.label ?? "Day itinerary"}
-            {destination && <span className="rounded-md bg-container px-1.5 py-0.5 text-[12px] font-bold text-on-surface-variant">{km(traveller.origin, destination).toFixed(1)} km</span>}
+          <h1 className="text-title font-semibold md:text-[1.625rem] md:leading-8">
+            {traveller.origin.label}{" "}
+            <Icon name="arrow_forward" className="mx-0.5 text-[22px] text-primary" />{" "}
+            {destination?.label ?? "Day itinerary"}
+            {destination && <span className="chip ml-2 bg-container align-middle text-on-surface-variant">{km(traveller.origin, destination).toFixed(1)} km</span>}
           </h1>
-          <p className="mt-0.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-on-surface-variant">
+          <p className="mt-0.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-small text-on-surface-variant">
             <span>{traveller.traveller_id === "CUSTOM" ? "Your trip" : traveller.name}</span>
             {live?.source === "backend" && <span className="flex items-center gap-1"><Icon name="sensors" className="text-[16px] text-primary" /> Pakka Check live at {live.asOf}</span>}
             {active.length > 0 && <span className="flex items-center gap-1 text-tertiary"><Icon name="warning" className="text-[16px]" /> {active.length} live problem{active.length === 1 ? "" : "s"} in Mumbai</span>}
@@ -129,7 +131,7 @@ export default function RouteResults({ traveller }: { traveller: Traveller | nul
           {constraints.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-1.5">
               {constraints.map((c) => (
-                <span key={c.text} className="flex items-center gap-1 rounded-lg bg-container-low px-2 py-1 text-[12px] font-semibold">
+                <span key={c.text} className="flex items-center gap-1 rounded-lg bg-container-low px-2 py-1 text-caption font-semibold">
                   <Icon name={c.icon} className="text-[16px] text-on-surface-variant" /> {c.text}
                 </span>
               ))}
@@ -138,7 +140,7 @@ export default function RouteResults({ traveller }: { traveller: Traveller | nul
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Link href={`/plan?from=${encodeURIComponent(traveller.origin.label)}&to=${encodeURIComponent(destination?.label ?? "")}`}
-            className="flex items-center gap-1 rounded-xl bg-container-low px-4 py-2.5 text-[13px] font-semibold hover:bg-container">
+            className="flex items-center gap-1 rounded-xl bg-container-low px-4 py-2.5 text-small font-semibold hover:bg-container">
             <Icon name="edit_calendar" className="text-[18px]" /> {departText}
           </Link>
           <button type="button" title="Copy link to this trip" aria-label="Copy link"
@@ -168,20 +170,20 @@ export default function RouteResults({ traveller }: { traveller: Traveller | nul
             <div className="flex flex-wrap gap-1 rounded-2xl bg-container-low p-1">
               {FILTERS.map((f) => (
                 <button key={f.id} type="button" onClick={() => setFilter(f.id)} aria-pressed={filter === f.id} disabled={!counts[f.id]}
-                  className={`flex items-center gap-1.5 rounded-xl px-3 py-2 text-[13px] font-semibold transition disabled:opacity-40 ${
+                  className={`flex items-center gap-1.5 rounded-xl px-3 py-2 text-small font-semibold transition disabled:opacity-40 ${
                     filter === f.id ? "bg-container-lowest text-primary shadow-sm" : "text-on-surface-variant hover:text-on-surface"}`}>
                   <Icon name={f.icon} className="text-[18px]" /> {f.label}
-                  {f.id === "all" && <span className="rounded-full bg-primary-fixed px-1.5 text-[11px] text-on-primary-fixed">{counts.all}</span>}
+                  {f.id === "all" && <span className="rounded-full bg-primary-fixed px-1.5 text-micro text-on-primary-fixed">{counts.all}</span>}
                 </button>
               ))}
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[12px] font-bold uppercase tracking-wider text-outline">Sort:</span>
+              <span className="text-caption font-bold uppercase tracking-wider text-outline">Sort:</span>
               {ordered.map((c) => {
                 const on = c.plan_id === selectedId;
                 return (
                   <button key={c.plan_id} onClick={() => setSelectedId(c.plan_id)} aria-pressed={on}
-                    className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-semibold transition ${
+                    className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-small font-semibold transition ${
                       on ? "bg-primary text-on-primary shadow-sm" : "bg-container-lowest text-on-surface shadow-sm hover:bg-container-low"}`}>
                     <Icon name={LABEL_STYLE[c.label].icon} className="text-[18px]" />
                     {PLAN_LABEL[c.label]}{c.recommended ? " (Recommended)" : ""}
@@ -208,7 +210,7 @@ export default function RouteResults({ traveller }: { traveller: Traveller | nul
                 <section className="flex flex-col gap-1.5 rounded-2xl bg-container-lowest p-4 shadow-sm">
                   <h2 className="flex items-center gap-2 text-sm font-semibold"><Icon name="verified_user" className="text-[18px] text-primary" /> What Pakka Check changed</h2>
                   {plan.notes!.map((n) => (
-                    <p key={n} className="flex items-start gap-2 text-[13px] text-on-surface-variant">
+                    <p key={n} className="flex items-start gap-2 text-small text-on-surface-variant">
                       <Icon name={n.startsWith("Avoided") ? "block" : "info"} className={`text-[16px] ${n.startsWith("Avoided") ? "text-error" : "text-secondary"}`} /> {n}
                     </p>
                   ))}
@@ -222,7 +224,7 @@ export default function RouteResults({ traveller }: { traveller: Traveller | nul
                     {plan.rejected.map((r) => (
                       <li key={r.summary} className="py-2">
                         <span className="font-semibold">{readableRoute(r.summary)}</span>
-                        <span className="block text-[13px] text-on-surface-variant">{r.reason}</span>
+                        <span className="block text-small text-on-surface-variant">{r.reason}</span>
                       </li>
                     ))}
                   </ul>
@@ -350,7 +352,7 @@ function NoRoute({ traveller, rejected }: { traveller: Traveller; rejected: Plan
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <h3 className="text-[12px] font-bold uppercase tracking-wider text-on-surface-variant">Why</h3>
+        <h3 className="text-caption font-bold uppercase tracking-wider text-on-surface-variant">Why</h3>
         <ul className="flex flex-col gap-1.5">
           {reasons.map((r) => (
             <li key={r} className="flex items-start gap-2 rounded-xl bg-amber-soft/60 px-3 py-2 text-sm text-on-surface">
@@ -361,7 +363,7 @@ function NoRoute({ traveller, rejected }: { traveller: Traveller; rejected: Plan
       </div>
 
       <div className="flex flex-col gap-2">
-        <h3 className="text-[12px] font-bold uppercase tracking-wider text-on-surface-variant">What you can do</h3>
+        <h3 className="text-caption font-bold uppercase tracking-wider text-on-surface-variant">What you can do</h3>
         <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
           {fixes.map((f) => (
             <Link key={f.label} href={tripHref(f.traveller)}
@@ -369,7 +371,7 @@ function NoRoute({ traveller, rejected }: { traveller: Traveller; rejected: Plan
               <Icon name={f.icon} className="text-[22px]" />
               <span className="min-w-0">
                 <span className="block text-sm font-semibold">{f.label}{f.primary ? " (recommended)" : ""}</span>
-                <span className={`block text-[12px] ${f.primary ? "text-on-primary/85" : "text-on-surface-variant"}`}>{f.why}</span>
+                <span className={`block text-caption ${f.primary ? "text-on-primary/85" : "text-on-surface-variant"}`}>{f.why}</span>
               </span>
             </Link>
           ))}
@@ -378,7 +380,7 @@ function NoRoute({ traveller, rejected }: { traveller: Traveller; rejected: Plan
             <Icon name="edit" className="text-[22px]" />
             <span>
               <span className="block text-sm font-semibold">Change the trip myself</span>
-              <span className="block text-[12px] text-on-surface-variant">Open the planner with these two places filled in.</span>
+              <span className="block text-caption text-on-surface-variant">Open the planner with these two places filled in.</span>
             </span>
           </Link>
         </div>
@@ -430,29 +432,29 @@ function ResultCard({ card, traveller, destinationLabel, fastest, selected, onSe
     <article onClick={onSelect}
       className={`flex cursor-pointer flex-col gap-4 rounded-2xl bg-container-lowest p-5 shadow-sm transition hover:shadow-md ${selected ? "ring-2 ring-primary" : ""}`}>
       <div className="flex flex-wrap items-center gap-2">
-        <span className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[12px] font-bold ${style.chip}`}>
+        <span className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-caption font-bold ${style.chip}`}>
           <Icon name={style.icon} className="text-[16px]" /> {card.recommended ? `Recommended ${PLAN_LABEL[card.label]}` : style.title}
         </span>
-        <span className={`rounded-full px-2.5 py-1 text-[12px] font-bold ${REL_STYLE[card.reliability_colour]}`}>{pct(card.reliability)} reliable</span>
+        <span className={`rounded-full px-2.5 py-1 text-caption font-bold ${REL_STYLE[card.reliability_colour]}`}>{pct(card.reliability)} reliable</span>
         {risky.length > 0 && (
-          <span className="flex items-center gap-1 rounded-full bg-error-container px-2.5 py-1 text-[12px] font-bold text-on-error-container">
+          <span className="flex items-center gap-1 rounded-full bg-error-container px-2.5 py-1 text-caption font-bold text-on-error-container">
             <Icon name="warning" className="text-[16px]" /> Live problem on route
           </span>
         )}
-        <span className="ml-auto flex items-center gap-1 text-[12px] font-semibold text-primary">
+        <span className="ml-auto flex items-center gap-1 text-caption font-semibold text-primary">
           <span className="h-2 w-2 rounded-full bg-primary" /> Score {card.score.toFixed(1)}/10
         </span>
       </div>
 
       <div className="flex items-end justify-between gap-3">
         <p className="flex flex-wrap items-baseline gap-2">
-          <span className="text-[32px] font-bold leading-none tabular-nums">{card.duration_min} min</span>
+          <span className="text-display font-bold leading-none tracking-tight tabular-nums">{card.duration_min} min</span>
           <span className="text-sm text-on-surface-variant tabular-nums">{last.arrive} arrival</span>
-          {faster === 0 && card.label !== "fastest" && <span className="rounded bg-primary-fixed px-1.5 py-0.5 text-[11px] font-bold text-on-primary-fixed">Fastest</span>}
+          {faster === 0 && card.label !== "fastest" && <span className="rounded bg-primary-fixed px-1.5 py-0.5 text-micro font-bold text-on-primary-fixed">Fastest</span>}
         </p>
         <p className="text-right">
-          <span className="block text-[32px] font-bold leading-none tabular-nums text-primary">₹{card.cost_inr}</span>
-          <span className="text-[12px] text-on-surface-variant">{fareBreakdown(card)}</span>
+          <span className="block text-display font-bold leading-none tracking-tight tabular-nums text-primary">₹{card.cost_inr}</span>
+          <span className="text-caption text-on-surface-variant">{fareBreakdown(card)}</span>
         </p>
       </div>
 
@@ -464,23 +466,23 @@ function ResultCard({ card, traveller, destinationLabel, fastest, selected, onSe
               <li key={i} className="flex items-center gap-2">
                 {i > 0 && <Icon name="arrow_forward" className="text-[16px] text-outline" />}
                 {leg.mode === "walk" ? (
-                  <span className={`flex items-center gap-0.5 text-[13px] ${hit ? "font-semibold text-error" : "text-on-surface-variant"}`}>
+                  <span className={`flex items-center gap-0.5 text-small ${hit ? "font-semibold text-error" : "text-on-surface-variant"}`}>
                     {hit && <Icon name="warning" className="text-[16px]" />}
                     <Icon name="directions_walk" className="text-[18px]" />{leg.duration_min}m
                   </span>
                 ) : (
                   <span className="flex items-center gap-1.5 rounded-lg bg-container-lowest px-2 py-1 shadow-sm">
-                    <span className="rounded px-1.5 py-0.5 text-[11px] font-bold text-white" style={{ backgroundColor: legColor(leg) }}>
+                    <span className="rounded px-1.5 py-0.5 text-micro font-bold text-white" style={{ backgroundColor: legColor(leg) }}>
                       {hit ? "⚠ " : ""}{legName(leg)}
                     </span>
-                    <span className="text-[13px] font-semibold tabular-nums">{leg.duration_min}m</span>
+                    <span className="text-small font-semibold tabular-nums">{leg.duration_min}m</span>
                   </span>
                 )}
               </li>
             );
           })}
         </ol>
-        <div className="flex flex-wrap gap-x-4 gap-y-1 text-[13px] text-on-surface-variant">
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-small text-on-surface-variant">
           {interchanges(card, traveller, destinationLabel) && (
             <span className="flex items-center gap-1"><Icon name="transfer_within_a_station" className="text-[16px]" /> {interchanges(card, traveller, destinationLabel)}</span>
           )}
@@ -492,7 +494,7 @@ function ResultCard({ card, traveller, destinationLabel, fastest, selected, onSe
         </div>
       </div>
 
-      <p className="flex items-start gap-2 text-[13px]">
+      <p className="flex items-start gap-2 text-small">
         <Icon name="tips_and_updates" className="text-[18px] text-primary" /> {card.reason}
       </p>
 
@@ -506,7 +508,7 @@ function ResultCard({ card, traveller, destinationLabel, fastest, selected, onSe
               <span className="text-on-surface-variant"> · {legName(leg)}{leg.cost_inr ? ` · ₹${leg.cost_inr}` : ""}</span>
               {leg.event_ids.map((id) => (
                 <Link key={id} href={`/events/${id}`} onClick={(e) => e.stopPropagation()}
-                  className="ml-1 rounded bg-error-container px-1.5 py-0.5 text-[11px] font-bold text-on-error-container hover:underline">
+                  className="ml-1 rounded bg-error-container px-1.5 py-0.5 text-micro font-bold text-on-error-container hover:underline">
                   {id} · {pct(leg.risk)} risk
                 </Link>
               ))}
@@ -515,7 +517,7 @@ function ResultCard({ card, traveller, destinationLabel, fastest, selected, onSe
         </ol>
       )}
       {panel === "fare" && (
-        <ul className="flex flex-col gap-1 rounded-xl bg-container-low p-3 text-[13px]">
+        <ul className="flex flex-col gap-1 rounded-xl bg-container-low p-3 text-small">
           {card.legs.filter((l) => l.cost_inr > 0).map((l, i) => (
             <li key={i} className="flex justify-between gap-2"><span>{legName(l)} · {placeName(l.from_id, traveller, destinationLabel)} → {placeName(l.to_id, traveller, destinationLabel)}</span><b>₹{l.cost_inr}</b></li>
           ))}
@@ -524,13 +526,13 @@ function ResultCard({ card, traveller, destinationLabel, fastest, selected, onSe
       )}
 
       <div className="flex flex-wrap items-center gap-2" onClick={(e) => e.stopPropagation()}>
-        <button onClick={() => setPanel(panel === "steps" ? null : "steps")} className="mr-auto flex items-center gap-1 text-[13px] font-semibold text-primary">
+        <button onClick={() => setPanel(panel === "steps" ? null : "steps")} className="mr-auto flex items-center gap-1 text-small font-semibold text-primary">
           {panel === "steps" ? "Hide steps" : `View ${card.legs.length} steps`} <Icon name="keyboard_arrow_right" className="text-[18px]" />
         </button>
-        <button onClick={() => setPanel(panel === "fare" ? null : "fare")} className="rounded-xl bg-container-low px-4 py-2.5 text-[13px] font-semibold hover:bg-container">
+        <button onClick={() => setPanel(panel === "fare" ? null : "fare")} className="rounded-xl bg-container-low px-4 py-2.5 text-small font-semibold hover:bg-container">
           Fare Breakdown
         </button>
-        <button onClick={onTrack} className={`flex items-center gap-1 rounded-xl px-4 py-2.5 text-[13px] font-semibold ${selected ? "bg-primary text-on-primary hover:bg-primary-container" : "bg-container-low hover:bg-container"}`}>
+        <button onClick={onTrack} className={`flex items-center gap-1 rounded-xl px-4 py-2.5 text-small font-semibold ${selected ? "bg-primary text-on-primary hover:bg-primary-container" : "bg-container-low hover:bg-container"}`}>
           <Icon name="near_me" className="text-[18px]" /> Start Tracking
         </button>
       </div>
@@ -541,21 +543,23 @@ function ResultCard({ card, traveller, destinationLabel, fastest, selected, onSe
 function ActiveSelection({ card, onTrack }: { card: RouteCard; onTrack: () => void }) {
   const lines = [...new Map(card.legs.filter((l) => l.mode !== "walk").map((l) => [legName(l), legColor(l)])).entries()];
   return (
-    <div className="absolute inset-x-3 bottom-3 z-[500] flex flex-wrap items-center gap-3 rounded-2xl bg-container-lowest p-4 shadow-float">
-      <div className="min-w-0 flex-1">
-        <span className="rounded-md bg-primary px-2 py-0.5 text-[11px] font-bold uppercase text-on-primary">Active selection</span>
-        <p className="mt-1 truncate font-semibold">{PLAN_LABEL[card.label]} · {legSummary(card)}</p>
-        <ul className="mt-1 flex flex-wrap gap-x-3 text-[12px] text-on-surface-variant">
+    <div className="absolute inset-x-3 bottom-3 z-[500] flex flex-wrap items-center gap-x-4 gap-y-3 rounded-2xl bg-container-lowest/95 p-4 shadow-float backdrop-blur-sm">
+      <div className="min-w-[10rem] flex-1">
+        <span className="chip whitespace-nowrap bg-primary text-micro uppercase tracking-wider text-on-primary">Active selection</span>
+        <p className="mt-1.5 truncate text-body font-semibold">{PLAN_LABEL[card.label]} · {legSummary(card)}</p>
+        <ul className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-caption text-on-surface-variant">
           {lines.map(([name, color]) => <li key={name} className="flex items-center gap-1"><span className="h-1 w-3 rounded-full" style={{ background: color }} /> {name}</li>)}
         </ul>
       </div>
-      <div className="text-right">
-        <p className="text-2xl font-bold tabular-nums text-primary">{card.duration_min} mins</p>
-        <p className="text-sm font-semibold tabular-nums">₹{card.cost_inr}</p>
+      <div className="flex items-center gap-4">
+        <div className="text-right">
+          <p className="whitespace-nowrap text-title font-bold tabular-nums text-primary">{card.duration_min} mins</p>
+          <p className="text-small font-semibold tabular-nums">₹{card.cost_inr}</p>
+        </div>
+        <button onClick={onTrack} className="btn-primary">
+          <Icon name="navigation" className="text-[20px]" /> Start trip
+        </button>
       </div>
-      <button onClick={onTrack} className="flex items-center gap-1 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary hover:bg-primary-container">
-        <Icon name="navigation" /> Start trip
-      </button>
     </div>
   );
 }
@@ -563,13 +567,13 @@ function ActiveSelection({ card, onTrack }: { card: RouteCard; onTrack: () => vo
 function TradeOffMatrix({ cards, selectedId, onSelect }: { cards: RouteCard[]; selectedId: string | null; onSelect: (id: string) => void }) {
   return (
     <section className="overflow-hidden rounded-2xl bg-container-lowest shadow-sm">
-      <div className="flex items-center justify-between p-4">
-        <h2 className="flex items-center gap-2 font-semibold"><Icon name="table_chart" className="text-primary" /> Corridor Trade-off Matrix</h2>
-        <span className="text-[12px] text-on-surface-variant">time · fare · changes · walk · reliability</span>
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 p-4">
+        <h2 className="flex items-center gap-2 text-subtitle font-semibold"><Icon name="table_chart" className="text-[20px] text-primary" /> Corridor Trade-off Matrix</h2>
+        <span className="text-caption text-on-surface-variant">time · fare · changes · walk · reliability</span>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm">
-          <thead className="bg-container-low text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">
+          <thead className="bg-container-low eyebrow">
             <tr>
               <th className="px-4 py-2.5">Route</th>
               <th className="px-3 py-2.5 text-right">Time</th>
@@ -588,7 +592,7 @@ function TradeOffMatrix({ cards, selectedId, onSelect }: { cards: RouteCard[]; s
                   className={`cursor-pointer tabular-nums hover:bg-container-low ${c.plan_id === selectedId ? "bg-primary-soft/60" : ""}`}>
                   <td className="px-4 py-2.5">
                     <span className="font-semibold">{PLAN_LABEL[c.label]}</span>
-                    <span className="block text-[12px] text-on-surface-variant">{legSummary(c)}</span>
+                    <span className="block text-caption text-on-surface-variant">{legSummary(c)}</span>
                   </td>
                   <td className={`px-3 py-2.5 text-right ${best((x) => x.duration_min)}`}>{c.duration_min} min</td>
                   <td className={`px-3 py-2.5 text-right ${best((x) => x.cost_inr)}`}>₹{c.cost_inr}</td>
@@ -617,16 +621,16 @@ function CompareWithNormalApp({ aware, baseline }: { aware: PlanResponse; baseli
     <section className="flex flex-col gap-3 rounded-2xl bg-container-lowest p-4 shadow-sm">
       <div className="flex items-center justify-between gap-2">
         <h2 className="flex items-center gap-2 font-semibold"><Icon name="compare_arrows" className="text-primary" /> Normal app vs TravelBuddy</h2>
-        <Link href="/compare" className="text-[12px] font-semibold text-primary hover:underline">Full evaluation →</Link>
+        <Link href="/compare" className="text-caption font-semibold text-primary hover:underline">Full evaluation →</Link>
       </div>
-      <p className="text-[13px] text-on-surface-variant">
+      <p className="text-small text-on-surface-variant">
         {changed ? "A schedule-only app ignores live reports. Here's what it would tell you for this same trip:"
           : "No live problem affects this trip right now, so a schedule-only app would show the same routes."}
       </p>
       {changed && (
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-[13px]">
-            <thead className="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">
+          <table className="w-full text-left text-small">
+            <thead className="eyebrow">
               <tr><th className="py-1.5">Option</th><th className="py-1.5">Normal app</th><th className="py-1.5">TravelBuddy</th></tr>
             </thead>
             <tbody className="divide-y divide-hairline-soft">

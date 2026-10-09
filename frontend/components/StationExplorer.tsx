@@ -56,10 +56,10 @@ export default function StationExplorer() {
             ))}
           </div>
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-1 rounded-full bg-primary-fixed px-2 py-1 text-[11px] font-bold text-on-primary-fixed">
+            <div className="flex items-center gap-1 rounded-full bg-primary-fixed px-2 py-1 text-micro font-bold text-on-primary-fixed">
               <span className="h-1.5 w-1.5 animate-ping rounded-full bg-primary" /> {hub.feeds}
             </div>
-            <div className="text-[13px] text-on-surface-variant">
+            <div className="text-small text-on-surface-variant">
               Updated: <span className="font-semibold text-on-surface tabular-nums">{clock ?? "--:--:--"} IST</span>
             </div>
           </div>
@@ -72,10 +72,10 @@ export default function StationExplorer() {
             <input value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Search station"
               placeholder="Search station, platform, exit gate or bus route..."
               className="h-12 w-full rounded-lg bg-container-low pl-10 pr-24 text-sm placeholder:text-outline transition-all focus:bg-container-lowest focus:outline-none focus:ring-2 focus:ring-primary" />
-            <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 rounded bg-primary px-2 py-1 text-[11px] font-bold text-on-primary transition-colors hover:bg-primary-container">
+            <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 rounded bg-primary px-2 py-1 text-micro font-bold text-on-primary transition-colors hover:bg-primary-container">
               Search
             </button>
-            {notFound && <p className="mt-1 text-[12px] text-error">Not in the covered network — try a station name like “Dadar”.</p>}
+            {notFound && <p className="mt-1 text-caption text-error">Not in the covered network — try a station name like “Dadar”.</p>}
           </form>
           <div className="flex flex-wrap items-center gap-4 rounded-xl bg-container-low px-4 py-2">
             <div className="flex items-center gap-1">
@@ -86,7 +86,7 @@ export default function StationExplorer() {
             <div className="flex items-center gap-1.5">
               {hub.radii.map((r) => (
                 <button key={r} type="button" onClick={() => setRadius(r)} aria-pressed={radius === r}
-                  className={`rounded px-2.5 py-1 text-[11px] font-bold transition-all ${radius === r ? "bg-primary text-on-primary shadow-sm" : "text-on-surface-variant hover:bg-container-high"}`}>
+                  className={`rounded px-2.5 py-1 text-micro font-bold transition-all ${radius === r ? "bg-primary text-on-primary shadow-sm" : "text-on-surface-variant hover:bg-container-high"}`}>
                   {r}
                 </button>
               ))}
@@ -103,7 +103,7 @@ export default function StationExplorer() {
                 className={`flex shrink-0 items-center gap-1 rounded-full px-4 py-2 text-xs font-semibold shadow-sm ${on ? "bg-primary text-on-primary" : "bg-container-lowest hover:bg-container"}`}>
                 <Icon name={f.icon} className={`text-[18px] ${on ? "" : f.iconCls}`} />
                 <span>{f.label}</span>
-                <span className={`rounded-full px-1.5 text-[11px] font-bold ${on ? "bg-white/20" : "bg-container-high text-on-surface-variant"}`}>{f.count}</span>
+                <span className={`rounded-full px-1.5 text-micro font-bold ${on ? "bg-white/20" : "bg-container-high text-on-surface-variant"}`}>{f.count}</span>
               </button>
             );
           })}
@@ -128,7 +128,7 @@ export default function StationExplorer() {
               <div className="flex items-center gap-1 rounded-lg bg-container-lowest p-1">
                 {mapLayers.map((l) => (
                   <button key={l} type="button" onClick={() => setLayer(l)} aria-pressed={layer === l}
-                    className={`rounded px-2 py-1 text-[11px] font-bold transition-all ${layer === l ? "bg-primary text-on-primary shadow-sm" : "text-on-surface-variant hover:bg-container"}`}>
+                    className={`rounded px-2 py-1 text-micro font-bold transition-all ${layer === l ? "bg-primary text-on-primary shadow-sm" : "text-on-surface-variant hover:bg-container"}`}>
                     {l}
                   </button>
                 ))}
@@ -139,31 +139,31 @@ export default function StationExplorer() {
               <div className="pointer-events-none absolute inset-x-4 top-4 z-[500] flex justify-center">
                 <div className="flex items-center gap-2 rounded-lg bg-container-lowest/95 px-3 py-1.5 shadow-md backdrop-blur-md">
                   <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-primary" />
-                  <span className="text-[11px] font-bold">{skywalk}</span>
+                  <span className="text-micro font-bold">{skywalk}</span>
                 </div>
               </div>
-              <div className="absolute inset-x-4 bottom-4 z-[500] flex items-center justify-between gap-2 rounded-xl bg-[#2d3133]/85 px-4 py-2 text-[13px] text-[#eff1f3] shadow-xl backdrop-blur-md">
+              <div className="absolute inset-x-4 bottom-4 z-[500] flex items-center justify-between gap-2 rounded-xl bg-[#2d3133]/85 px-4 py-2 text-small text-[#eff1f3] shadow-xl backdrop-blur-md">
                 <div className="flex items-center gap-2">
                   <Icon name="navigation" className="text-[18px] text-primary-fixed-dim" />
                   <span>Your Location: <strong>{hub.you.text}</strong> {hub.you.dist}</span>
                 </div>
-                <span className="shrink-0 text-[11px] font-bold uppercase tracking-wider text-primary-fixed-dim">{hub.you.walk}</span>
+                <span className="shrink-0 eyebrow text-primary-fixed-dim">{hub.you.walk}</span>
               </div>
             </div>
             <div className="flex flex-col gap-4 p-5">
               <div className="flex items-center justify-between">
                 <span className="text-lg font-bold">Station Gate Guide &amp; Key Portals</span>
-                <span className="text-[11px] font-semibold text-primary">{gates.length} Exits Active</span>
+                <span className="text-micro font-semibold text-primary">{gates.length} Exits Active</span>
               </div>
               <div className="grid grid-cols-2 gap-1 sm:grid-cols-3">
                 {gates.map((g) => (
                   <div key={g.gate} className="flex cursor-pointer flex-col gap-1 rounded-lg bg-container-low p-2 transition-colors hover:bg-container-high">
                     <div className="flex items-center justify-between">
-                      <span className="rounded bg-primary px-1.5 py-0.5 text-[11px] font-bold text-on-primary">{g.gate}</span>
+                      <span className="rounded bg-primary px-1.5 py-0.5 text-micro font-bold text-on-primary">{g.gate}</span>
                       <Icon name={g.icon} className={`text-[16px] ${g.iconCls}`} />
                     </div>
                     <div className="text-xs font-bold">{g.title}</div>
-                    <div className="truncate text-[13px] text-on-surface-variant">{g.text}</div>
+                    <div className="truncate text-small text-on-surface-variant">{g.text}</div>
                   </div>
                 ))}
               </div>
@@ -177,7 +177,7 @@ export default function StationExplorer() {
                 <Icon name="room_preferences" className="text-[20px] text-primary" />
                 <span className="text-lg font-bold">Hub Facilities (sample)</span>
               </div>
-              <span className="rounded-full bg-primary-fixed px-2 py-0.5 text-[11px] font-bold text-on-primary-fixed">All Operational</span>
+              <span className="rounded-full bg-primary-fixed px-2 py-0.5 text-micro font-bold text-on-primary-fixed">All Operational</span>
             </div>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               {facilities.map((f) => (
@@ -187,8 +187,8 @@ export default function StationExplorer() {
                   </div>
                   <div>
                     <div className="text-xs font-bold">{f.title}</div>
-                    <div className="text-[13px] text-on-surface-variant">{f.text}</div>
-                    <div className="mt-1 text-[11px] font-bold text-primary">{f.foot}</div>
+                    <div className="text-small text-on-surface-variant">{f.text}</div>
+                    <div className="mt-1 text-micro font-bold text-primary">{f.foot}</div>
                   </div>
                 </div>
               ))}
@@ -232,9 +232,9 @@ function StationCard({ station: s }: { station: Station }) {
           <div>
             <div className="flex flex-wrap items-center gap-1">
               <span className="text-lg font-bold">{s.name}</span>
-              <span className={`rounded px-1.5 py-0.5 text-[11px] font-bold ${s.tagCls}`}>{s.tag}</span>
+              <span className={`rounded px-1.5 py-0.5 text-micro font-bold ${s.tagCls}`}>{s.tag}</span>
             </div>
-            <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[13px] text-on-surface-variant">
+            <div className="mt-0.5 flex flex-wrap items-center gap-2 text-small text-on-surface-variant">
               {s.sub.map((x, i) => (
                 <span key={x.text} className="flex items-center gap-2">
                   {i > 0 && <span>•</span>}
@@ -245,7 +245,7 @@ function StationCard({ station: s }: { station: Station }) {
           </div>
         </div>
         <div className="shrink-0 text-right">
-          <span className="text-[11px] font-bold uppercase text-on-surface-variant">Walking</span>
+          <span className="text-micro font-bold uppercase text-on-surface-variant">Walking</span>
           <div className="text-sm font-bold">{s.walk}</div>
         </div>
       </div>
@@ -257,7 +257,7 @@ function StationCard({ station: s }: { station: Station }) {
               <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded text-xs font-bold ${s.codeCls}`}>{d.code}</div>
               <div className="flex min-w-0 flex-col">
                 <div className="truncate text-sm font-semibold">{d.title}</div>
-                <div className="flex flex-wrap items-center gap-1 text-[13px] text-on-surface-variant">
+                <div className="flex flex-wrap items-center gap-1 text-small text-on-surface-variant">
                   {d.meta.map((m, i) => (
                     <span key={m.text} className="flex items-center gap-1">{i > 0 && <span>•</span>}<span className={m.cls}>{m.text}</span></span>
                   ))}
@@ -265,12 +265,12 @@ function StationCard({ station: s }: { station: Station }) {
               </div>
             </div>
             <div className="flex shrink-0 items-center gap-4">
-              <span className={`hidden items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold sm:flex ${CROWD[d.crowd.tone]}`}>
+              <span className={`hidden items-center gap-1 rounded-full px-2 py-0.5 text-micro font-bold sm:flex ${CROWD[d.crowd.tone]}`}>
                 {d.crowd.dot && <span className={`h-1.5 w-1.5 rounded-full ${DOT[d.crowd.tone]}`} />}{d.crowd.text}
               </span>
               <div className="min-w-[70px] text-right">
                 <div className={`text-lg font-extrabold leading-none ${d.etaPrimary ? "text-primary" : ""}`}>{d.eta}</div>
-                <div className="text-[11px] font-bold text-on-surface-variant">{d.then}</div>
+                <div className="text-micro font-bold text-on-surface-variant">{d.then}</div>
               </div>
             </div>
           </div>
@@ -280,7 +280,7 @@ function StationCard({ station: s }: { station: Station }) {
       {s.amenities.length > 0 && (
         <div className="flex flex-wrap items-center gap-1 pt-1">
           {s.amenities.map((a) => (
-            <span key={a.text} className="flex items-center gap-1 rounded bg-container px-2 py-1 text-[11px] font-bold text-on-surface-variant">
+            <span key={a.text} className="flex items-center gap-1 rounded bg-container px-2 py-1 text-micro font-bold text-on-surface-variant">
               <Icon name={a.icon} className={`text-[14px] ${a.iconCls}`} /> {a.text}
             </span>
           ))}
@@ -293,10 +293,10 @@ function StationCard({ station: s }: { station: Station }) {
             <Icon name="electric_rickshaw" className="text-[20px] text-primary" />
             <div>
               <div className="text-xs font-semibold">{s.auto.title}</div>
-              <div className="text-[13px] text-on-surface-variant">{s.auto.text}</div>
+              <div className="text-small text-on-surface-variant">{s.auto.text}</div>
             </div>
           </div>
-          <span className="shrink-0 rounded bg-container-lowest px-2 py-1 text-[11px] font-bold text-primary shadow-sm">{s.auto.badge}</span>
+          <span className="shrink-0 rounded bg-container-lowest px-2 py-1 text-micro font-bold text-primary shadow-sm">{s.auto.badge}</span>
         </div>
       )}
     </article>

@@ -122,7 +122,7 @@ export default function JourneyPlanner() {
 
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-primary">Transit Matrix</p>
+                <p className="text-micro font-bold uppercase tracking-[0.12em] text-primary">Transit Matrix</p>
                 <h1 className="text-2xl font-semibold">Plan Your Commute</h1>
               </div>
               <div className="flex gap-2">
@@ -135,7 +135,7 @@ export default function JourneyPlanner() {
 
             {/* Departure / via / destination */}
             <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between text-[13px]">
+              <div className="flex items-center justify-between text-small">
                 <span className="font-semibold text-slate">Point of Departure</span>
                 <button type="button" onClick={() => set("from", "Andheri station")} title="No GPS in the prototype — uses Andheri as your location"
                   className="flex items-center gap-1 font-semibold text-primary">
@@ -145,7 +145,7 @@ export default function JourneyPlanner() {
               <PlaceInput listId={listId} value={form.from} onChange={(v) => set("from", v)} dot="bg-primary"
                 placeholder="Enter starting station, address, or landmark" label="Point of departure" />
 
-              <div className="flex items-center justify-between py-1 text-[13px]">
+              <div className="flex items-center justify-between py-1 text-small">
                 {via === null ? (
                   <button type="button" onClick={() => setVia("")} className="flex items-center gap-1.5 text-base text-primary">
                     <Icon name="add_circle" className="text-[20px]" /> Add Layover / Via Stop
@@ -161,7 +161,7 @@ export default function JourneyPlanner() {
                 {via === null && <span className="text-on-surface-variant">Direct Corridor Routing</span>}
               </div>
 
-              <div className="flex items-center justify-between text-[13px]">
+              <div className="flex items-center justify-between text-small">
                 <span className="font-semibold text-slate">Final Destination</span>
                 <span className="text-on-surface-variant">Zone 1 Suburban / Metro</span>
               </div>
@@ -171,7 +171,7 @@ export default function JourneyPlanner() {
 
             {/* Shortcuts */}
             <div className="flex flex-col gap-2">
-              <span className="text-[13px] text-on-surface-variant">Quick-Access Shortcuts</span>
+              <span className="text-small text-on-surface-variant">Quick-Access Shortcuts</span>
               <div className="grid grid-cols-2 gap-2">
                 {savedPlaces.map((p) => (
                   <button key={p.id} type="button" onClick={() => set("to", p.place)}
@@ -179,7 +179,7 @@ export default function JourneyPlanner() {
                     <span className="grid h-10 w-10 place-items-center rounded-lg bg-container"><Icon name={p.icon} className="text-on-surface-variant" /></span>
                     <span className="flex flex-col">
                       <span className="font-semibold">{p.title}</span>
-                      <span className="text-[13px] text-on-surface-variant">{p.sub}</span>
+                      <span className="text-small text-on-surface-variant">{p.sub}</span>
                     </span>
                   </button>
                 ))}
@@ -187,7 +187,7 @@ export default function JourneyPlanner() {
               <div className="flex flex-wrap gap-2">
                 {quickChips.map((c) => (
                   <button key={c.label} type="button" onClick={() => set("to", c.place)}
-                    className="flex items-center gap-1.5 rounded-lg bg-container-low px-3 py-1.5 text-[15px] hover:bg-container">
+                    className="flex items-center gap-1.5 rounded-lg bg-container-low px-3 py-1.5 text-body hover:bg-container">
                     <Icon name={c.icon} className="text-[18px]" /> {c.label}
                   </button>
                 ))}
@@ -196,14 +196,14 @@ export default function JourneyPlanner() {
 
             {/* Departure scheduling */}
             <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between text-[13px]">
+              <div className="flex items-center justify-between text-small">
                 <span className="font-semibold text-slate">Departure Scheduling</span>
                 <span className="font-semibold text-primary">Peak Commute Hours</span>
               </div>
               <div className="grid grid-cols-3 rounded-xl bg-container-low p-1" role="radiogroup" aria-label="Departure">
                 {([["now", "Depart Now"], ["at", "Depart At..."], ["by", "Arrive By..."]] as const).map(([d, l]) => (
                   <button key={d} type="button" role="radio" aria-checked={departure === d} onClick={() => chooseDeparture(d)}
-                    className={`flex items-center justify-center gap-1 rounded-lg py-2 text-[15px] ${departure === d ? "bg-container-lowest text-primary shadow-sm" : "text-on-surface-variant"}`}>
+                    className={`flex items-center justify-center gap-1 rounded-lg py-2 text-body ${departure === d ? "bg-container-lowest text-primary shadow-sm" : "text-on-surface-variant"}`}>
                     {departure === d && <span className="h-1.5 w-1.5 rounded-full bg-primary" />} {l}
                   </button>
                 ))}
@@ -213,12 +213,12 @@ export default function JourneyPlanner() {
                   <Icon name="schedule" className="text-outline" />
                   {editTime ? (
                     <input type="time" value={form.time} onChange={(e) => set("time", e.target.value)} aria-label="Time"
-                      className="bg-transparent text-[15px] tabular-nums focus:outline-none" />
+                      className="bg-transparent text-body tabular-nums focus:outline-none" />
                   ) : (
-                    <span className="truncate text-[15px]">{departure === "now" ? "Now (current demo time)" : `Today, ${form.time}`}</span>
+                    <span className="truncate text-body">{departure === "now" ? "Now (current demo time)" : `Today, ${form.time}`}</span>
                   )}
                 </label>
-                <button type="button" onClick={() => setEditTime((v) => !v)} className="rounded-xl bg-container-low px-4 text-[15px] hover:bg-container">
+                <button type="button" onClick={() => setEditTime((v) => !v)} className="rounded-xl bg-container-low px-4 text-body hover:bg-container">
                   {editTime ? "Done" : "Change"}
                 </button>
               </div>
@@ -226,7 +226,7 @@ export default function JourneyPlanner() {
 
             {/* Modalities */}
             <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between text-[13px]">
+              <div className="flex items-center justify-between text-small">
                 <span className="font-semibold text-slate">Supported Modalities</span>
                 <span className="text-on-surface-variant">Tap to include/exclude</span>
               </div>
@@ -236,7 +236,7 @@ export default function JourneyPlanner() {
                   const primary = m.id === "overall" && on;
                   return (
                     <button key={m.id} type="button" onClick={() => toggleModality(m)} aria-pressed={on} title={m.id === "walk" ? "Walking is always included" : undefined}
-                      className={`flex flex-col items-center gap-1 rounded-xl px-1 py-2.5 text-[11px] font-semibold transition ${
+                      className={`flex flex-col items-center gap-1 rounded-xl px-1 py-2.5 text-micro font-semibold transition ${
                         primary ? "bg-primary text-on-primary" : on ? "bg-primary-soft text-primary-ink" : "bg-container-low text-on-surface-variant hover:bg-container"}`}>
                       <Icon name={m.icon} className="text-[22px]" /> {m.label}
                     </button>
@@ -247,7 +247,7 @@ export default function JourneyPlanner() {
 
             {/* Priority */}
             <div className="flex flex-col gap-2">
-              <span className="text-[13px] font-semibold text-slate">Priority Strategy</span>
+              <span className="text-small font-semibold text-slate">Priority Strategy</span>
               <div className="grid grid-cols-3 gap-2">
                 {STRATEGIES.map((s) => {
                   const on = form.priority === s.value;
@@ -256,14 +256,14 @@ export default function JourneyPlanner() {
                       className={`flex flex-col items-start gap-1 rounded-xl p-3 text-left transition ${on ? "bg-primary-soft ring-1 ring-primary" : "bg-container-low hover:bg-container"}`}>
                       <span className="flex items-start gap-1.5">
                         <Icon name={on ? "radio_button_checked" : "radio_button_unchecked"} className={`text-[20px] ${on ? "text-primary" : "text-outline"}`} />
-                        <span className="text-[15px] font-semibold leading-tight">{s.label}</span>
+                        <span className="text-body font-semibold leading-tight">{s.label}</span>
                       </span>
-                      <span className="pl-6 text-[12px] leading-snug text-on-surface-variant">{s.hint}</span>
+                      <span className="pl-6 text-caption leading-snug text-on-surface-variant">{s.hint}</span>
                     </button>
                   );
                 })}
               </div>
-              <label className="flex cursor-pointer items-center justify-between rounded-xl bg-container-low px-3 py-3 text-[15px]">
+              <label className="flex cursor-pointer items-center justify-between rounded-xl bg-container-low px-3 py-3 text-body">
                 <span className="flex items-center gap-2"><Icon name="accessible" className="text-primary" /> Step-free / Accessible routes only</span>
                 <input type="checkbox" checked={form.stepFree} onChange={(e) => set("stepFree", e.target.checked)} className="h-5 w-5 accent-[var(--primary)]" />
               </label>
@@ -271,7 +271,7 @@ export default function JourneyPlanner() {
 
             {/* Trip limits (PS: budget, walking, changes, deadline, luggage, crowds, language) */}
             <div className="flex flex-col gap-2">
-              <span className="text-[13px] font-semibold text-slate">Trip Limits</span>
+              <span className="text-small font-semibold text-slate">Trip Limits</span>
               <div className="grid grid-cols-3 gap-2">
                 <NumberBox label="Budget ₹" value={form.budget} onChange={(v) => set("budget", v)} placeholder="any" />
                 <NumberBox label="Max walk (min)" value={form.maxWalk} onChange={(v) => set("maxWalk", v)} placeholder="15" />
@@ -282,10 +282,10 @@ export default function JourneyPlanner() {
               )}
               <Toggle icon="luggage" label="Heavy luggage (slower walking, prefers lifts)" checked={form.heavyLuggage} onChange={(v) => set("heavyLuggage", v)} />
               <Toggle icon="groups" label="Avoid crowded trains" checked={form.avoidCrowds} onChange={(v) => set("avoidCrowds", v)} />
-              <label className="flex items-center justify-between rounded-xl bg-container-low px-3 py-2.5 text-[15px]">
+              <label className="flex items-center justify-between rounded-xl bg-container-low px-3 py-2.5 text-body">
                 <span className="flex items-center gap-2"><Icon name="translate" className="text-primary" /> Language for explanations</span>
                 <select value={form.language} onChange={(e) => set("language", e.target.value as FormState["language"])}
-                  className="rounded-lg bg-container-lowest px-2 py-1 text-[14px] focus:outline-none">
+                  className="rounded-lg bg-container-lowest px-2 py-1 text-small focus:outline-none">
                   <option value="en">English</option><option value="hi">हिंदी</option><option value="mr">मराठी</option>
                 </select>
               </label>
@@ -305,19 +305,19 @@ export default function JourneyPlanner() {
           <section className="flex flex-col gap-3 rounded-2xl bg-container-lowest p-5 shadow-sm">
             <div className="flex items-center justify-between">
               <h2 className="flex items-center gap-2 text-base font-semibold"><Icon name="campaign" className="text-tertiary" /> Live Transit Advisories</h2>
-              <span className="rounded-full bg-tertiary-fixed px-2.5 py-0.5 text-[13px] font-semibold text-tertiary">ACTIVE ({problems.length})</span>
+              <span className="rounded-full bg-tertiary-fixed px-2.5 py-0.5 text-small font-semibold text-tertiary">ACTIVE ({problems.length})</span>
             </div>
-            {problems.length === 0 && <p className="text-[14px] text-on-surface-variant">No confirmed or possible problems right now.</p>}
+            {problems.length === 0 && <p className="text-small text-on-surface-variant">No confirmed or possible problems right now.</p>}
             {problems.slice(0, 4).map((e) => (
               <Link key={e.event_id} href={`/events/${e.event_id}`} className="flex gap-3 rounded-xl bg-container-low p-3 hover:bg-container">
                 <Icon name={e.status === "confirmed" ? "error" : "info"} className={e.status === "confirmed" ? "text-error" : "text-tertiary"} />
                 <div className="min-w-0">
-                  <p className="text-[15px] font-medium">{eventTitle(e)}</p>
-                  <p className="text-[13px] text-on-surface-variant">{STATUS_STYLE[e.status].label} {pct(e.confidence)} · {evidenceSummary(e)}</p>
+                  <p className="text-body font-medium">{eventTitle(e)}</p>
+                  <p className="text-small text-on-surface-variant">{STATUS_STYLE[e.status].label} {pct(e.confidence)} · {evidenceSummary(e)}</p>
                 </div>
               </Link>
             ))}
-            <div className="flex items-center justify-between text-[14px]">
+            <div className="flex items-center justify-between text-small">
               <span className="text-on-surface-variant">Source: Pakka Check (commuters + news + official)</span>
               <Link href="/report" className="font-semibold text-primary">View All Alerts</Link>
             </div>
@@ -331,11 +331,11 @@ export default function JourneyPlanner() {
               <div className="flex items-center gap-3">
                 <span className="grid h-10 w-10 place-items-center rounded-lg bg-primary-fixed text-on-primary-fixed"><Icon name="map" /></span>
                 <div>
-                  <h2 className="text-[17px] font-semibold">Regional Multimodal Canvas</h2>
-                  <p className="text-[13px] text-on-surface-variant">Scale: 1:25,000 MMR Corridors</p>
+                  <h2 className="text-subtitle font-semibold">Regional Multimodal Canvas</h2>
+                  <p className="text-small text-on-surface-variant">Scale: 1:25,000 MMR Corridors</p>
                 </div>
               </div>
-              <p className="text-[13px] text-on-surface-variant">Rail &amp; metro lines in their colours, your start and end, and live problems (red = confirmed, amber = possible).</p>
+              <p className="text-small text-on-surface-variant">Rail &amp; metro lines in their colours, your start and end, and live problems (red = confirmed, amber = possible).</p>
             </div>
 
             <div className="relative h-[560px] bg-container-low">
@@ -344,12 +344,12 @@ export default function JourneyPlanner() {
 
             <div className="flex flex-col gap-3 bg-container-low/50 p-5">
               <div className="flex items-center justify-between">
-                <span className="text-[13px] font-semibold uppercase tracking-wider text-on-surface-variant">Top Recommended Route Options</span>
-                {preview.cards.length > 0 && <span className="text-[13px] text-on-surface-variant">Live preview · press Find to see all</span>}
+                <span className="text-small font-semibold uppercase tracking-wider text-on-surface-variant">Top Recommended Route Options</span>
+                {preview.cards.length > 0 && <span className="text-small text-on-surface-variant">Live preview · press Find to see all</span>}
               </div>
-              {preview.state === "idle" && <p className="text-[14px] text-on-surface-variant">Pick a start and destination from the list to preview routes.</p>}
-              {preview.state === "loading" && <p className="text-[14px] text-on-surface-variant">Checking routes…</p>}
-              {preview.state === "error" && <p className="text-[14px] text-on-surface-variant">Can&apos;t reach the TravelBuddy server for a preview.</p>}
+              {preview.state === "idle" && <p className="text-small text-on-surface-variant">Pick a start and destination from the list to preview routes.</p>}
+              {preview.state === "loading" && <p className="text-small text-on-surface-variant">Checking routes…</p>}
+              {preview.state === "error" && <p className="text-small text-on-surface-variant">Can&apos;t reach the TravelBuddy server for a preview.</p>}
               {preview.cards.slice(0, 2).map((c) => <PreviewCard key={c.plan_id} card={c} />)}
             </div>
           </section>
@@ -359,17 +359,17 @@ export default function JourneyPlanner() {
             <Link href="/itinerary" className="flex items-center gap-4 rounded-2xl bg-container-lowest p-4 shadow-sm hover:shadow-md">
               <div className="grid h-20 w-20 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-tertiary-container to-tertiary text-white"><Icon name="event_note" className="text-[36px]" /></div>
               <div className="min-w-0">
-                <p className="text-[12px] font-bold uppercase tracking-wide text-on-surface-variant">Several stops?</p>
-                <p className="text-[16px] font-bold">Day Itinerary</p>
-                <p className="line-clamp-2 text-[14px] text-on-surface-variant">Best order for up to 5 places, inside opening hours.</p>
+                <p className="text-caption font-bold uppercase tracking-wide text-on-surface-variant">Several stops?</p>
+                <p className="text-subtitle font-bold">Day Itinerary</p>
+                <p className="line-clamp-2 text-small text-on-surface-variant">Best order for up to 5 places, inside opening hours.</p>
               </div>
             </Link>
             <Link href="/compare" className="flex items-center gap-4 rounded-2xl bg-container-lowest p-4 shadow-sm hover:shadow-md">
               <div className="grid h-20 w-20 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-primary to-primary-container text-white"><Icon name="compare_arrows" className="text-[36px]" /></div>
               <div className="min-w-0">
-                <p className="text-[12px] font-bold uppercase tracking-wide text-on-surface-variant">Why TravelBuddy?</p>
-                <p className="text-[16px] font-bold">Normal app vs us</p>
-                <p className="line-clamp-2 text-[14px] text-on-surface-variant">The same evening, travelled twice, scored on what really happened.</p>
+                <p className="text-caption font-bold uppercase tracking-wide text-on-surface-variant">Why TravelBuddy?</p>
+                <p className="text-subtitle font-bold">Normal app vs us</p>
+                <p className="line-clamp-2 text-small text-on-surface-variant">The same evening, travelled twice, scored on what really happened.</p>
               </div>
             </Link>
           </div>
@@ -410,20 +410,20 @@ function PreviewCard({ card }: { card: RouteCard }) {
     <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-4 rounded-2xl bg-container-lowest p-4 shadow-sm">
       <span className={`flex h-14 w-14 flex-col items-center justify-center rounded-xl ${card.recommended ? "bg-primary text-on-primary" : "bg-container-high text-on-surface"}`}>
         <span className="text-xl font-bold leading-none">{card.duration_min}</span>
-        <span className="text-[11px] font-semibold">MIN</span>
+        <span className="text-micro font-semibold">MIN</span>
       </span>
       <div className="min-w-0">
         <span className="flex flex-wrap items-center gap-1.5">
-          <span className={`rounded-md px-2 py-0.5 text-[13px] font-semibold ${card.recommended ? "bg-primary-fixed text-on-primary-fixed" : "bg-secondary-container text-on-secondary-container"}`}>
+          <span className={`rounded-md px-2 py-0.5 text-small font-semibold ${card.recommended ? "bg-primary-fixed text-on-primary-fixed" : "bg-secondary-container text-on-secondary-container"}`}>
             {PLAN_LABEL[card.label]}{card.recommended ? " · recommended" : ""}
           </span>
-          <span className={`rounded-md px-2 py-0.5 text-[12px] font-bold ${card.reliability_colour === "green" ? "bg-primary-soft text-primary-ink" : card.reliability_colour === "yellow" ? "bg-amber-soft text-amber-ink" : "bg-error-container text-on-error-container"}`}>
+          <span className={`rounded-md px-2 py-0.5 text-caption font-bold ${card.reliability_colour === "green" ? "bg-primary-soft text-primary-ink" : card.reliability_colour === "yellow" ? "bg-amber-soft text-amber-ink" : "bg-error-container text-on-error-container"}`}>
             {pct(card.reliability)} reliable
           </span>
-          {risky && <span className="text-[12px] font-bold text-error">⚠ live problem</span>}
+          {risky && <span className="text-caption font-bold text-error">⚠ live problem</span>}
         </span>
-        <p className="mt-1 truncate text-[16px] font-semibold">{parts.join(" → ") || "Walk"} <span className="font-medium text-primary">· ₹{card.cost_inr}</span></p>
-        <p className="text-[13px] text-on-surface-variant">{card.legs[0].depart} → {card.legs[card.legs.length - 1].arrive} · {card.transfers} change{card.transfers === 1 ? "" : "s"} · {card.walk_min} min walk</p>
+        <p className="mt-1 truncate text-subtitle font-semibold">{parts.join(" → ") || "Walk"} <span className="font-medium text-primary">· ₹{card.cost_inr}</span></p>
+        <p className="text-small text-on-surface-variant">{card.legs[0].depart} → {card.legs[card.legs.length - 1].arrive} · {card.transfers} change{card.transfers === 1 ? "" : "s"} · {card.walk_min} min walk</p>
       </div>
     </div>
   );
@@ -432,16 +432,16 @@ function PreviewCard({ card }: { card: RouteCard }) {
 function NumberBox({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (v: string) => void; placeholder: string }) {
   return (
     <label className="flex flex-col gap-1 rounded-xl bg-container-low px-3 py-2">
-      <span className="text-[11px] font-bold uppercase text-on-surface-variant">{label}</span>
+      <span className="text-micro font-bold uppercase text-on-surface-variant">{label}</span>
       <input inputMode="numeric" value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value.replace(/\D/g, ""))}
-        className="w-full bg-transparent text-[15px] tabular-nums focus:outline-none" />
+        className="w-full bg-transparent text-body tabular-nums focus:outline-none" />
     </label>
   );
 }
 
 function Toggle({ icon, label, checked, onChange }: { icon: string; label: string; checked: boolean; onChange: (v: boolean) => void }) {
   return (
-    <label className="flex cursor-pointer items-center justify-between gap-2 rounded-xl bg-container-low px-3 py-2.5 text-[15px]">
+    <label className="flex cursor-pointer items-center justify-between gap-2 rounded-xl bg-container-low px-3 py-2.5 text-body">
       <span className="flex items-center gap-2"><Icon name={icon} className="text-primary" /> {label}</span>
       <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="h-5 w-5 accent-[var(--primary)]" />
     </label>
@@ -461,14 +461,14 @@ function PlaceInput({ listId, value, onChange, placeholder, label, dot, pin = fa
           <span className="grid h-7 w-7 place-items-center rounded-full bg-primary-soft"><span className={`h-3 w-3 rounded-full ${dot}`} /></span>
         )}
         <input list={listId} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} aria-label={label} autoComplete="off"
-          className="min-w-0 flex-1 bg-transparent text-[17px] placeholder:text-outline focus:outline-none" />
+          className="min-w-0 flex-1 bg-transparent text-subtitle placeholder:text-outline focus:outline-none" />
         {value && (
           <button type="button" onClick={() => onChange("")} aria-label={`Clear ${label}`} className="text-outline hover:text-on-surface">
             <Icon name="close" />
           </button>
         )}
       </div>
-      {!known && <span className="text-[12px] text-error">Not in the covered area — pick a suggestion from the list</span>}
+      {!known && <span className="text-caption text-error">Not in the covered area — pick a suggestion from the list</span>}
     </div>
   );
 }

@@ -7,19 +7,19 @@
  */
 :root {
   /* surfaces */
-  --surface: #f7f9fb;
+  --surface: #f5f7f9;
   --surface-dim: #d8dadc;
   --surface-container-lowest: #ffffff;
-  --surface-container-low: #f2f4f6;
-  --surface-container: #eceef0;
-  --surface-container-high: #e6e8ea;
-  --surface-container-highest: #e0e3e5;
-  --on-surface: #191c1e;
-  --on-surface-variant: #3d4a42;
-  --outline: #6d7a72;
-  --outline-variant: #bccac0;
-  --hairline: #e2e8f0;
-  --hairline-soft: #f1f5f9;
+  --surface-container-low: #f1f4f6;
+  --surface-container: #eaeef1;
+  --surface-container-high: #e3e8eb;
+  --surface-container-highest: #dbe1e5;
+  --on-surface: #15201b;
+  --on-surface-variant: #46534c;
+  --outline: #66746d;            /* AA on white for small text */
+  --outline-variant: #c3cfc8;
+  --hairline: #e3e8ec;
+  --hairline-soft: #eff3f5;
   /* brand */
   --primary: #006948;
   --primary-container: #00855d;
@@ -60,10 +60,17 @@
   --bad-soft: var(--error-container);
   --grey: var(--outline);
 
-  /* elevation */
-  --shadow-1: 0 1px 3px 0 rgba(15, 23, 42, 0.04);
-  --shadow-2: 0 -4px 16px 0 rgba(15, 23, 42, 0.08);
-  --shadow-3: 0 8px 24px -4px rgba(15, 23, 42, 0.12);
+  /* elevation: 1 resting card · 2 raised / hover · 3 floating panel / modal */
+  --ring-hairline: 0 0 0 1px rgba(16, 32, 26, 0.06);
+  --shadow-1: var(--ring-hairline), 0 1px 2px rgba(16, 32, 26, 0.04), 0 2px 8px -2px rgba(16, 32, 26, 0.05);
+  --shadow-2: var(--ring-hairline), 0 2px 4px rgba(16, 32, 26, 0.05), 0 10px 24px -8px rgba(16, 32, 26, 0.12);
+  --shadow-3: 0 0 0 1px rgba(16, 32, 26, 0.05), 0 12px 32px -8px rgba(16, 32, 26, 0.22), 0 4px 10px -4px rgba(16, 32, 26, 0.08);
+  --shadow-sheet-up: 0 -4px 16px 0 rgba(15, 23, 42, 0.08);
+
+  /* focus + motion */
+  --focus-ring: 0 0 0 3px color-mix(in srgb, var(--primary) 28%, transparent);
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  --dur: 160ms;
 }
 
 @theme inline {
@@ -121,78 +128,209 @@
   --font-sans: var(--font-jakarta);
   --font-mono: var(--font-geist-mono);
   --shadow-card: var(--shadow-1);
-  --shadow-sheet: var(--shadow-2);
+  --shadow-sheet: var(--shadow-sheet-up);
   --shadow-float: var(--shadow-3);
 }
 
-html {
-  color-scheme: light;
+/* Design system scale (Tailwind theme tokens). Every existing rounded-* / shadow-* class
+   picks these up, so the whole app shares one radius + elevation language. */
+@theme {
+  /* type scale: micro 11 · caption 12 · small 13 · body 15 · subtitle 17 · title 22 · display 30 */
+  --text-micro: 0.6875rem;
+  --text-micro--line-height: 1rem;
+  --text-micro--letter-spacing: 0.02em;
+  --text-caption: 0.75rem;
+  --text-caption--line-height: 1.05rem;
+  --text-small: 0.8125rem;
+  --text-small--line-height: 1.25rem;
+  --text-body: 0.9375rem;
+  --text-body--line-height: 1.45rem;
+  --text-subtitle: 1.0625rem;
+  --text-subtitle--line-height: 1.5rem;
+  --text-title: 1.375rem;
+  --text-title--line-height: 1.75rem;
+  --text-display: 1.875rem;
+  --text-display--line-height: 2.25rem;
+
+  /* radius: controls 10–12 · cards 16 · pills full */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.625rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+
+  /* elevation */
+  --shadow-xs: var(--ring-hairline);
+  --shadow-sm: var(--shadow-1);
+  --shadow-md: var(--shadow-2);
+  --shadow-lg: var(--shadow-3);
+  --shadow-xl: var(--shadow-3);
 }
 
-body {
-  background: var(--surface);
-  color: var(--on-surface);
-  font-feature-settings: "tnum" 0;
+@layer base {
+  html {
+    color-scheme: light;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background: var(--surface);
+    color: var(--on-surface);
+    font-feature-settings: "tnum" 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--primary-fixed) 70%, white);
+    color: var(--on-primary-fixed);
+  }
+
+  /* Typography hierarchy: tighter, calmer headings that wrap evenly */
+  h1, h2, h3 {
+    letter-spacing: -0.012em;
+    text-wrap: balance;
+    color: var(--on-surface);
+  }
+  h1 { letter-spacing: -0.02em; }
+  p { text-wrap: pretty; }
+
+  /* Interaction feedback: every clickable element eases its colour, shadow and position */
+  a, button, summary, [role="button"], [role="radio"], [role="switch"],
+  input, select, textarea, label:has(> input[type="checkbox"]) {
+    transition-property: color, background-color, border-color, box-shadow, transform, opacity;
+    transition-duration: var(--dur);
+    transition-timing-function: var(--ease);
+  }
+  button:not(:disabled), [role="button"], [role="radio"], [role="switch"], summary, select {
+    cursor: pointer;
+  }
+  button:disabled, [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
+  /* Subtle press-in on buttons */
+  button:not(:disabled):active, a[class*="bg-primary"]:active {
+    transform: translateY(1px);
+  }
+  /* Clickable cards (links / buttons that carry card elevation) lift slightly on hover */
+  a.shadow-sm:hover, button.shadow-sm:not(:disabled):hover, article.cursor-pointer:hover {
+    box-shadow: var(--shadow-2);
+  }
+  a.shadow-sm:hover, article.cursor-pointer:hover {
+    transform: translateY(-1px);
+  }
+  .leaflet-container a.shadow-sm:hover { transform: none; }
+
+  /* Visible keyboard focus everywhere (mouse clicks keep it clean) */
+  :focus { outline: none; }
+  :focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+  }
+  input:focus-visible, select:focus-visible, textarea:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+  }
+
+  /* Inputs: one look for text fields / selects across the app */
+  input[type="text"], input[type="time"], input:not([type]), input[inputmode], select, textarea {
+    color: var(--on-surface);
+  }
+  input::placeholder, textarea::placeholder {
+    color: var(--outline);
+    opacity: 1;
+  }
+
+  /* Scrollbars that don't shout */
+  * { scrollbar-width: thin; scrollbar-color: var(--outline-variant) transparent; }
 }
 
-/* Material Symbols (loaded in layout.tsx) */
-.material-symbols-outlined {
-  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
-  line-height: 1;
-  vertical-align: middle;
-  user-select: none;
-}
-.icon-fill {
-  font-variation-settings: "FILL" 1, "wght" 500, "GRAD" 0, "opsz" 24;
+@layer components {
+  /* Material Symbols (loaded in layout.tsx) — one weight across the app */
+  .material-symbols-outlined {
+    font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+    line-height: 1;
+    vertical-align: middle;
+    user-select: none;
+    flex-shrink: 0;
+  }
+  .icon-fill {
+    font-variation-settings: "FILL" 1, "wght" 500, "GRAD" 0, "opsz" 24;
+  }
+
+  /* ---------------------------------------------------------------- shared components */
+
+  /* Level-1 card: white, hairline ring, ambient micro-shadow */
+  .card {
+    background: var(--surface-container-lowest);
+    border-radius: 1rem;
+    box-shadow: var(--shadow-1);
+  }
+  .card-interactive { cursor: pointer; }
+  .card-interactive:hover { box-shadow: var(--shadow-2); transform: translateY(-1px); }
+
+  /* Buttons: primary (filled emerald), secondary (white, hairline), ghost (text) */
+  .btn-primary, .btn-secondary, .btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 44px;
+    padding: 0 1.125rem;
+    border-radius: 0.75rem;
+    font-weight: 600;
+    font-size: var(--text-small);
+    line-height: 1.25rem;
+    white-space: nowrap;
+  }
+  .btn-primary {
+    background: var(--primary);
+    color: var(--on-primary);
+    box-shadow: 0 1px 2px rgba(0, 105, 72, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+  .btn-primary:hover { background: var(--primary-container); box-shadow: 0 4px 12px -4px rgba(0, 105, 72, 0.45); }
+  .btn-secondary {
+    background: var(--surface-container-lowest);
+    color: var(--slate);
+    box-shadow: var(--shadow-1);
+  }
+  .btn-secondary:hover { background: var(--surface-container-low); }
+  .btn-ghost { background: transparent; color: var(--primary); }
+  .btn-ghost:hover { background: var(--primary-soft); }
+  .btn-primary:disabled, .btn-secondary:disabled, .btn-ghost:disabled { opacity: 0.5; box-shadow: none; }
+
+  /* Chips / badges */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    border-radius: 9999px;
+    padding: 0.125rem 0.625rem;
+    font-size: var(--text-caption);
+    line-height: 1.25rem;
+    font-weight: 700;
+  }
+
+  /* Small uppercase section label ("eyebrow") */
+  .eyebrow {
+    font-size: var(--text-micro);
+    line-height: 1rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--on-surface-variant);
+  }
 }
 
-/* Level-1 card from DESIGN.md: white, 1px hairline, ambient micro-shadow */
-.card {
-  background: var(--surface-container-lowest);
-  border: 1px solid var(--hairline);
-  border-radius: 1rem;
-  box-shadow: var(--shadow-1);
-}
-
-/* Primary action: 48px, rounded-xl, slight press-in */
-.btn-primary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  min-height: 48px;
-  padding: 0 1.25rem;
-  border-radius: 0.75rem;
-  background: var(--primary);
-  color: var(--on-primary);
-  font-weight: 600;
-  transition: transform 0.1s ease, background-color 0.15s ease;
-}
-.btn-primary:hover {
-  background: var(--primary-container);
-}
-.btn-primary:active {
-  transform: scale(0.98);
-}
-.btn-secondary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  min-height: 44px;
-  padding: 0 1rem;
-  border-radius: 0.75rem;
-  background: var(--surface-container-lowest);
-  border: 1px solid var(--hairline);
-  color: var(--slate);
-  font-weight: 600;
-  transition: transform 0.1s ease, background-color 0.15s ease;
-}
-.btn-secondary:hover {
-  background: var(--surface-container-low);
-}
-.btn-secondary:active {
-  transform: scale(0.98);
+/* Respect "reduce motion" */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* Leaflet popups match the cards */
@@ -201,7 +339,16 @@ body {
   background: var(--surface-container-lowest);
   color: var(--on-surface);
   border-radius: 0.75rem;
+  box-shadow: var(--shadow-3);
 }
+.leaflet-tooltip {
+  border: none;
+  border-radius: 0.5rem;
+  box-shadow: var(--shadow-2);
+  font-size: var(--text-caption);
+  color: var(--on-surface);
+}
+.leaflet-bar a { transition: background-color var(--dur) var(--ease); }
 .leaflet-container {
   font-family: inherit;
 }
