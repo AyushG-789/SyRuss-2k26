@@ -95,7 +95,7 @@ function AuthDialog({ initial, onClose, onDone }: { initial: AuthRequest; onClos
               : <SigninForm initialLogin={initial.login ?? ""} onDone={onDone} onSwitch={() => setMode("signup")} />}
           </div>
           <p className="mt-4 flex items-start gap-1.5 text-caption text-on-surface-variant">
-            <Icon name="lock" className="mt-px text-[14px]" /> {t("privacy")}
+            <Icon name="lock" className="mt-px text-[16px]" /> {t("privacy")}
           </p>
         </div>
       </div>
@@ -124,7 +124,7 @@ function PasswordInput({ id, value, onChange, autoComplete, invalid }: {
         placeholder={t("passwordPh")} onChange={(e) => onChange(e.target.value)} aria-invalid={invalid} aria-describedby={invalid ? `${id}-err` : undefined} />
       <button type="button" onClick={() => setShow(!show)} aria-pressed={show}
         className="absolute right-1.5 top-1/2 flex -translate-y-1/2 items-center gap-1 rounded-lg px-2 py-1.5 text-caption font-semibold text-primary hover:bg-container-low">
-        <Icon name={show ? "visibility_off" : "visibility"} className="text-[18px]" /> {show ? t("hide") : t("show")}
+        <Icon name={show ? "visibility_off" : "visibility"} className="text-[20px]" /> {show ? t("hide") : t("show")}
       </button>
     </span>
   );

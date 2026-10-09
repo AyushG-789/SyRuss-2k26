@@ -6,18 +6,21 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import poisMock from "@/mocks/pois.json";
 import { type ItineraryPlan, planItinerary, travellers } from "@/lib/api";
-import { findPlace, PLACE_OPTIONS } from "@/lib/places";
+import { findPlace } from "@/lib/places";
 import { translate, useT } from "@/lib/i18n";
 import { M } from "@/lib/i18n/messages/DayPlanner";
 import type { Traveller } from "@/lib/types";
 import Icon from "./Icon";
 import MapView from "./MapView";
+import PlacePicker from "./PlacePicker";
 import StoryPanel from "./StoryPanel";
 
 const POIS = poisMock.pois as unknown as Record<string, { name: string; lat: number; lon: number }>;
+/** Every place you can add to a day, A to Z. */
+const POI_LIST = Object.entries(POIS).map(([id, p]) => ({ id, name: p.name })).sort((a, b) => a.name.localeCompare(b.name));
 type Stop = { poi_id: string; must_visit: boolean; fixed_time: string };
 const MAX_STOPS = 5;
 
@@ -105,7 +108,7 @@ export default function DayPlanner() {
   return (
     <main className="flex w-full flex-col gap-4 px-4 pb-16 pt-4 md:px-6">
       <header className="flex flex-col gap-1">
-        <span className="flex items-center gap-1 text-caption font-bold uppercase tracking-wider text-primary"><Icon name="event_note" className="text-[16px]" /> {t("eyebrow")}</span>
+        <span className="flex items-center gap-1 text-caption font-bold uppercase tracking-wider text-primary"><Icon name="event_note" className="text-[18px]" /> {t("eyebrow")}</span>
         <h1 className="text-2xl font-semibold">{t("title")}</h1>
         <p className="max-w-3xl text-sm text-on-surface-variant">
           {t("intro", { max: MAX_STOPS })}
@@ -114,26 +117,25 @@ export default function DayPlanner() {
 
       {demo && <StoryPanel traveller={tr4} onReplan={run} />}
 
-      <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-12">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-4 xl:grid-cols-12">
         {/* ---- Form ---- */}
-        <section className="flex flex-col gap-4 rounded-2xl bg-container-lowest p-5 shadow-sm lg:col-span-4">
+        <section className="flex flex-col gap-4 rounded-2xl bg-container-lowest p-5 shadow-sm xl:col-span-4">
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={loadExample}
               className="flex items-center gap-1 rounded-lg bg-container-low px-3 py-1.5 text-caption font-semibold text-primary hover:bg-container">
-              <Icon name="family_restroom" className="text-[16px]" /> {t("loadExample")}
+              <Icon name="family_restroom" className="text-[18px]" /> {t("loadExample")}
             </button>
             {(stops.length > 0 || start) && (
               <button type="button" onClick={clearAll} className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-caption font-semibold text-on-surface-variant hover:bg-container-low">
-                <Icon name="restart_alt" className="text-[16px]" /> {t("clear")}
+                <Icon name="restart_alt" className="text-[18px]" /> {t("clear")}
               </button>
             )}
           </div>
-          <datalist id="day-places">{PLACE_OPTIONS.map((p) => <option key={p.label} value={p.label} />)}</datalist>
-          <label className="flex flex-col gap-1 text-small font-semibold">
-            {t("startFrom")}
-            <input list="day-places" value={start} onChange={(e) => setStart(e.target.value)} placeholder={t("startPlaceholder")}
-              className="rounded-xl bg-container-low px-3 py-2.5 font-normal focus:outline-none focus:ring-2 focus:ring-primary" />
-          </label>
+          <div className="flex flex-col gap-1">
+            <span className="text-small font-semibold">{t("startFrom")}</span>
+            <PlacePicker value={start} onChange={setStart} placeholder={t("startPlaceholder")} label={t("startFrom")} compact
+              lead={<span className="block h-3 w-3 rounded-full border-[3px] border-primary" />} />
+          </div>
           <div className="grid grid-cols-2 gap-2">
             <label className="flex min-w-0 flex-col gap-1 text-small font-semibold">{t("from")}
               <input type="time" value={dayStart} onChange={(e) => setDayStart(e.target.value)} className="w-full min-w-0 rounded-xl bg-container-low px-2 py-2 font-normal tabular-nums" />
@@ -149,45 +151,47 @@ export default function DayPlanner() {
 
           <div className="flex flex-col gap-2">
             <span className="text-small font-semibold">{t("yourStops", { n: stops.length, max: MAX_STOPS })}</span>
+            <PoiAdder chosen={stops.map((x) => x.poi_id)} full={stops.length >= MAX_STOPS} onAdd={toggle} />
             {stops.length === 0 && <p className="rounded-xl bg-container-low p-3 text-small text-on-surface-variant">{t("noStops")}</p>}
-            {stops.map((s) => (
-              <div key={s.poi_id} className="flex flex-col gap-2 rounded-xl bg-container-low p-2.5">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-small font-semibold">{POIS[s.poi_id]?.name ?? s.poi_id}</span>
-                  <button type="button" onClick={() => toggle(s.poi_id)} aria-label={t("remove")} className="rounded p-0.5 text-outline hover:text-error"><Icon name="close" className="text-[18px]" /></button>
-                </div>
-                <div className="flex flex-wrap items-center gap-2 text-caption">
-                  <button type="button" onClick={() => update(s.poi_id, { must_visit: !s.must_visit })}
-                    className={`rounded-full px-2 py-0.5 font-bold ${s.must_visit ? "bg-primary text-on-primary" : "bg-container-high text-on-surface-variant"}`}>
-                    {s.must_visit ? t("mustVisit") : t("optional")}
-                  </button>
-                  <label className="flex items-center gap-1">{t("at")} <input type="time" value={s.fixed_time} onChange={(e) => update(s.poi_id, { fixed_time: e.target.value })}
-                    className="rounded bg-container-lowest px-1 py-0.5" /> <span className="text-outline">{t("optionalParen")}</span></label>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <details className="text-small" open={stops.length === 0}>
-            <summary className="cursor-pointer font-semibold text-primary">{t("addPlaces")}</summary>
-            <div className="mt-2 flex max-h-56 flex-wrap gap-1.5 overflow-y-auto">
-              {Object.entries(POIS).filter(([id]) => !stops.some((s) => s.poi_id === id)).map(([id, p]) => (
-                <button key={id} type="button" onClick={() => toggle(id)} disabled={stops.length >= MAX_STOPS}
-                  className="rounded-full bg-container-low px-2.5 py-1 text-caption hover:bg-primary-fixed disabled:opacity-40">+ {p.name}</button>
+            <ol className="flex flex-col gap-2">
+              {stops.map((s, i) => (
+                <li key={s.poi_id} className="anim-in flex flex-col gap-2.5 rounded-xl bg-container-low p-3">
+                  <div className="flex items-center gap-3">
+                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-primary-soft text-body font-bold text-primary-ink">{i + 1}</span>
+                    <span className="min-w-0 flex-1 truncate text-body font-semibold">{POIS[s.poi_id]?.name ?? s.poi_id}</span>
+                    <button type="button" onClick={() => toggle(s.poi_id)} aria-label={`${t("remove")}: ${POIS[s.poi_id]?.name ?? s.poi_id}`}
+                      className="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-outline hover:bg-container hover:text-error"><Icon name="close" className="text-[22px]" /></button>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="grid grid-cols-2 rounded-lg bg-container-lowest p-0.5" role="radiogroup" aria-label={POIS[s.poi_id]?.name}>
+                      {([[true, "mustVisit"], [false, "optional"]] as const).map(([v, l]) => (
+                        <button key={l} type="button" role="radio" aria-checked={s.must_visit === v} onClick={() => update(s.poi_id, { must_visit: v })}
+                          className={`min-h-9 rounded-md px-3 text-caption font-semibold ${s.must_visit === v ? "bg-primary text-on-primary" : "text-on-surface-variant hover:text-on-surface"}`}>
+                          {t(l)}
+                        </button>
+                      ))}
+                    </div>
+                    <label className="flex min-h-10 items-center gap-1.5 rounded-lg bg-container-lowest px-2.5 text-caption text-on-surface-variant">
+                      <Icon name="schedule" className="text-[18px] text-primary" /> {t("fixedTime")}
+                      <input type="time" value={s.fixed_time} onChange={(e) => update(s.poi_id, { fixed_time: e.target.value })}
+                        className="bg-transparent text-small text-on-surface tabular-nums focus:outline-none" />
+                    </label>
+                  </div>
+                </li>
               ))}
-            </div>
-          </details>
+            </ol>
+          </div>
 
           <button type="button" onClick={run} disabled={busy || !traveller}
             className="flex items-center justify-center gap-1 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-on-primary hover:bg-primary-container disabled:opacity-50">
-            <Icon name="auto_awesome" className="text-[18px]" /> {busy ? t("planning") : t("planMyDay")}
+            <Icon name="auto_awesome" className="text-[20px]" /> {busy ? t("planning") : t("planMyDay")}
           </button>
           {!traveller && <p className="text-caption text-error">{t("needInput")}</p>}
           {error && <p className="rounded-xl bg-amber-soft p-2 text-small text-amber-ink">{error}</p>}
         </section>
 
         {/* ---- Result ---- */}
-        <section className="flex flex-col gap-4 lg:col-span-8">
+        <section className="flex flex-col gap-4 xl:col-span-8">
           {plan && (!plan.feasible || plan.partial) && (plan.dropped?.length ?? 0) > 0 && (
             <LeftOut plan={plan} onFix={(fix) => { replanAfterChange.current = true; fix(); }}
               fixes={{
@@ -215,7 +219,7 @@ export default function DayPlanner() {
                       <button type="button" onClick={() => setFocus(i)}
                         className={`flex min-w-0 flex-1 flex-col gap-1 rounded-xl p-2 text-left transition ${focus === i ? "bg-primary-fixed/30" : "hover:bg-container-low"}`}>
                         <span className="flex items-center gap-1 text-caption text-on-surface-variant">
-                          <Icon name="alt_route" className="text-[14px]" /> {s.leg.depart} {s.leg.route} · {t("minutes", { n: s.leg.duration_min })} · ₹{s.leg.cost_inr}
+                          <Icon name="alt_route" className="text-[16px]" /> {s.leg.depart} {s.leg.route} · {t("minutes", { n: s.leg.duration_min })} · ₹{s.leg.cost_inr}
                           {s.leg.event_ids.length > 0 && <span className="rounded bg-tertiary-fixed px-1 font-bold text-tertiary">⚠ {Math.round(s.leg.reliability * 100)}%</span>}
                         </span>
                         <span className="font-semibold">{s.name}</span>
@@ -233,7 +237,7 @@ export default function DayPlanner() {
                 </ol>
                 <div className="flex flex-col gap-3">
                   <p className="flex items-center gap-1 text-caption text-on-surface-variant">
-                    <Icon name="pin_drop" className="text-[16px] text-primary" /> {t("mapLegendNumbers")} · <b>S</b> {t("mapLegendStart")} · {t("mapLegendClick")}
+                    <Icon name="pin_drop" className="text-[18px] text-primary" /> {t("mapLegendNumbers")} · <b>S</b> {t("mapLegendStart")} · {t("mapLegendClick")}
                   </p>
                   <div className="h-[420px] overflow-hidden rounded-2xl bg-container-lowest shadow-sm">
                     {focused && (
@@ -261,7 +265,7 @@ export default function DayPlanner() {
                   )}
                   {(plan.warnings?.length ?? 0) > 0 && (
                     <div className="rounded-2xl bg-tertiary-fixed p-4 text-small text-tertiary">
-                      {plan.warnings!.map((w) => <p key={w} className="flex items-start gap-1"><Icon name="warning" className="text-[16px]" /> {w}</p>)}
+                      {plan.warnings!.map((w) => <p key={w} className="flex items-start gap-1"><Icon name="warning" className="text-[18px]" /> {w}</p>)}
                     </div>
                   )}
                   <p className="text-caption text-outline">
@@ -319,7 +323,7 @@ function LeftOut({ plan, fixes, onFix, hasFixed }: {
       <ul className="flex flex-col gap-1.5">
         {dropped.map((d) => (
           <li key={d.poi_id} className="flex items-start gap-2 rounded-xl bg-amber-soft/60 px-3 py-2 text-sm">
-            <Icon name="close" className="text-[18px] text-amber-ink" />
+            <Icon name="close" className="text-[20px] text-amber-ink" />
             <span>
               {d.must_visit && <span className="mr-1 rounded bg-error-container px-1.5 py-0.5 text-micro font-bold text-on-error-container">{t("mustVisitTag")}</span>}
               {d.reason}
@@ -338,7 +342,7 @@ function LeftOut({ plan, fixes, onFix, hasFixed }: {
           ].map((f) => (
             <button key={f.k} type="button" onClick={() => onFix(fixes[f.k])}
               className="flex items-center gap-1 rounded-xl bg-container-low px-3 py-2 text-small font-semibold hover:bg-container">
-              <Icon name={f.icon} className="text-[18px] text-primary" /> {f.label}
+              <Icon name={f.icon} className="text-[20px] text-primary" /> {f.label}
             </button>
           ))}
         </div>
@@ -352,6 +356,72 @@ function Mini({ label, value }: { label: string; value: string }) {
     <div className="rounded-2xl bg-container-lowest p-4 shadow-sm">
       <span className="block eyebrow">{label}</span>
       <span className="text-xl font-bold">{value}</span>
+    </div>
+  );
+}
+
+/** Add a place to the day: type to search, or open the A–Z list with the arrow. Keyboard: ↑ ↓ Enter Esc. */
+function PoiAdder({ chosen, full, onAdd }: { chosen: string[]; full: boolean; onAdd: (id: string) => void }) {
+  const t = useT(M);
+  const listId = useId();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [q, setQ] = useState("");
+  const [open, setOpen] = useState(false);
+  const [active, setActive] = useState(0);
+  const query = q.trim().toLowerCase();
+  const shown = POI_LIST.filter((p) => !chosen.includes(p.id) && (!query || p.name.toLowerCase().includes(query)))
+    // names that start with what was typed come first, the rest stay A to Z
+    .sort((a, b) => Number(!a.name.toLowerCase().startsWith(query)) - Number(!b.name.toLowerCase().startsWith(query)));
+
+  function pick(id: string) {
+    onAdd(id);
+    setQ("");
+    setActive(0);
+    inputRef.current?.focus();
+  }
+  function onKey(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "ArrowDown") { e.preventDefault(); setOpen(true); setActive((a) => Math.min(a + 1, shown.length - 1)); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); setActive((a) => Math.max(a - 1, 0)); }
+    else if (e.key === "Enter" && open && shown[active]) { e.preventDefault(); pick(shown[active].id); }
+    else if (e.key === "Escape" && open) { e.preventDefault(); setOpen(false); }
+  }
+
+  if (full) return <p className="rounded-xl bg-primary-soft p-3 text-small text-primary-ink">{t("allAdded", { max: MAX_STOPS })}</p>;
+  return (
+    <div className="relative" onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setOpen(false); }}>
+      <div className="flex min-h-12 items-center gap-2 rounded-xl border border-dashed border-outline-variant bg-container-lowest pl-3 pr-1.5 focus-within:border-solid focus-within:ring-2 focus-within:ring-primary">
+        <Icon name="add_location_alt" className="text-[22px] text-primary" />
+        <input ref={inputRef} value={q} placeholder={t("addPlaceholder")} aria-label={t("addPlaces")} autoComplete="off" spellCheck={false}
+          role="combobox" aria-expanded={open} aria-controls={listId} aria-autocomplete="list"
+          aria-activedescendant={open && shown[active] ? `${listId}-${active}` : undefined}
+          onChange={(e) => { setQ(e.target.value); setOpen(true); setActive(0); }}
+          onFocus={() => setOpen(true)} onKeyDown={onKey}
+          className="min-w-0 flex-1 bg-transparent text-body placeholder:text-outline focus:outline-none" />
+        <button type="button" tabIndex={-1} aria-label={t("showAllPlaces")} aria-expanded={open} aria-controls={listId}
+          onMouseDown={(e) => e.preventDefault()} onClick={() => { setOpen((o) => !o); inputRef.current?.focus(); }}
+          className={`grid h-10 w-10 shrink-0 place-items-center rounded-lg transition hover:bg-container ${open ? "bg-container text-primary" : "text-on-surface-variant"}`}>
+          <Icon name="expand_more" className={`text-[28px] transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
+        </button>
+      </div>
+      {open && (
+        <div className="anim-pop absolute inset-x-0 top-full z-40 mt-1.5 overflow-hidden rounded-2xl bg-container-lowest shadow-float ring-1 ring-hairline" style={{ transformOrigin: "top center" }}>
+          <div className="border-b border-hairline-soft px-4 py-2 text-caption text-on-surface-variant">
+            {query ? t("matchesN", { n: shown.length }) : t("placesAZ", { n: shown.length })}
+          </div>
+          <ul id={listId} role="listbox" aria-label={t("addPlaces")} className="max-h-72 overflow-y-auto overscroll-contain p-1.5">
+            {shown.length === 0 && <li className="px-3 py-4 text-center text-small text-on-surface-variant">{t("noPlaceMatch", { q: q.trim() })}</li>}
+            {shown.map((p, i) => (
+              <li key={p.id} id={`${listId}-${i}`} role="option" aria-selected={i === active}
+                onMouseDown={(e) => e.preventDefault()} onMouseEnter={() => setActive(i)} onClick={() => pick(p.id)}
+                className={`flex cursor-pointer items-center gap-3 rounded-xl px-2.5 py-2 ${i === active ? "bg-container-low" : ""}`}>
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-primary-soft text-primary-ink"><Icon name="location_on" className="text-[20px]" /></span>
+                <span className="min-w-0 flex-1 truncate text-body font-semibold">{p.name}</span>
+                <Icon name="add_circle" className="shrink-0 text-[22px] text-primary" />
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }

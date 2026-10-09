@@ -4,7 +4,7 @@
 import "leaflet/dist/leaflet.css";
 import { createLeafletContext, LeafletContext, type LeafletContextInterface } from "@react-leaflet/core";
 import { divIcon, Map as LeafletMap } from "leaflet";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CircleMarker, Marker, Polyline, Popup, TileLayer, Tooltip, useMap } from "react-leaflet";
 import { lines, stations } from "@/lib/api";
 import { evidenceSummary, eventPosition, eventTitle, legColor, pct, STATUS_STYLE } from "@/lib/format";
@@ -38,7 +38,7 @@ function stopIcon(badge: string, active: boolean, start: boolean, c: MapColors) 
     className: "",
     iconSize: [size, size],
     iconAnchor: [size / 2, size / 2],
-    html: `<div style="width:${size}px;height:${size}px;border-radius:9999px;background:${bg};color:${c.pinText};display:grid;place-items:center;font:700 ${active ? 15 : 13}px/1 'Plus Jakarta Sans',system-ui,sans-serif;border:3px solid ${c.ring};box-shadow:0 2px 6px rgba(0,0,0,.35)">${badge}</div>`,
+    html: `<div style="width:${size}px;height:${size}px;border-radius:9999px;background:${bg};color:${c.pinText};display:grid;place-items:center;font:700 ${active ? 15 : 13}px/1 'Plus Jakarta Sans',system-ui,sans-serif;border:3px solid ${c.ring};box-shadow:0 2px 6px rgba(0,0,0,.35)${active ? `,0 0 0 6px ${bg}33` : ""}">${badge}</div>`,
   });
 }
 
@@ -198,6 +198,13 @@ export default function RouteMap({
         <CircleMarker key={`${w.key}-dot`} center={w.path[0]} radius={4} pathOptions={{ color: WALK_COLOR, fillColor: WALK_COLOR, fillOpacity: 1, weight: 1 }} />
       ))}
 
+      {/* Light casing under the chosen route so it reads clearly above the map and other lines. */}
+      {paths.map(({ leg, path }, i) =>
+        path.length > 1 ? (
+          <Polyline key={`${card?.plan_id}-${i}-casing`} positions={path} interactive={false}
+            pathOptions={{ color: c.ring, weight: leg.mode === "walk" ? 7 : 10, opacity: 0.85, lineCap: "round", lineJoin: "round" }} />
+        ) : null,
+      )}
       {paths.map(({ leg, path }, i) =>
         path.length > 1 ? (
           <Polyline
@@ -225,8 +232,12 @@ export default function RouteMap({
         if (!pos) return null;
         const style = STATUS_STYLE[ev.status];
         return (
+          <Fragment key={ev.event_id}>
+          {ev.status === "confirmed" && (
+            <CircleMarker center={pos} radius={11} interactive={false}
+              pathOptions={{ color: style.color, fillColor: style.color, fillOpacity: 0.3, weight: 0, className: "map-pulse-slow" }} />
+          )}
           <CircleMarker
-            key={ev.event_id}
             center={pos}
             radius={ev.status === "confirmed" ? 11 : 8}
             pathOptions={{ color: style.color, fillColor: style.color, fillOpacity: 0.35, weight: 2 }}
@@ -241,6 +252,7 @@ export default function RouteMap({
               </span>
             </Popup>
           </CircleMarker>
+          </Fragment>
         );
       })}
 
@@ -262,9 +274,17 @@ export default function RouteMap({
         </CircleMarker>
       )}
       {destination && stops.length === 0 && (
+        <CircleMarker center={[destination.lat, destination.lon]} radius={15} interactive={false}
+          pathOptions={{ color: c.accent, fillColor: c.accentFill, fillOpacity: 0.18, weight: 0 }} />
+      )}
+      {destination && stops.length === 0 && (
         <CircleMarker center={[destination.lat, destination.lon]} radius={8} pathOptions={{ color: c.accent, fillColor: c.accentFill, fillOpacity: 1, weight: 3 }}>
           <Tooltip>{t("endAt", { label: destination.label })}</Tooltip>
         </CircleMarker>
+      )}
+      {here && (
+        <CircleMarker center={here} radius={9} interactive={false}
+          pathOptions={{ color: c.brand, fillColor: c.brand, fillOpacity: 0.35, weight: 0, className: "map-pulse" }} />
       )}
       {here && (
         <CircleMarker center={here} radius={9} pathOptions={{ color: c.ring, fillColor: c.brand, fillOpacity: 1, weight: 4 }}>

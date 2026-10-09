@@ -188,7 +188,7 @@ export default function LocalTrainsTracker({
               className="flex items-center gap-1.5 rounded-xl border border-outline-variant bg-container-lowest px-3 py-1.5 text-xs font-semibold text-on-surface hover:bg-container-high transition-colors disabled:opacity-50"
               title="Refresh departures"
             >
-              <Icon name="refresh" className={`text-[16px] ${loading ? "animate-spin" : ""}`} />
+              <Icon name="refresh" className={`text-[18px] ${loading ? "animate-spin" : ""}`} />
               <span>Refresh</span>
             </button>
           </div>
@@ -218,7 +218,7 @@ export default function LocalTrainsTracker({
                   }`}
                 />
                 <span>{line.name}</span>
-                <span className="text-[11px] font-normal opacity-80">({line.operator})</span>
+                <span className="text-micro font-normal opacity-80">({line.operator})</span>
               </button>
             );
           })}
@@ -328,16 +328,16 @@ export default function LocalTrainsTracker({
               </span>
             ) : (
               <span className="flex items-center gap-1.5 font-medium text-on-surface">
-                <Icon name="event_note" className="text-[16px] text-primary" />
+                <Icon name="event_note" className="text-[18px] text-primary" />
                 <span>Planned times</span>
-                <span className="text-[11px] text-on-surface-variant">
+                <span className="text-micro text-on-surface-variant">
                   (no live feed right now · based on how often trains usually run · train numbers show only with live data)
                 </span>
               </span>
             )}
           </div>
           {lastRefreshed && (
-            <div className="text-[11px] text-on-surface-variant">
+            <div className="text-micro text-on-surface-variant">
               Last updated: <span className="font-semibold text-on-surface">{lastRefreshed}</span>
             </div>
           )}
@@ -390,7 +390,7 @@ export default function LocalTrainsTracker({
                       <div className="flex flex-wrap items-center gap-1.5">
                         {/* Fast / Slow badge */}
                         <span
-                          className={`rounded px-2 py-0.5 text-[11px] font-black uppercase tracking-wider text-white ${
+                          className={`rounded px-2 py-0.5 text-micro font-black uppercase tracking-wider text-white ${
                             isFast ? "bg-[#B71C1C]" : "bg-amber-600"
                           }`}
                         >
@@ -398,12 +398,12 @@ export default function LocalTrainsTracker({
                         </span>
 
                         {/* Direction badge */}
-                        <span className="rounded bg-container-high px-2 py-0.5 text-[11px] font-bold text-on-surface-variant">
+                        <span className="rounded bg-container-high px-2 py-0.5 text-micro font-bold text-on-surface-variant">
                           {isUp ? "↑ UP" : "↓ DOWN"}
                         </span>
 
                         {/* Platform */}
-                        <span className="rounded bg-primary-fixed px-2 py-0.5 text-[11px] font-bold text-primary">
+                        <span className="rounded bg-primary-fixed px-2 py-0.5 text-micro font-bold text-primary">
                           {train.platform}
                         </span>
                       </div>
@@ -441,11 +441,11 @@ export default function LocalTrainsTracker({
 
                     <div>
                       {train.delay_minutes > 0 ? (
-                        <span className="rounded bg-red-100 px-2 py-0.5 text-[11px] font-bold text-red-700 dark:bg-red-950 dark:text-red-300">
+                        <span className="rounded bg-red-100 px-2 py-0.5 text-micro font-bold text-red-700 dark:bg-red-950 dark:text-red-300">
                           +{train.delay_minutes} min delay
                         </span>
                       ) : (
-                        <span className="rounded bg-emerald-100 px-2 py-0.5 text-[11px] font-bold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+                        <span className="rounded bg-emerald-100 px-2 py-0.5 text-micro font-bold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
                           Right time
                         </span>
                       )}

@@ -65,7 +65,7 @@ export default function StoryPanel({ traveller, onReplan, resultsHref }: {
     <section className="flex flex-col gap-3 rounded-2xl border-2 border-primary/30 bg-primary-fixed/20 p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="flex items-center gap-1 text-caption font-bold uppercase tracking-wider text-primary">
-          <Icon name="theater_comedy" className="text-[16px]" /> {t("badge", { id: traveller.traveller_id, name: text.name ?? traveller.name })}
+          <Icon name="theater_comedy" className="text-[18px]" /> {t("badge", { id: traveller.traveller_id, name: text.name ?? traveller.name })}
         </span>
         <span className="rounded-full bg-container-lowest px-2 py-0.5 text-micro font-bold text-on-surface-variant">
           {d.kind === "track" ? t("kindTrack", { time: d.moment }) : d.kind === "plan" ? t("kindPlan") : t("kindItinerary")}
@@ -79,7 +79,7 @@ export default function StoryPanel({ traveller, onReplan, resultsHref }: {
           <Icon name="play_circle" className="text-[20px]" /> {busy ? t("settingUp") : label}
         </button>
         <span className="flex items-center gap-1 text-caption text-on-surface-variant">
-          <Icon name="visibility" className="text-[16px]" /> {text.watch}
+          <Icon name="visibility" className="text-[18px]" /> {text.watch}
         </span>
       </div>
       {done && <p className="text-caption font-semibold text-primary">{t("done", { time: d.moment })}</p>}

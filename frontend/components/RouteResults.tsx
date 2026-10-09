@@ -155,15 +155,15 @@ export default function RouteResults({ traveller }: { traveller: Traveller | nul
           </h1>
           <p className="mt-0.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-small text-on-surface-variant">
             <span>{traveller.traveller_id === "CUSTOM" ? t("yourTrip") : storyText(activeLang(), traveller.traveller_id, { name: traveller.name }).name}</span>
-            {live?.source === "backend" && <span className="flex items-center gap-1"><Icon name="sensors" className="text-[16px] text-primary" /> {t("liveAt", { time: live.asOf ?? "" })}</span>}
-            {active.length > 0 && <span className="flex items-center gap-1 text-tertiary"><Icon name="warning" className="text-[16px]" /> {t(active.length === 1 ? "liveProblem" : "liveProblems", { n: active.length })}</span>}
+            {live?.source === "backend" && <span className="flex items-center gap-1"><Icon name="sensors" className="text-[18px] text-primary" /> {t("liveAt", { time: live.asOf ?? "" })}</span>}
+            {active.length > 0 && <span className="flex items-center gap-1 text-tertiary"><Icon name="warning" className="text-[18px]" /> {t(active.length === 1 ? "liveProblem" : "liveProblems", { n: active.length })}</span>}
             {plan?.sample && <span className="rounded-full bg-amber-soft px-2 py-0.5 font-semibold text-amber-ink">{t("sample")}</span>}
           </p>
           {constraints.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-1.5">
               {constraints.map((c) => (
                 <span key={c.text} className="flex items-center gap-1 rounded-lg bg-container-low px-2 py-1 text-caption font-semibold">
-                  <Icon name={c.icon} className="text-[16px] text-on-surface-variant" /> {c.text}
+                  <Icon name={c.icon} className="text-[18px] text-on-surface-variant" /> {c.text}
                 </span>
               ))}
             </div>
@@ -172,7 +172,7 @@ export default function RouteResults({ traveller }: { traveller: Traveller | nul
         <div className="flex flex-wrap items-center gap-2">
           <Link href={`/plan?from=${encodeURIComponent(traveller.origin.label)}&to=${encodeURIComponent(destination?.label ?? "")}`}
             className="flex items-center gap-1 rounded-xl bg-container-low px-4 py-2.5 text-small font-semibold hover:bg-container">
-            <Icon name="edit_calendar" className="text-[18px]" /> {departText}
+            <Icon name="edit_calendar" className="text-[20px]" /> {departText}
           </Link>
           <button type="button" title={t("copyTitle")} aria-label={t("copyAria")}
             onClick={() => { navigator.clipboard?.writeText(window.location.href).catch(() => undefined); setCopied(true); setTimeout(() => setCopied(false), 1500); }}
@@ -202,8 +202,7 @@ export default function RouteResults({ traveller }: { traveller: Traveller | nul
                   disabled={!counts[f.id] && !picked.has(f.id)}
                   className={`flex h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl px-3 text-small font-semibold transition disabled:opacity-40 ${
                     picked.has(f.id) ? "bg-primary text-on-primary shadow-sm" : "bg-container-low text-on-surface-variant hover:bg-container hover:text-on-surface"}`}>
-                  <Icon name={picked.has(f.id) && f.id !== "all" ? "check_circle" : f.icon} fill={picked.has(f.id) && f.id !== "all"} className="text-[18px]" /> {t(f.label)}
-                  <span className={`rounded-full px-1.5 text-micro tabular-nums ${picked.has(f.id) ? "bg-on-primary/20" : "bg-container text-on-surface-variant"}`}>{counts[f.id] ?? 0}</span>
+                  <Icon name={picked.has(f.id) && f.id !== "all" ? "check_circle" : f.icon} fill={picked.has(f.id) && f.id !== "all"} className="text-[20px]" /> {t(f.label)}
                 </button>
               ))}
               </div>
@@ -217,7 +216,7 @@ export default function RouteResults({ traveller }: { traveller: Traveller | nul
                   <button key={c.plan_id} onClick={() => setSelectedId(c.plan_id)} aria-pressed={on}
                     className={`flex h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl px-3.5 text-small font-semibold transition ${
                       on ? "bg-primary text-on-primary shadow-sm" : "bg-container-low text-on-surface hover:bg-container"}`}>
-                    <Icon name={LABEL_STYLE[c.label].icon} className="text-[18px]" />
+                    <Icon name={LABEL_STYLE[c.label].icon} className="text-[20px]" />
                     {PLAN_LABEL[c.label]}{c.recommended ? t("recommendedSuffix") : ""}
                     <span className={on ? "text-on-primary/80" : "text-on-surface-variant"}>
                       {c.label === "cheapest" ? `₹${c.cost_inr}` : t("minShort", { n: c.duration_min })}
@@ -247,10 +246,10 @@ export default function RouteResults({ traveller }: { traveller: Traveller | nul
 
               {(plan.notes?.length ?? 0) > 0 && (
                 <section className="flex flex-col gap-1.5 rounded-2xl bg-container-lowest p-4 shadow-sm">
-                  <h2 className="flex items-center gap-2 text-sm font-semibold"><Icon name="verified_user" className="text-[18px] text-primary" /> {t("pcChanged")}</h2>
+                  <h2 className="flex items-center gap-2 text-sm font-semibold"><Icon name="verified_user" className="text-[20px] text-primary" /> {t("pcChanged")}</h2>
                   {plan.notes!.map((n) => (
                     <p key={n} className="flex items-start gap-2 text-small text-on-surface-variant">
-                      <Icon name={isAvoided(n) ? "block" : "info"} className={`text-[16px] ${isAvoided(n) ? "text-error" : "text-secondary"}`} /> {n}
+                      <Icon name={isAvoided(n) ? "block" : "info"} className={`text-[18px] ${isAvoided(n) ? "text-error" : "text-secondary"}`} /> {n}
                     </p>
                   ))}
                 </section>
@@ -386,7 +385,7 @@ function NoRoute({ traveller, rejected }: { traveller: Traveller; rejected: Plan
         <ul className="flex flex-col gap-1.5">
           {reasons.map((r) => (
             <li key={r} className="flex items-start gap-2 rounded-xl bg-amber-soft/60 px-3 py-2 text-sm text-on-surface">
-              <Icon name="info" className="text-[18px] text-amber-ink" /> {r}
+              <Icon name="info" className="text-[20px] text-amber-ink" /> {r}
             </li>
           ))}
         </ul>
@@ -475,15 +474,15 @@ function ResultCard({ card, traveller, destinationLabel, fastest, selected, onSe
   const style = LABEL_STYLE[card.label];
   return (
     <article onClick={onSelect}
-      className={`flex cursor-pointer flex-col gap-4 rounded-2xl bg-container-lowest p-5 shadow-sm transition hover:shadow-md ${selected ? "ring-2 ring-primary" : ""}`}>
+      className={`flex cursor-pointer flex-col gap-4 rounded-2xl bg-container-lowest p-5 transition ${selected ? "tb-chosen" : "shadow-sm hover:shadow-md"}`}>
       <div className="flex flex-wrap items-center gap-2">
         <span className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-caption font-bold ${style.chip}`}>
-          <Icon name={style.icon} className="text-[16px]" /> {card.recommended ? t("card.recommended", { label: PLAN_LABEL[card.label] }) : t(style.title)}
+          <Icon name={style.icon} className="text-[18px]" /> {card.recommended ? t("card.recommended", { label: PLAN_LABEL[card.label] }) : t(style.title)}
         </span>
         <span className={`rounded-full px-2.5 py-1 text-caption font-bold ${REL_STYLE[card.reliability_colour]}`}>{t("reliable", { pct: pct(card.reliability) })}</span>
         {risky.length > 0 && (
           <span className="flex items-center gap-1 rounded-full bg-error-container px-2.5 py-1 text-caption font-bold text-on-error-container">
-            <Icon name="warning" className="text-[16px]" /> {t("liveOnRoute")}
+            <Icon name="warning" className="text-[18px]" /> {t("liveOnRoute")}
           </span>
         )}
         <span className="ml-auto flex items-center gap-1 text-caption font-semibold text-primary">
@@ -509,11 +508,11 @@ function ResultCard({ card, traveller, destinationLabel, fastest, selected, onSe
             const hit = leg.event_ids.length > 0 && leg.risk >= 0.3;
             return (
               <li key={i} className="flex items-center gap-2">
-                {i > 0 && <Icon name="arrow_forward" className="text-[16px] text-outline" />}
+                {i > 0 && <Icon name="arrow_forward" className="text-[18px] text-outline" />}
                 {leg.mode === "walk" ? (
                   <span className={`flex items-center gap-0.5 text-small ${hit ? "font-semibold text-error" : "text-on-surface-variant"}`}>
-                    {hit && <Icon name="warning" className="text-[16px]" />}
-                    <Icon name="directions_walk" className="text-[18px]" />{t("minShort", { n: leg.duration_min })}
+                    {hit && <Icon name="warning" className="text-[18px]" />}
+                    <Icon name="directions_walk" className="text-[20px]" />{t("minShort", { n: leg.duration_min })}
                   </span>
                 ) : (
                   <span className="flex items-center gap-1.5 rounded-lg bg-container-lowest px-2 py-1 shadow-sm">
@@ -529,18 +528,18 @@ function ResultCard({ card, traveller, destinationLabel, fastest, selected, onSe
         </ol>
         <div className="flex flex-wrap gap-x-4 gap-y-1 text-small text-on-surface-variant">
           {interchanges(card, traveller, destinationLabel) && (
-            <span className="flex items-center gap-1"><Icon name="transfer_within_a_station" className="text-[16px]" /> {interchanges(card, traveller, destinationLabel)}</span>
+            <span className="flex items-center gap-1"><Icon name="transfer_within_a_station" className="text-[18px]" /> {interchanges(card, traveller, destinationLabel)}</span>
           )}
-          <span className="flex items-center gap-1"><Icon name="directions_walk" className="text-[16px]" /> {t("walking", { n: card.walk_min })}</span>
-          {!card.legs.every((l) => l.step_free) && <span className="flex items-center gap-1"><Icon name="stairs" className="text-[16px]" /> {t("stairs")}</span>}
+          <span className="flex items-center gap-1"><Icon name="directions_walk" className="text-[18px]" /> {t("walking", { n: card.walk_min })}</span>
+          {!card.legs.every((l) => l.step_free) && <span className="flex items-center gap-1"><Icon name="stairs" className="text-[18px]" /> {t("stairs")}</span>}
           {risky.length > 0 && (
-            <span className="flex items-center gap-1 font-semibold text-error"><Icon name="warning" className="text-[16px]" /> {t(risky.length === 1 ? "riskyLeg" : "riskyLegs", { n: risky.length })}</span>
+            <span className="flex items-center gap-1 font-semibold text-error"><Icon name="warning" className="text-[18px]" /> {t(risky.length === 1 ? "riskyLeg" : "riskyLegs", { n: risky.length })}</span>
           )}
         </div>
       </div>
 
       <p className="flex items-start gap-2 text-small">
-        <Icon name="tips_and_updates" className="text-[18px] text-primary" /> {card.reason}
+        <Icon name="tips_and_updates" className="text-[20px] text-primary" /> {card.reason}
       </p>
 
       {panel === "steps" && (
@@ -572,13 +571,13 @@ function ResultCard({ card, traveller, destinationLabel, fastest, selected, onSe
 
       <div className="flex flex-wrap items-center gap-2" onClick={(e) => e.stopPropagation()}>
         <button onClick={() => setPanel(panel === "steps" ? null : "steps")} className="mr-auto flex items-center gap-1 text-small font-semibold text-primary">
-          {panel === "steps" ? t("hideSteps") : t("viewSteps", { n: card.legs.length })} <Icon name="keyboard_arrow_right" className="text-[18px]" />
+          {panel === "steps" ? t("hideSteps") : t("viewSteps", { n: card.legs.length })} <Icon name="keyboard_arrow_right" className="text-[20px]" />
         </button>
         <button onClick={() => setPanel(panel === "fare" ? null : "fare")} className="rounded-xl bg-container-low px-4 py-2.5 text-small font-semibold hover:bg-container">
           {t("fareBreakdown")}
         </button>
         <button onClick={onTrack} className={`flex items-center gap-1 rounded-xl px-4 py-2.5 text-small font-semibold ${selected ? "bg-primary text-on-primary hover:bg-primary-container" : "bg-container-low hover:bg-container"}`}>
-          <Icon name="near_me" className="text-[18px]" /> {t("startTracking")}
+          <Icon name="near_me" className="text-[20px]" /> {t("startTracking")}
         </button>
       </div>
     </article>

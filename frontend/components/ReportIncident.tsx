@@ -111,7 +111,7 @@ export default function ReportIncident() {
         <div className="flex items-center gap-1 text-micro font-bold text-on-surface-variant">
           {page.breadcrumb.map((b, i) => (
             <span key={b} className="flex items-center gap-1">
-              {i > 0 && <Icon name="chevron_right" className="text-[14px] text-outline" />}
+              {i > 0 && <Icon name="chevron_right" className="text-[16px] text-outline" />}
               {i === 0 ? <Link href="/home" className="hover:text-primary">{t(b)}</Link>
                 : <span className={i === page.breadcrumb.length - 1 ? "font-semibold text-primary" : ""}>{t(b)}</span>}
             </span>
@@ -170,12 +170,12 @@ export default function ReportIncident() {
             <div className="flex items-center justify-between">
               <StepTitle n={2} title={t("step3")} />
               <span className="flex items-center gap-1 rounded-lg bg-container px-2 py-1 text-micro font-semibold text-primary">
-                <Icon name="edit_location_alt" className="text-[16px]" /> {t("refinePin")}
+                <Icon name="edit_location_alt" className="text-[18px]" /> {t("refinePin")}
               </span>
             </div>
             <div className="flex items-start gap-2 rounded-xl bg-container p-2">
               <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-on-primary">
-                <Icon name="near_me" className="text-[18px]" />
+                <Icon name="near_me" className="text-[20px]" />
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-1">
@@ -192,7 +192,7 @@ export default function ReportIncident() {
                 <span className="text-micro font-bold text-primary">{t("requiredBy")}</span>
               </span>
               <span className="relative">
-                <Icon name="train" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-primary" />
+                <Icon name="train" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[20px] text-primary" />
                 <select value={stationId} onChange={(e) => setStationId(e.target.value)}
                   className="h-11 w-full cursor-pointer appearance-none rounded-xl bg-container pl-10 pr-10 text-small focus:outline-none focus:ring-2 focus:ring-primary">
                   {stationOptions.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
@@ -240,11 +240,11 @@ export default function ReportIncident() {
                 </button>
               </div>
               <div className="flex items-center gap-1 text-micro font-bold text-outline">
-                <Icon name="verified_user" className="text-[18px] text-primary" /> {t("filedAt", { station: station?.name ?? stationId, type: TYPE_LABEL[cat.type] ?? cat.type })}
+                <Icon name="verified_user" className="text-[20px] text-primary" /> {t("filedAt", { station: station?.name ?? stationId, type: TYPE_LABEL[cat.type] ?? cat.type })}
               </div>
             </div>
             <div className="flex items-start gap-1 border-t border-container-high/60 pt-2">
-              <Icon name="info" className="mt-0.5 text-[16px] text-outline" />
+              <Icon name="info" className="mt-0.5 text-[18px] text-outline" />
               <p className="text-small leading-relaxed text-on-surface-variant">
                 {t("howChecked")}
               </p>
@@ -286,7 +286,7 @@ export default function ReportIncident() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1">
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-on-primary shadow-sm">
-                  <Icon name="workspace_premium" className="text-[18px]" />
+                  <Icon name="workspace_premium" className="text-[20px]" />
                 </div>
                 <div className="flex flex-col">
                   <span className="eyebrow">{t("repTier")}</span>
@@ -342,7 +342,7 @@ function ResultBanner({ result }: { result: Result }) {
   const r = result.out;
   const style = STATUS_STYLE[r.status];
   return (
-    <div className="flex flex-col gap-1 rounded-xl bg-primary-soft p-3 text-sm text-primary-ink">
+    <div className="tb-success flex flex-col gap-1 rounded-xl bg-primary-soft p-3 text-sm text-primary-ink">
       <p className="flex items-center gap-2 font-semibold">
         <Icon name="check_circle" /> {t("received", { time: r.reported_at })} — {r.created_event ? t("newReport") : t("addedExisting")}
       </p>
@@ -414,7 +414,7 @@ function NearbyFeed({ events, backend }: { events: DisruptionEvent[]; backend: b
               <p className="line-clamp-1 text-small text-on-surface-variant">{evidenceSummary(ev)} · {t("sure", { pct: pct(ev.confidence) })}</p>
               <div className="flex items-center justify-between pt-1">
                 <div className={`flex items-center gap-1 text-micro font-bold ${burst ? "text-outline" : "text-primary"}`}>
-                  <Icon name={burst ? "flag" : official ? "verified" : "groups"} className="text-[16px]" />
+                  <Icon name={burst ? "flag" : official ? "verified" : "groups"} className="text-[18px]" />
                   {burst ? t("burstIgnored") : official ? t("verifiedOfficial") : ev.status === "confirmed" ? t("communityConfirmed") : style.label}
                 </div>
                 <div className="flex items-center gap-2">
@@ -422,7 +422,7 @@ function NearbyFeed({ events, backend }: { events: DisruptionEvent[]; backend: b
                   {confirmed[ev.event_id] && <span className="text-micro font-bold text-primary">{confirmedText(confirmed[ev.event_id])}</span>}
                   <button type="button" onClick={() => seeToo(ev)} disabled={!backend || burst} title={t("seeToo")}
                     className="flex items-center gap-1 rounded bg-container-lowest px-2 py-0.5 text-micro font-bold shadow-sm transition-colors hover:bg-container-high disabled:opacity-50">
-                    <Icon name="thumb_up" className="text-[14px] text-primary" /> {crowd}
+                    <Icon name="thumb_up" className="text-[16px] text-primary" /> {crowd}
                   </button>
                 </div>
               </div>

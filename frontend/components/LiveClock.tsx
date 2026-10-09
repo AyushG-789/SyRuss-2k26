@@ -51,7 +51,7 @@ export default function LiveClock({ className = "", showIcon = true, showZone = 
       title="Live Mumbai Transit Time (Asia/Kolkata)"
       aria-label="Current Mumbai Transit System Time"
     >
-      {showIcon && <Icon name="schedule" className={`${lg ? "text-[24px]" : "text-[16px]"} text-primary`} />}
+      {showIcon && <Icon name="schedule" className={`${lg ? "text-[24px]" : "text-[18px]"} text-primary`} />}
       <span className={`font-mono text-on-surface ${lg ? "text-body" : "text-xs"}`}>
         {time ?? "--:--:--"}
       </span>

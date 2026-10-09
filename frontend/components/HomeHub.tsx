@@ -43,7 +43,7 @@ function Welcome() {
     { label: t("statFakes"), value: String(evs.filter((e) => e.status === "coordinated" || e.status === "ignored").length), accent: false },
   ];
   return (
-    <section className="relative mt-4 w-full overflow-hidden rounded-2xl bg-container-lowest p-6 shadow-sm">
+    <section className="tb-hero relative mt-4 w-full overflow-hidden rounded-2xl bg-container-lowest p-6 shadow-sm">
       <div className="pointer-events-none absolute -right-20 -top-24 h-96 w-96 rounded-full bg-primary-fixed/30 blur-3xl" />
       <div className="pointer-events-none absolute bottom-0 right-48 h-64 w-64 rounded-full bg-secondary-container/40 blur-2xl" />
 
@@ -80,7 +80,7 @@ function Welcome() {
         </p>
         <Link href="/plan"
           className="flex h-12 shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-lg bg-primary px-5 text-sm font-semibold text-on-primary shadow-sm transition-transform hover:bg-primary-container active:scale-95">
-          <Icon name="alt_route" className="text-[20px]" /> {t("planTrip")} <Icon name="arrow_forward" className="text-[18px]" />
+          <Icon name="alt_route" className="text-[20px]" /> {t("planTrip")} <Icon name="arrow_forward" className="text-[20px]" />
         </Link>
       </div>
     </section>
@@ -127,7 +127,7 @@ function FrequentTrips() {
             </div>
             <div className="mt-4 flex items-center justify-between pt-1">
               <div className="flex min-w-0 items-center gap-1 text-small text-on-surface-variant">
-                <Icon name="route" className="text-[16px] text-primary" /> <span className="truncate">{trip.from} → {trip.to}</span>
+                <Icon name="route" className="text-[18px] text-primary" /> <span className="truncate">{trip.from} → {trip.to}</span>
               </div>
               <Icon name="arrow_forward" className="text-[20px] text-outline transition-all group-hover:translate-x-1 group-hover:text-primary" />
             </div>
@@ -165,7 +165,7 @@ function TransportModes() {
           <span className="text-small text-on-surface-variant">{t("modesHint")}</span>
         </div>
         <Link href="/report" className="flex items-center gap-0.5 text-xs font-semibold text-primary hover:underline">
-          {t("liveReports")} <Icon name="open_in_new" className="text-[16px]" />
+          {t("liveReports")} <Icon name="open_in_new" className="text-[18px]" />
         </Link>
       </div>
       <div className="anim-stagger grid grid-cols-2 gap-2 md:grid-cols-5">
@@ -183,7 +183,7 @@ function TransportModes() {
                 <span className="block truncate text-lg font-semibold">{m.name}</span>
                 <span className="block truncate text-caption font-semibold text-on-surface-variant">{m.detail}</span>
                 <div className={`mt-2 flex items-center gap-1 text-micro font-bold ${TONE[m.tone].text}`}>
-                  <Icon name={STATUS_ICON[m.tone]} className="text-[14px]" /> {m.label}
+                  <Icon name={STATUS_ICON[m.tone]} className="text-[16px]" /> {m.label}
                 </div>
               </div>
             </>
@@ -331,7 +331,7 @@ function DemoTravellers() {
               </div>
               <p className="line-clamp-3 text-caption text-on-surface-variant">{text.story}</p>
               <span className="mt-auto flex items-center gap-1 text-caption font-semibold text-primary">
-                <Icon name="play_circle" className="text-[16px]" /> {tr.demo ? t("openStoryAt", { time: tr.demo.moment }) : t("openStory")}
+                <Icon name="play_circle" className="text-[18px]" /> {tr.demo ? t("openStoryAt", { time: tr.demo.moment }) : t("openStory")}
               </span>
             </Link>
           );

@@ -164,7 +164,7 @@ function LiveTrip({ trip, onTrip }: { trip: SavedTrip; onTrip: (t: SavedTrip | n
               <PhasePill phase={phase} />
               <Link href="/admin" title={t("clockTitle")}
                 className="flex items-center gap-1 rounded-full bg-container px-2 py-0.5 font-mono text-micro font-bold text-on-surface-variant hover:bg-container-high">
-                <Icon name="schedule" className="text-[14px]" /> {clock ? `${t("demoTime", { time: clock.now })}${clock.speed ? ` · ${t("speedX", { n: clock.speed })}` : ` · ${t("paused")}`}` : t("clockOffline")}
+                <Icon name="schedule" className="text-[16px]" /> {clock ? `${t("demoTime", { time: clock.now })}${clock.speed ? ` · ${t("speedX", { n: clock.speed })}` : ` · ${t("paused")}`}` : t("clockOffline")}
               </Link>
               {clock && phase !== "arrived" && (
                 <ClockButtons speed={clock.speed} onChange={setClock} />
@@ -177,13 +177,13 @@ function LiveTrip({ trip, onTrip }: { trip: SavedTrip; onTrip: (t: SavedTrip | n
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button onClick={() => setModal("sos")} className="flex items-center gap-1 rounded-xl bg-error px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition-transform hover:opacity-95 active:scale-95">
-            <Icon name="emergency" className="text-[18px]" /> {t("sos")}
+            <Icon name="emergency" className="text-[20px]" /> {t("sos")}
           </button>
           <button onClick={() => setModal("share")} className="flex items-center gap-1 rounded-xl bg-container-lowest px-4 py-2.5 text-xs font-semibold shadow-sm transition-colors hover:bg-container">
-            <Icon name="share" className="text-[18px] text-primary" /> {t("shareLink")}
+            <Icon name="share" className="text-[20px] text-primary" /> {t("shareLink")}
           </button>
           <button onClick={endTrip} className="flex items-center gap-1 rounded-xl bg-container-lowest px-4 py-2.5 text-xs font-semibold shadow-sm transition-colors hover:bg-container">
-            <Icon name="stop_circle" className="text-[18px] text-outline" /> {t("endTrip")}
+            <Icon name="stop_circle" className="text-[20px] text-outline" /> {t("endTrip")}
           </button>
         </div>
       </div>
@@ -191,12 +191,12 @@ function LiveTrip({ trip, onTrip }: { trip: SavedTrip; onTrip: (t: SavedTrip | n
       {/* ---- Demo story (TR1–TR5) ---- */}
       {traveller.demo?.kind === "track" && clock && phase !== "arrived" && (
         <div className="mb-2 flex flex-wrap items-center gap-2 rounded-xl border-2 border-primary/30 bg-primary-fixed/20 p-3 text-small">
-          <Icon name="theater_comedy" className="text-[18px] text-primary" />
+          <Icon name="theater_comedy" className="text-[20px] text-primary" />
           <span className="min-w-0 flex-1"><b>{t("storyLabel", { id: traveller.traveller_id })}</b> {rich(t("storyMoment"), { time: <b>{traveller.demo.moment}</b> })} {storyText(activeLang(), traveller.traveller_id, { watch: traveller.demo.watch }).watch}</span>
           {clock.now < traveller.demo.moment && (
             <button type="button" onClick={() => updateClock({ set: traveller.demo!.moment }).then(setClock).catch(() => undefined)}
               className="flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-caption font-bold text-on-primary hover:bg-primary-container">
-              <Icon name="fast_forward" className="text-[16px]" /> {t("jumpTo", { time: traveller.demo.moment })}
+              <Icon name="fast_forward" className="text-[18px]" /> {t("jumpTo", { time: traveller.demo.moment })}
             </button>
           )}
         </div>
@@ -208,18 +208,18 @@ function LiveTrip({ trip, onTrip }: { trip: SavedTrip; onTrip: (t: SavedTrip | n
       )}
       {!journey?.proposal && journey?.notice && (
         <div key={journey.notice} className="anim-in mb-2 flex items-start gap-2 rounded-xl bg-tertiary-fixed p-3 text-small text-tertiary">
-          <Icon name="info" className="text-[18px]" /> {journey.notice}
+          <Icon name="info" className="text-[20px]" /> {journey.notice}
         </div>
       )}
       {lost && (
         <div className="mb-2 flex items-start gap-2 rounded-xl bg-amber-soft p-3 text-small text-amber-ink">
-          <Icon name="sync_problem" className="text-[18px]" />
+          <Icon name="sync_problem" className="text-[20px]" />
           {t("lost")}
         </div>
       )}
       {!trip.journeyId && (
         <div className="mb-2 flex items-start gap-2 rounded-xl bg-amber-soft p-3 text-small text-amber-ink">
-          <Icon name="cloud_off" className="text-[18px]" />
+          <Icon name="cloud_off" className="text-[20px]" />
           {t("offlineTrip")}
         </div>
       )}
@@ -228,13 +228,13 @@ function LiveTrip({ trip, onTrip }: { trip: SavedTrip; onTrip: (t: SavedTrip | n
       <div className="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard label={phase === "upcoming" ? t("startsIn") : t("remaining")} icon="schedule" iconCls="bg-primary-fixed/40 text-primary"
           value={<><span className="text-display font-bold tracking-tight tabular-nums">{phase === "upcoming" ? startMin - nowMin : remaining}</span><span className="text-lg font-bold text-primary">{t("mins")}</span></>}
-          footLeft={<span className="flex items-center gap-1 text-primary"><Icon name="update" className="text-[16px]" /> {t("followsClock")}</span>}
+          footLeft={<span className="flex items-center gap-1 text-primary"><Icon name="update" className="text-[18px]" /> {t("followsClock")}</span>}
           footRight={<span className="font-mono text-micro font-bold text-outline">{t("tripMin", { min: card.duration_min })}</span>} />
         <MetricCard label={t("estArrival")} icon="sports_score" iconCls="bg-secondary-container text-on-secondary-container"
           value={<span className="text-display font-bold tracking-tight tabular-nums">{hhmm(eta)}</span>}
           footLeft={confirmedDelay > 0 || blocked
-            ? <span className="flex items-center gap-1 font-semibold text-error"><Icon name="warning" className="text-[16px]" /> {blocked ? t("routeBlocked") : t("delayConfirmed", { min: confirmedDelay })}</span>
-            : <span className="flex items-center gap-1 font-semibold text-primary"><Icon name="check_circle" className="text-[16px]" /> {t("onSchedule")}</span>}
+            ? <span className="flex items-center gap-1 font-semibold text-error"><Icon name="warning" className="text-[18px]" /> {blocked ? t("routeBlocked") : t("delayConfirmed", { min: confirmedDelay })}</span>
+            : <span className="flex items-center gap-1 font-semibold text-primary"><Icon name="check_circle" className="text-[18px]" /> {t("onSchedule")}</span>}
           footRight={<span className="max-w-[9rem] truncate text-micro font-bold">{destLabel}</span>} />
         <MetricCard label={t("fare")} icon="payments" iconCls="bg-tertiary-fixed text-tertiary"
           value={<><span className="text-display font-bold tracking-tight tabular-nums">₹{card.cost_inr}</span><span className="text-xs font-semibold text-on-surface-variant">{t("total")}</span></>}
@@ -253,7 +253,7 @@ function LiveTrip({ trip, onTrip }: { trip: SavedTrip; onTrip: (t: SavedTrip | n
           </div>
           <div className="mt-4 flex w-full items-center justify-between pt-1">
             <span className="truncate text-small text-tertiary">{target ? t("atPlace", { place: target.label }) : t("reportHint")}</span>
-            <Icon name="arrow_forward" className="text-[18px] text-tertiary transition-transform group-hover:translate-x-1" />
+            <Icon name="arrow_forward" className="text-[20px] text-tertiary transition-transform group-hover:translate-x-1" />
           </div>
         </button>
       </div>
@@ -282,10 +282,10 @@ function LiveTrip({ trip, onTrip }: { trip: SavedTrip; onTrip: (t: SavedTrip | n
             </div>
             <div className="mt-5 grid grid-cols-2 gap-2 pt-2">
               <Link href={trip.resultsHref} className="flex items-center justify-center gap-1.5 rounded-xl bg-container px-2 py-2.5 text-xs font-semibold shadow-sm transition-colors hover:bg-container-high">
-                <Icon name="alt_route" className="text-[18px]" /> {t("otherRoutes")}
+                <Icon name="alt_route" className="text-[20px]" /> {t("otherRoutes")}
               </Link>
               <Link href="/report" className="flex items-center justify-center gap-1.5 rounded-xl bg-container px-2 py-2.5 text-xs font-semibold shadow-sm transition-colors hover:bg-container-high">
-                <Icon name="campaign" className="text-[18px]" /> {t("liveReports")}
+                <Icon name="campaign" className="text-[20px]" /> {t("liveReports")}
               </Link>
             </div>
           </div>
@@ -299,7 +299,7 @@ function LiveTrip({ trip, onTrip }: { trip: SavedTrip; onTrip: (t: SavedTrip | n
             <div className="z-20 flex items-center justify-between bg-container-lowest p-4 shadow-sm">
               <div className="flex items-center gap-2">
                 <div className="flex items-center gap-1.5 rounded-full bg-primary-fixed px-2 py-1 text-micro font-bold text-on-primary-fixed">
-                  <span className={`h-2 w-2 rounded-full bg-primary ${phase === "moving" ? "animate-ping" : ""}`} />
+                  <span className={`tb-live-dot ${phase === "moving" ? "is-live" : ""}`} />
                   {phase === "moving" ? t("position") : phase === "upcoming" ? t("notStartedYet") : t("arrived")}
                 </div>
               </div>
@@ -367,11 +367,11 @@ function NoTrip({ onStarted }: { onStarted: (t: SavedTrip) => void }) {
         </div>
         <div className="flex w-full flex-col gap-2 sm:flex-row">
           <Link href="/plan" className="flex flex-1 items-center justify-center gap-1 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-on-primary hover:bg-primary-container">
-            <Icon name="alt_route" className="text-[18px]" /> {t("planTrip")}
+            <Icon name="alt_route" className="text-[20px]" /> {t("planTrip")}
           </Link>
           <button onClick={startDemo} disabled={busy}
             className="flex flex-1 items-center justify-center gap-1 rounded-xl bg-container px-4 py-3 text-sm font-semibold hover:bg-container-high disabled:opacity-50">
-            <Icon name="play_circle" className="text-[18px] text-primary" /> {busy ? t("starting") : t("demoBtn")}
+            <Icon name="play_circle" className="text-[20px] text-primary" /> {busy ? t("starting") : t("demoBtn")}
           </button>
         </div>
         <p className="text-caption text-outline">{t("demoNote")}</p>
@@ -445,7 +445,7 @@ function ClockButtons({ speed, onChange }: { speed: number; onChange: (c: ClockS
   return speed === 0 ? (
     <>
       <button type="button" onClick={() => set({ speed: 10 })} className={btn} title={t("play10Title")}>
-        <Icon name="play_arrow" className="text-[14px]" /> {t("play10")}
+        <Icon name="play_arrow" className="text-[16px]" /> {t("play10")}
       </button>
       <button type="button" onClick={() => set({ advance_min: 5 })} className={btn.replace("bg-primary ", "bg-container ").replace("text-on-primary", "text-on-surface")} title={t("jump5Title")}>
         {t("plus5")}
@@ -453,7 +453,7 @@ function ClockButtons({ speed, onChange }: { speed: number; onChange: (c: ClockS
     </>
   ) : (
     <button type="button" onClick={() => set({ speed: 0 })} className={btn.replace("bg-primary ", "bg-container ").replace("text-on-primary", "text-on-surface")}>
-      <Icon name="pause" className="text-[14px]" /> {t("pause")}
+      <Icon name="pause" className="text-[16px]" /> {t("pause")}
     </button>
   );
 }
@@ -467,7 +467,7 @@ function PhasePill({ phase }: { phase: "upcoming" | "moving" | "arrived" }) {
   }[phase];
   return (
     <span className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-micro font-bold uppercase ${map.cls}`}>
-      {phase === "moving" && <span className="h-1.5 w-1.5 animate-ping rounded-full bg-primary" />} {map.text}
+      {phase === "moving" && <span className="tb-live-dot is-live !h-1.5 !w-1.5" />} {map.text}
     </span>
   );
 }
@@ -500,7 +500,7 @@ function CurrentLeg({ phase, leg, nowMin, name, destLabel }: {
   return (
     <div className="mt-4 flex flex-col items-start gap-2 rounded-xl bg-container-lowest p-4 shadow-sm sm:flex-row sm:items-center">
       <div className="flex shrink-0 items-center gap-1 rounded-lg bg-primary px-2 py-1 text-micro font-bold uppercase text-on-primary">
-        <Icon name={leg ? MODE_ICON[leg.mode] ?? "route" : "flag"} className="text-[16px]" /> {badge}
+        <Icon name={leg ? MODE_ICON[leg.mode] ?? "route" : "flag"} className="text-[18px]" /> {badge}
       </div>
       <div className="flex min-w-0 flex-col">
         <span className="truncate text-sm font-semibold">{title}</span>
@@ -561,11 +561,11 @@ function Milestone({ leg, state, name, hits, nowMin }: {
       <div className={`relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${NODE[state]}`}>
         {state === "now" ? (
           <>
-            <span className="absolute h-3 w-3 animate-ping rounded-full bg-primary" />
+            <span className="absolute h-3 w-3 animate-ping rounded-full bg-primary motion-reduce:animate-none motion-reduce:opacity-30" />
             <span className="relative h-3 w-3 rounded-full bg-primary" />
           </>
         ) : (
-          <Icon name={state === "done" ? "check" : MODE_ICON[leg.mode] ?? "route"} className="text-[16px]" />
+          <Icon name={state === "done" ? "check" : MODE_ICON[leg.mode] ?? "route"} className="text-[18px]" />
         )}
       </div>
       <div className={`flex min-w-0 flex-1 flex-col rounded-xl p-2 ${BOX[state]}`}>
@@ -585,7 +585,7 @@ function Milestone({ leg, state, name, hits, nowMin }: {
         {hits.map((h) => (
           <span key={h.event_id} className="mt-1 flex items-center gap-1 rounded-md px-2 py-1 text-micro font-semibold"
             style={{ background: h.status === "confirmed" ? "var(--error-container)" : "var(--tertiary-fixed)", color: h.status === "confirmed" ? "var(--on-error-container)" : "var(--tertiary)" }}>
-            <Icon name={h.blocked ? "block" : "schedule"} className="text-[14px]" />
+            <Icon name={h.blocked ? "block" : "schedule"} className="text-[16px]" />
             {h.title} · {STATUS_STYLE[h.status].label} · {t("pctSure", { pct: pct(h.confidence) })}{h.blocked ? ` · ${t("cantUse")}` : h.delay_min ? ` · ${t("minLate", { min: h.delay_min })}` : ""}
           </span>
         ))}
@@ -599,7 +599,7 @@ function Arrival({ label, time, reached, delayed }: { label: string; time: strin
   return (
     <div className="relative flex items-start gap-4">
       <div className={`relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${reached ? NODE.done : "bg-container text-on-surface shadow-sm"}`}>
-        <Icon name="flag" className="text-[16px]" />
+        <Icon name="flag" className="text-[18px]" />
       </div>
       <div className="flex min-w-0 flex-1 items-center justify-between gap-2 rounded-xl p-2">
         <span className="text-sm font-bold">{t("arriveAt", { place: label })}</span>
@@ -626,7 +626,7 @@ function RouteProblems({ hits, connected, journeyId }: { hits: LegHit[]; connect
       ) : !connected ? (
         <p className="mt-3 text-small text-on-surface-variant">{t("checking")}</p>
       ) : unique.length === 0 ? (
-        <p className="mt-3 flex items-center gap-1 text-small text-primary"><Icon name="check_circle" className="text-[16px]" /> {t("nothingAhead")}</p>
+        <p className="mt-3 flex items-center gap-1 text-small text-primary"><Icon name="check_circle" className="text-[18px]" /> {t("nothingAhead")}</p>
       ) : (
         <ul className="mt-3 flex flex-col gap-2">
           {unique.map((h) => (
@@ -770,7 +770,7 @@ function ReportModal({ target, onClose }: { target: { stop_id: string; line_id: 
       {result ? (
         <div className="flex flex-col gap-3">
           {result.ok ? (
-            <p className="flex items-start gap-2 rounded-xl bg-primary-soft p-3 text-sm text-primary-ink">
+            <p className="tb-success flex items-start gap-2 rounded-xl bg-primary-soft p-3 text-sm text-primary-ink">
               <Icon name="check_circle" />
               {result.out
                 ? t("received", { time: result.out.reported_at, status: STATUS_STYLE[result.out.status].label, pct: pct(result.out.confidence) })
@@ -792,7 +792,7 @@ function ReportModal({ target, onClose }: { target: { stop_id: string; line_id: 
               {reportCategories.map((c) => (
                 <button key={c.id} type="button" onClick={() => setCat(c.id)} aria-pressed={cat === c.id}
                   className={`flex items-center gap-2 rounded-xl p-2 text-left text-xs font-semibold transition-colors ${cat === c.id ? "bg-primary-fixed text-on-primary-fixed" : "bg-container hover:bg-primary-fixed hover:text-on-primary-fixed"}`}>
-                  <Icon name={c.icon} className={`text-[18px] ${c.iconCls}`} /> {t(`cat.${c.id}`)}
+                  <Icon name={c.icon} className={`text-[20px] ${c.iconCls}`} /> {t(`cat.${c.id}`)}
                 </button>
               ))}
             </div>
@@ -827,7 +827,7 @@ function ShareModal({ destLabel, eta, onClose }: { destLabel: string; eta: strin
           className="shrink-0 rounded-lg bg-primary px-2 py-1.5 text-micro font-bold text-on-primary">{copied ? t("copied") : t("copyLink")}</button>
       </div>
       <div className="flex items-center gap-1 text-micro font-bold text-on-surface-variant">
-        <Icon name="info" className="text-[16px] text-primary" /> {t("sampleLink")}
+        <Icon name="info" className="text-[18px] text-primary" /> {t("sampleLink")}
       </div>
     </ModalShell>
   );

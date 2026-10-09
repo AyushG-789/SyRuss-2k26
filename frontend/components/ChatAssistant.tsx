@@ -373,7 +373,7 @@ export default function ChatAssistant() {
           <header className="flex items-center justify-between gap-2 bg-primary px-4 py-3 text-on-primary">
             <div className="flex items-center gap-2">
               <span className="grid h-8 w-8 place-items-center rounded-full bg-on-primary/15">
-                <Icon name="forum" className="text-[18px]" />
+                <Icon name="forum" className="text-[20px]" />
               </span>
               <div className="leading-tight">
                 <p className="text-sm font-semibold">{t("ask")}</p>
@@ -471,7 +471,7 @@ export default function ChatAssistant() {
 
           {transcribing && (
             <div className="flex items-center gap-1.5 border-t border-hairline-soft bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary">
-              <Icon name="graphic_eq" className="text-[16px] animate-pulse" />
+              <Icon name="graphic_eq" className="text-[18px] animate-pulse" />
               <span>{t("transcribing")}</span>
             </div>
           )}
@@ -589,7 +589,7 @@ function AssistantBubble({
                   : "text-primary hover:bg-primary-fixed"
               }`}
             >
-              <Icon name={isPlaying ? "volume_off" : "volume_up"} className="text-[15px]" />
+              <Icon name={isPlaying ? "volume_off" : "volume_up"} className="text-[18px]" />
               <span>{isPlaying ? t("stop") : t("listen")}</span>
             </button>
           </div>
@@ -606,7 +606,7 @@ function AssistantBubble({
             onClick={onClose}
             className="flex items-center justify-center gap-1 rounded-xl bg-primary px-3 py-2 text-small font-semibold text-on-primary hover:bg-primary-container"
           >
-            {t("openDetails")} <Icon name="arrow_forward" className="text-[16px]" />
+            {t("openDetails")} <Icon name="arrow_forward" className="text-[18px]" />
           </Link>
         </div>
       )}
@@ -621,7 +621,7 @@ function AssistantBubble({
 
       {r && r.source !== "gemini" && (
         <p className="flex items-center gap-1 px-1 text-micro text-outline">
-          <Icon name="info" className="text-[14px]" />
+          <Icon name="info" className="text-[16px]" />
           {r.source === "fallback" ? t("fallback")
                 : r.note?.includes("slow") ? t("slow") : t("simplified")}
         </p>

@@ -123,18 +123,18 @@ function Panel({ open, section, onClose }: { open: boolean; section: ProfileSect
               <div className="flex flex-wrap items-center gap-2">
                 <p className="truncate text-subtitle font-bold">{profile.signedIn ? profile.name : t("guestName")}</p>
                 {profile.signedIn
-                  ? <span className="chip bg-primary-soft text-primary-ink"><Icon name="verified" className="text-[14px]" /> {t("verified")}</span>
+                  ? <span className="chip bg-primary-soft text-primary-ink"><Icon name="verified" className="text-[16px]" /> {t("verified")}</span>
                   : <span className="chip bg-container text-on-surface-variant">{t("guest")}</span>}
               </div>
               {profile.email && <p className="truncate text-small text-on-surface-variant">{profile.email}</p>}
               <p className="mt-0.5 flex items-center gap-1 text-caption text-on-surface-variant">
-                <Icon name="calendar_today" className="text-[14px]" />
+                <Icon name="calendar_today" className="text-[16px]" />
                 {profile.signedIn ? t("since", { date: profile.memberSince }) : t("notSignedIn")}
               </p>
             </div>
             {profile.signedIn && !editing && (
               <button type="button" onClick={manage} className="btn-secondary !min-h-9 !px-3">
-                <Icon name="edit" className="text-[16px]" /> {t("edit")}
+                <Icon name="edit" className="text-[18px]" /> {t("edit")}
               </button>
             )}
           </div>
@@ -155,7 +155,7 @@ function Panel({ open, section, onClose }: { open: boolean; section: ProfileSect
           <Safety />
           <AppSupport profile={profile} onNavigate={onClose} />
           <p className="pb-2 text-center text-caption text-on-surface-variant">
-            <Icon name="lock" className="mr-1 align-[-3px] text-[14px]" />
+            <Icon name="lock" className="mr-1 align-[-3px] text-[16px]" />
             {t("savedLocal")}
           </p>
         </div>
@@ -204,7 +204,7 @@ function Section({ icon, title, action, id, fold, children }: {
     <section data-section={id} className="scroll-mt-4">
       <div className="mb-3 flex items-center justify-between gap-2">
         <h3 className="eyebrow flex items-center gap-2 !text-caption text-on-surface">
-          <Icon name={icon} className="text-[18px] text-primary" /> {title}
+          <Icon name={icon} className="text-[20px] text-primary" /> {title}
         </h3>
         {action}
       </div>
@@ -365,7 +365,7 @@ function PersonalForm({ profile, onDone }: { profile: Profile; onDone: () => voi
       <div className="flex justify-end gap-2 pt-1">
         <button type="button" onClick={onDone} className="btn-secondary">{t("cancel")}</button>
         <button type="submit" className="btn-primary">
-          <Icon name="check" className="text-[18px]" /> {t("saveChanges")}
+          <Icon name="check" className="text-[20px]" /> {t("saveChanges")}
         </button>
       </div>
     </form>
@@ -380,8 +380,8 @@ function GuestCard() {
         <Icon name="person_off" className="text-on-surface-variant" /> {t("guestText")}
       </p>
       <div className="grid grid-cols-2 gap-2">
-        <button type="button" onClick={() => openAuth("signup")} className="btn-primary"><Icon name="person_add" className="text-[18px]" /> {t("createAccount")}</button>
-        <button type="button" onClick={() => openAuth("signin")} className="btn-secondary"><Icon name="login" className="text-[18px]" /> {t("signIn")}</button>
+        <button type="button" onClick={() => openAuth("signup")} className="btn-primary"><Icon name="person_add" className="text-[20px]" /> {t("createAccount")}</button>
+        <button type="button" onClick={() => openAuth("signin")} className="btn-secondary"><Icon name="login" className="text-[20px]" /> {t("signIn")}</button>
       </div>
     </div>
   );
@@ -403,14 +403,14 @@ function Accounts() {
               <span className="block truncate text-caption text-on-surface-variant">{a.email}</span>
             </span>
             {a.current
-              ? <span className="chip bg-primary-soft text-primary-ink"><Icon name="check" className="text-[14px]" /> {t("thisOne")}</span>
+              ? <span className="chip bg-primary-soft text-primary-ink"><Icon name="check" className="text-[16px]" /> {t("thisOne")}</span>
               : <button type="button" onClick={() => openAuth("signin", findLogin(a.id))} className="btn-secondary !min-h-9 !px-3">{t("switchTo")}</button>}
           </li>
         ))}
       </ul>
       <button type="button" onClick={() => openAuth("signup")}
         className="mt-1 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-outline-variant py-2.5 text-small font-semibold text-primary hover:bg-container-low">
-        <Icon name="person_add" className="text-[18px]" /> {t("createAnother")}
+        <Icon name="person_add" className="text-[20px]" /> {t("createAnother")}
       </button>
     </section>
   );
@@ -446,12 +446,12 @@ function Preferences({ profile, onPlan, open, onToggle }: { profile: Profile; on
             <button key={c.id} type="button" aria-pressed={on} onClick={() => toggleMode(c)}
               title={last ? t("keepOne") : undefined}
               className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-small font-semibold ${on ? "bg-primary text-on-primary" : "bg-container-lowest text-on-surface-variant ring-1 ring-hairline hover:bg-container-low"}`}>
-              <Icon name={c.icon} className="text-[16px]" /> {c.id === "local" ? t("localTrain") : MODE_LABEL[c.modes[c.modes.length - 1]]}
+              <Icon name={c.icon} className="text-[18px]" /> {c.id === "local" ? t("localTrain") : MODE_LABEL[c.modes[c.modes.length - 1]]}
             </button>
           );
         })}
         <span className="flex items-center gap-1.5 rounded-lg bg-primary-soft px-3 py-1.5 text-small font-semibold text-primary-ink" title={t("walkAlwaysTip")}>
-          <Icon name="directions_walk" className="text-[16px]" /> {t("walkAlways")}
+          <Icon name="directions_walk" className="text-[18px]" /> {t("walkAlways")}
         </span>
       </div>
 
@@ -480,7 +480,7 @@ function Preferences({ profile, onPlan, open, onToggle }: { profile: Profile; on
       <div className="mt-3 flex items-center justify-between gap-2 rounded-xl bg-primary-soft px-3 py-2">
         <p className="text-caption text-primary-ink">{t("plannerUses")}</p>
         <Link href="/plan" onClick={onPlan} className="flex items-center gap-1 text-caption font-bold text-primary hover:underline">
-          {t("planTrip")} <Icon name="arrow_forward" className="text-[14px]" />
+          {t("planTrip")} <Icon name="arrow_forward" className="text-[16px]" />
         </Link>
       </div>
     </Section>
@@ -534,10 +534,10 @@ function SavedPlaces({ profile, onGo, open, onToggle }: { profile: Profile; onGo
                   <span className="block truncate text-caption text-on-surface-variant">{p.place || t("notSet")}</span>
                 </span>
                 <button type="button" onClick={() => { setEditing(p.id); setDraft(p.place); }} aria-label={t("editPlace", { place: t(p.id) })}
-                  className="rounded-lg p-2 text-on-surface-variant hover:bg-container-low"><Icon name="edit" className="text-[18px]" /></button>
+                  className="rounded-lg p-2 text-on-surface-variant hover:bg-container-low"><Icon name="edit" className="text-[20px]" /></button>
                 {p.place && (
                   <Link href={`/plan?to=${encodeURIComponent(p.place)}`} onClick={onGo} className="btn-ghost !min-h-9 !px-3">
-                    {t("go")} <Icon name="arrow_forward" className="text-[16px]" />
+                    {t("go")} <Icon name="arrow_forward" className="text-[18px]" />
                   </Link>
                 )}
               </div>
@@ -573,7 +573,7 @@ function Activity({ profile, onNavigate }: { profile: Profile; onNavigate: () =>
     <Section id="activity" icon="monitoring" title={t("activity")}
       action={
         <button type="button" onClick={() => setLedger(!ledger)} aria-expanded={ledger} className="flex items-center text-small font-semibold text-primary hover:underline">
-          {ledger ? t("hideLedger") : t("fullLedger")} <Icon name={ledger ? "expand_less" : "chevron_right"} className="text-[18px]" />
+          {ledger ? t("hideLedger") : t("fullLedger")} <Icon name={ledger ? "expand_less" : "chevron_right"} className="text-[20px]" />
         </button>
       }>
       <div className="grid grid-cols-2 gap-2">
@@ -612,7 +612,7 @@ function Activity({ profile, onNavigate }: { profile: Profile; onNavigate: () =>
                         <span className="block truncate text-small font-semibold">{activityText(t, a)}</span>
                         <span className="block text-caption text-on-surface-variant">{timeAgo(a.at, lang)}</span>
                       </span>
-                      <Icon name="chevron_right" className="text-[18px] text-outline" />
+                      <Icon name="chevron_right" className="text-[20px] text-outline" />
                     </Link>
                   </li>
                 ))}
@@ -679,7 +679,7 @@ function Safety() {
         ))}
       </div>
       <button type="button" onClick={shareTrip} className="btn-secondary mt-2 w-full">
-        <Icon name="share_location" className="text-[18px] text-primary" /> {t("shareTrip")}
+        <Icon name="share_location" className="text-[20px] text-primary" /> {t("shareTrip")}
       </button>
       {status && <p className="mt-2 text-caption text-on-surface-variant" role="status">{t(status)}</p>}
     </Section>
@@ -715,7 +715,7 @@ function AppSupport({ profile, onNavigate }: { profile: Profile; onNavigate: () 
                   className={`flex flex-col items-center gap-0.5 rounded-xl bg-container-lowest px-2 py-3 ring-2 ${on ? "ring-primary" : "ring-transparent shadow-sm hover:ring-hairline"}`}>
                   <span className="text-subtitle font-bold">{l.label}</span>
                   <span className="text-micro text-on-surface-variant">{l.english}</span>
-                  {on && <Icon name="check_circle" fill className="text-[18px] text-primary" />}
+                  {on && <Icon name="check_circle" fill className="text-[20px] text-primary" />}
                 </button>
               );
             })}
@@ -744,9 +744,9 @@ function AppSupport({ profile, onNavigate }: { profile: Profile; onNavigate: () 
                     </span>
                   </span>
                   <span className="flex items-center gap-1.5 px-1 text-small font-semibold">
-                    <Icon name={th.icon} className={`text-[18px] ${on ? "text-primary" : "text-on-surface-variant"}`} />
+                    <Icon name={th.icon} className={`text-[20px] ${on ? "text-primary" : "text-on-surface-variant"}`} />
                     {t(th.label)}
-                    {on && <Icon name="check_circle" fill className="ml-auto text-[18px] text-primary" />}
+                    {on && <Icon name="check_circle" fill className="ml-auto text-[20px] text-primary" />}
                   </span>
                 </button>
               );
@@ -776,7 +776,7 @@ function AppSupport({ profile, onNavigate }: { profile: Profile; onNavigate: () 
               </div>
             ) : (
               <button type="button" onClick={() => { setConfirmClear(true); setCleared(false); }} className="btn-secondary w-full !text-error">
-                <Icon name="delete" className="text-[18px]" /> {t("clearData")}
+                <Icon name="delete" className="text-[20px]" /> {t("clearData")}
               </button>
             )}
             {cleared && <p className="text-caption text-primary" role="status">{t("cleared")}</p>}
@@ -817,16 +817,16 @@ function Footer({ signedIn, onManage }: { signedIn: boolean; onManage: () => voi
       ) : signedIn ? (
         <div className="grid grid-cols-[1fr_auto] gap-2">
           <button type="button" onClick={onManage} className="btn-secondary">
-            <Icon name="manage_accounts" className="text-[18px]" /> {t("manage")}
+            <Icon name="manage_accounts" className="text-[20px]" /> {t("manage")}
           </button>
           <button type="button" onClick={() => setConfirm(true)} className="btn-secondary !text-error">
-            <Icon name="logout" className="text-[18px]" /> {t("signOut")}
+            <Icon name="logout" className="text-[20px]" /> {t("signOut")}
           </button>
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-2">
-          <button type="button" onClick={() => openAuth("signup")} className="btn-primary"><Icon name="person_add" className="text-[18px]" /> {t("createAccount")}</button>
-          <button type="button" onClick={() => openAuth("signin")} className="btn-secondary"><Icon name="login" className="text-[18px]" /> {t("signIn")}</button>
+          <button type="button" onClick={() => openAuth("signup")} className="btn-primary"><Icon name="person_add" className="text-[20px]" /> {t("createAccount")}</button>
+          <button type="button" onClick={() => openAuth("signin")} className="btn-secondary"><Icon name="login" className="text-[20px]" /> {t("signIn")}</button>
         </div>
       )}
     </div>

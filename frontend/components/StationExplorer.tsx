@@ -249,7 +249,7 @@ export default function StationExplorer() {
               : "text-on-surface-variant hover:bg-container-high hover:text-on-surface"
           }`}
         >
-          <Icon name="train" className="text-[18px]" />
+          <Icon name="train" className="text-[20px]" />
           <span>Local Trains Live</span>
         </button>
         <button
@@ -260,7 +260,7 @@ export default function StationExplorer() {
               : "text-on-surface-variant hover:bg-container-high hover:text-on-surface"
           }`}
         >
-          <Icon name="subway" className="text-[18px]" />
+          <Icon name="subway" className="text-[20px]" />
           <span>Metro Network</span>
         </button>
         <button
@@ -271,7 +271,7 @@ export default function StationExplorer() {
               : "text-on-surface-variant hover:bg-container-high hover:text-on-surface"
           }`}
         >
-          <Icon name="directions_bus" className="text-[18px]" />
+          <Icon name="directions_bus" className="text-[20px]" />
           <span>BEST Buses</span>
         </button>
         <button
@@ -282,7 +282,7 @@ export default function StationExplorer() {
               : "text-on-surface-variant hover:bg-container-high hover:text-on-surface"
           }`}
         >
-          <Icon name="near_me" className="text-[18px]" />
+          <Icon name="near_me" className="text-[20px]" />
           <span>Station Explorer & Map</span>
         </button>
       </div>
@@ -307,7 +307,7 @@ export default function StationExplorer() {
               <div className="flex flex-wrap items-center gap-1 text-xs font-semibold text-on-surface-variant">
             {hubData.breadcrumb.map((b, i) => (
               <span key={String(b) + i} className="flex items-center gap-1">
-                {i > 0 && <Icon name="chevron_right" className="text-[14px] text-outline" />}
+                {i > 0 && <Icon name="chevron_right" className="text-[16px] text-outline" />}
                 <span className={i === hubData.breadcrumb.length - 1 ? "font-bold text-primary" : ""}>
                   {tx(t, b)}
                 </span>
@@ -362,7 +362,7 @@ export default function StationExplorer() {
                   aria-label={t("clearSearch")}
                   className="absolute right-20 top-1/2 -translate-y-1/2 p-1 text-outline transition-colors hover:text-on-surface"
                 >
-                  <Icon name="close" className="text-[18px]" />
+                  <Icon name="close" className="text-[20px]" />
                 </button>
               )}
               <button
@@ -482,7 +482,7 @@ export default function StationExplorer() {
           {/* Radius selector */}
           <div className="flex flex-wrap items-center gap-4 rounded-xl bg-container-low px-4 py-2">
             <div className="flex items-center gap-1">
-              <Icon name="radar" className="text-[18px] text-primary" />
+              <Icon name="radar" className="text-[20px] text-primary" />
               <span className="text-xs font-semibold">{t("radius")}</span>
               <span className="text-xs font-bold text-primary">{radiusLabel(t, radius)}</span>
             </div>
@@ -520,7 +520,7 @@ export default function StationExplorer() {
                   on ? "bg-primary text-on-primary" : "bg-container-lowest hover:bg-container"
                 }`}
               >
-                <Icon name={f.icon} className={`text-[18px] ${on ? "" : f.iconCls}`} />
+                <Icon name={f.icon} className={`text-[20px] ${on ? "" : f.iconCls}`} />
                 <span>{t(f.label)}</span>
                 <span
                   className={`rounded-full px-1.5 text-micro font-bold ${
@@ -657,7 +657,7 @@ export default function StationExplorer() {
                       <span className="rounded bg-primary px-1.5 py-0.5 text-micro font-bold text-on-primary">
                         {t("gate", { n: g.gate })}
                       </span>
-                      <Icon name={g.icon} className={`text-[16px] ${g.iconCls}`} />
+                      <Icon name={g.icon} className={`text-[18px] ${g.iconCls}`} />
                     </div>
                     <div className="text-xs font-bold">{tx(t, g.title)}</div>
                     <div className="truncate text-small text-on-surface-variant">{tx(t, g.text)}</div>
@@ -682,7 +682,7 @@ export default function StationExplorer() {
               {hubData.facilities.map((f, i) => (
                 <div key={String(f.title) + i} className="flex items-start gap-2 rounded-lg bg-container-low p-2">
                   <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-primary/10 text-primary">
-                    <Icon name={f.icon} className="text-[18px]" />
+                    <Icon name={f.icon} className="text-[20px]" />
                   </div>
                   <div>
                     <div className="text-xs font-bold">{tx(t, f.title)}</div>
@@ -697,7 +697,7 @@ export default function StationExplorer() {
                 href={`/plan?from=${encodeURIComponent(center.label)}`}
                 className="flex flex-1 items-center justify-center gap-1 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-on-primary shadow-sm transition-all hover:bg-primary-container"
               >
-                <Icon name="directions" className="text-[18px]" /> {t("indoorRoute")}
+                <Icon name="directions" className="text-[20px]" /> {t("indoorRoute")}
               </Link>
               <button
                 type="button"
@@ -795,7 +795,7 @@ function StationCard({ station: s }: { station: Station }) {
       {/* Live telemetry disclaimer for modes without live GPS feeds */}
       {isMetroOrBus && (
         <div className="flex items-center gap-1.5 rounded-lg bg-container-low px-2.5 py-1 text-micro text-on-surface-variant">
-          <Icon name="info" className="text-[14px] text-outline" />
+          <Icon name="info" className="text-[16px] text-outline" />
           <span>{t("telemetryUnavailable")}</span>
         </div>
       )}
@@ -808,7 +808,7 @@ function StationCard({ station: s }: { station: Station }) {
               key={String(a.text) + i}
               className="flex items-center gap-1 rounded bg-container px-2 py-1 text-micro font-bold text-on-surface-variant"
             >
-              <Icon name={a.icon} className={`text-[14px] ${a.iconCls}`} /> {tx(t, a.text)}
+              <Icon name={a.icon} className={`text-[16px] ${a.iconCls}`} /> {tx(t, a.text)}
             </span>
           ))}
         </div>

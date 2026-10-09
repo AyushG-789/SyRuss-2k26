@@ -57,7 +57,7 @@ export default function EventDetail({ id }: { id: string }) {
     <main className="flex w-full flex-col gap-4 px-4 pb-16 pt-4 md:px-6">
       <nav className="flex items-center gap-1 text-small text-on-surface-variant">
         <Link href="/report" className="hover:text-primary">{t("liveReports")}</Link>
-        <Icon name="chevron_right" className="text-[16px]" />
+        <Icon name="chevron_right" className="text-[18px]" />
         <span className="font-semibold text-on-surface">{ev.event_id}</span>
       </nav>
 
@@ -92,7 +92,7 @@ export default function EventDetail({ id }: { id: string }) {
                 <li key={`${e.ref_id}-${e.at}`} className={`flex flex-col gap-1 rounded-xl p-3 ${e.contradicts ? "bg-primary-soft/50" : "bg-container-low"}`}>
                   <div className="flex flex-wrap items-center gap-2">
                     <span className={`flex items-center gap-1 rounded-md px-2 py-0.5 text-micro font-bold ${s.cls}`}>
-                      <Icon name={s.icon} className="text-[14px]" /> {t(s.label)}
+                      <Icon name={s.icon} className="text-[16px]" /> {t(s.label)}
                     </span>
                     <span className="font-mono text-caption text-on-surface-variant">{e.ref_id}{e.reporter_id ? ` · ${e.reporter_id}` : ""} · {e.at}</span>
                     {e.contradicts && <span className="rounded-md bg-primary px-2 py-0.5 text-micro font-bold text-on-primary">{t("saysNormal")}</span>}
@@ -101,7 +101,7 @@ export default function EventDetail({ id }: { id: string }) {
                   <p className="text-small">“{e.text}”</p>
                   {(e.note || e.covers.length > 1) && (
                     <p className="flex items-center gap-1 text-caption text-on-surface-variant">
-                      <Icon name="info" className="text-[14px]" />
+                      <Icon name="info" className="text-[16px]" />
                       {e.note}{e.covers.length > 1 ? ` · ${t("standsFor", { n: e.covers.length, ids: e.covers.join(", ") })}` : ""}
                     </p>
                   )}
