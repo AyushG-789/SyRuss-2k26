@@ -2,6 +2,10 @@ import { defineMessages } from "../../i18n";
 
 export const M = defineMessages({
   en: {
+    createAccount: "Create account",
+    newHere: "New here?",
+    createFree: "Create a free account",
+    signedInAs: "Signed in as {name}",
     tagline: "Mumbai travel helper",
     navHome: "Home",
     navFeatures: "Features",
@@ -137,6 +141,10 @@ export const M = defineMessages({
     madeFor: "Built for the SyRuS 2026 hackathon",
   },
   hi: {
+    createAccount: "अकाउंट बनाएँ",
+    newHere: "नए हैं?",
+    createFree: "मुफ़्त अकाउंट बनाएँ",
+    signedInAs: "{name} के रूप में साइन इन",
     tagline: "मुंबई सफ़र साथी",
     navHome: "होम",
     navFeatures: "सुविधाएँ",
@@ -264,6 +272,10 @@ export const M = defineMessages({
     madeFor: "SyRuS 2026 हैकाथॉन के लिए बनाया",
   },
   mr: {
+    createAccount: "अकाउंट बनवा",
+    newHere: "नवीन आहात?",
+    createFree: "मोफत अकाउंट बनवा",
+    signedInAs: "{name} म्हणून साइन इन",
     tagline: "मुंबई प्रवास साथी",
     navHome: "होम",
     navFeatures: "सुविधा",

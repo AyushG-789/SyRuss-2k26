@@ -9,7 +9,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { getBaselinePlan, getClock, getPlan, planRequest, RoutingNotConnected, stations } from "@/lib/api";
-import { eventTitle, legColor, lineShortName, MODE_LABEL, PLAN_LABEL, pct, placeName, readableRoute } from "@/lib/format";
+import { eventTitle, legColor, lineShortName, MODE_LABEL, PLAN_LABEL, pct, placeName } from "@/lib/format";
 import { toMin } from "@/lib/geo";
 import { activeLang, translate, useT, type Vars } from "@/lib/i18n";
 import { storyText } from "@/lib/i18n/messages/StoryPanel";
@@ -22,6 +22,7 @@ import { tripHref } from "@/lib/tripUrl";
 import type { Leg, Mode, PlanLabel, PlanResponse, RouteCard, Traveller } from "@/lib/types";
 import { useLiveEvents } from "@/lib/useLiveEvents";
 import Icon from "./Icon";
+import Loader from "./Loader";
 import MapView from "./MapView";
 import StoryPanel from "./StoryPanel";
 
@@ -173,7 +174,7 @@ export default function RouteResults({ traveller }: { traveller: Traveller | nul
         <StoryPanel traveller={traveller} onReplan={() => setReloadKey((k) => k + 1)} resultsHref={pathname} />
       )}
 
-      {state.status === "loading" && <p className="text-on-surface-variant">{t("loadingRoutes")}</p>}
+      {state.status === "loading" && <Loader label={t("loadingRoutes")} />}
       {state.status === "error" && <p className="rounded-xl bg-error-container p-3 text-sm text-on-error-container">{t("loadError", { msg: state.message })}</p>}
       {state.status === "not_connected" && <NotConnected traveller={traveller} destination={destination} />}
 
@@ -215,8 +216,8 @@ export default function RouteResults({ traveller }: { traveller: Traveller | nul
           </div>
 
           <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-            {/* ---- Cards ---- */}
-            <div className="flex flex-col gap-4">
+            {/* ---- Cards (arrive one after another; re-run when the filter changes) ---- */}
+            <div key={filter} className="anim-stagger flex flex-col gap-4">
               {shown.map((card) => (
                 <ResultCard key={card.plan_id} card={card} traveller={traveller} destinationLabel={destination?.label}
                   fastest={Math.min(...ordered.map((c) => c.duration_min))}
@@ -235,19 +236,6 @@ export default function RouteResults({ traveller }: { traveller: Traveller | nul
                 </section>
               )}
 
-              {plan.rejected.length > 0 && (
-                <section className="rounded-2xl bg-container-lowest p-4 shadow-sm">
-                  <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold"><Icon name="block" className="text-[18px] text-error" /> {t("rejected")}</h2>
-                  <ul className="flex flex-col divide-y divide-hairline-soft text-sm">
-                    {plan.rejected.map((r) => (
-                      <li key={r.summary} className="py-2">
-                        <span className="font-semibold">{readableRoute(r.summary)}</span>
-                        <span className="block text-small text-on-surface-variant">{r.message || r.reason}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-              )}
             </div>
 
             {/* ---- Map + matrix + compare ---- */}

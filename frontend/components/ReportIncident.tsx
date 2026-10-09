@@ -1,16 +1,16 @@
 "use client";
 
 // Report a Transit & Traffic Incident — built from the team's design (citizen incident console).
-// REAL: category/description/station/direction → POST /reports (Pakka Check), the Nearby Active Feed
+// REAL: category/station/line/direction → POST /reports (Pakka Check), the Nearby Active Feed
 // (live events) and its "I see this too" confirmations. SAMPLE: voice memo, media, reputation.
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { stations, submitReport, type ReportOut } from "@/lib/api";
 import { eventTitle, evidenceSummary, pct, STATUS_ORDER, STATUS_STYLE, TYPE_LABEL } from "@/lib/format";
-import { useT } from "@/lib/i18n";
+import { translate, useT } from "@/lib/i18n";
 import { M } from "@/lib/i18n/messages/ReportIncident";
-import { categories, CORRIDOR_KEY, corridors, defaultDescription, DIRECTION_KEY, directions, location, page, radarLayers, reputation, sampleStats, voiceMemo } from "@/lib/mockReport";
+import { categories, CORRIDOR_KEY, corridors, DIRECTION_KEY, directions, location, page, radarLayers, reputation, sampleStats } from "@/lib/mockReport";
 import { recordReport } from "@/lib/profile";
 import { reporterId } from "@/lib/reporter";
 import type { DisruptionEvent } from "@/lib/types";
@@ -38,12 +38,9 @@ export default function ReportIncident() {
   const live = useLiveEvents();
   const refresh = useRefreshLiveEvents();
   const [category, setCategory] = useState(categories[1].id);
-  const [description, setDescription] = useState(defaultDescription);
-  const [useTranscript, setUseTranscript] = useState(true);
   const [stationId, setStationId] = useState(location.defaultStation);
   const [corridor, setCorridor] = useState(corridors[0]);
   const [direction, setDirection] = useState<(typeof directions)[number]>("Northbound");
-  const [media, setMedia] = useState<{ name: string; url: string; video: boolean }[]>([]);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
   const [draftSaved, setDraftSaved] = useState(false);
@@ -57,7 +54,6 @@ export default function ReportIncident() {
       try {
         const d = JSON.parse(raw!);
         if (d.category) setCategory(d.category);
-        if (typeof d.description === "string") setDescription(d.description);
         if (d.stationId && stations[d.stationId]) setStationId(d.stationId);
         if (d.corridor) setCorridor(d.corridor);
         if (d.direction) setDirection(d.direction);
@@ -82,11 +78,8 @@ export default function ReportIncident() {
   async function submit() {
     setBusy(true);
     setResult(null);
-    const text = [
-      description.trim(),
-      useTranscript ? `Voice: ${voiceMemo.transcript}` : "",
-      `${corridor}, ${direction}`,
-    ].filter(Boolean).join(" | ").slice(0, MAX_CHARS);
+    // What Pakka Check reads: built from the choices (in English, like every report it gets).
+    const text = `${translate(M, cat.label, undefined, "en")} at ${station?.name ?? stationId} | ${corridor}, ${direction}`.slice(0, MAX_CHARS);
     try {
       const out = await submitReport({
         reporter_id: reporterId(), text, type: cat.type, severity: cat.severity,
@@ -105,7 +98,7 @@ export default function ReportIncident() {
 
   function saveDraft() {
     try {
-      localStorage.setItem(DRAFT_KEY, JSON.stringify({ category, description, stationId, corridor, direction }));
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({ category, stationId, corridor, direction }));
       setDraftSaved(true);
       setTimeout(() => setDraftSaved(false), 2000);
     } catch { /* storage blocked */ }
@@ -172,26 +165,10 @@ export default function ReportIncident() {
             </div>
           </section>
 
-          {/* 2. Telemetry */}
-          <section className="flex flex-col gap-4 rounded-xl bg-container-lowest p-5 shadow-sm">
-            <StepTitle n={2} title={t("step2")} />
-            <VoiceMemo use={useTranscript} onUse={setUseTranscript} />
-            <label className="flex flex-col gap-1.5">
-              <span className="flex items-center justify-between">
-                <span className="text-xs font-semibold">{t("descLabel")}</span>
-                <span className="text-micro font-bold text-on-surface-variant">{t("chars", { n: description.length, max: MAX_CHARS })}</span>
-              </span>
-              <textarea value={description} onChange={(e) => setDescription(e.target.value.slice(0, MAX_CHARS))} rows={3}
-                placeholder={t("descPlaceholder")}
-                className="w-full rounded-xl bg-container p-4 text-small placeholder:text-outline transition-colors focus:bg-container-lowest focus:outline-none focus:ring-2 focus:ring-primary" />
-            </label>
-            <MediaPicker media={media} setMedia={setMedia} />
-          </section>
-
-          {/* 3. Location */}
+          {/* 2. Location */}
           <section className="flex flex-col gap-4 rounded-xl bg-container-lowest p-5 shadow-sm">
             <div className="flex items-center justify-between">
-              <StepTitle n={3} title={t("step3")} />
+              <StepTitle n={2} title={t("step3")} />
               <span className="flex items-center gap-1 rounded-lg bg-container px-2 py-1 text-micro font-semibold text-primary">
                 <Icon name="edit_location_alt" className="text-[16px]" /> {t("refinePin")}
               </span>
@@ -249,12 +226,12 @@ export default function ReportIncident() {
             </div>
           </section>
 
-          {/* 4. Submit */}
+          {/* 3. Submit */}
           <section className="flex flex-col gap-4 rounded-xl bg-container-lowest p-5 shadow-sm">
             {result && <ResultBanner result={result} />}
             <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
               <div className="flex w-full items-center gap-2 sm:w-auto">
-                <button type="button" onClick={submit} disabled={busy || description.trim().length < 3}
+                <button type="button" onClick={submit} disabled={busy}
                   className="flex h-12 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-primary px-6 text-sm font-bold text-on-primary shadow-sm transition-all hover:bg-primary-container active:scale-[0.98] disabled:opacity-50 sm:flex-initial">
                   <Icon name="send" className="text-[20px]" /> {busy ? t("sending") : t("submit")}
                 </button>
@@ -355,118 +332,6 @@ function StepTitle({ n, title }: { n: number; title: string }) {
     <div className="flex items-center gap-1">
       <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-fixed text-micro font-bold text-on-primary-fixed">{n}</span>
       <span className="text-lg font-bold">{title}</span>
-    </div>
-  );
-}
-
-const WAVE = [3, 5, 6, 3, 7, 4, 5, 6, 3, 5, 4, 6, 2, 4, 6, 3, 5, 2, 4, 2];
-
-function VoiceMemo({ use, onUse }: { use: boolean; onUse: (v: boolean) => void }) {
-  const t = useT(M);
-  return (
-    <div className="flex flex-col gap-2 rounded-xl bg-container-low p-4">
-      <div className="flex items-center justify-between">
-        <div className="flex flex-wrap items-center gap-1">
-          <Icon name="mic" className="text-[20px] text-primary" />
-          <span className="text-xs font-semibold">{t("voiceTitle")}</span>
-          <span className="rounded-full bg-primary-fixed px-2 py-0.5 text-micro font-bold uppercase text-on-primary-fixed">{t("sample")}</span>
-        </div>
-        <button type="button" onClick={() => onUse(false)} title={t("voiceRemoveTitle")} aria-label={t("voiceRemoveAria")}
-          className="rounded-lg p-1.5 text-outline transition-colors hover:bg-container-high hover:text-error">
-          <Icon name="delete" className="text-[18px]" />
-        </button>
-      </div>
-      <div className="flex items-center gap-4 rounded-lg bg-container-lowest p-2 shadow-sm">
-        <button type="button" aria-label={t("playAria")} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-on-primary shadow-sm">
-          <Icon name="play_arrow" className="text-[20px]" fill />
-        </button>
-        <div className="flex flex-1 flex-col gap-1">
-          <div className="flex h-7 items-center gap-1">
-            {WAVE.map((h, i) => (
-              <span key={i} className={`w-1 rounded ${i < 8 ? "bg-primary" : "bg-container-highest"}`} style={{ height: `${h * 4}px` }} />
-            ))}
-          </div>
-          <div className="flex items-center justify-between text-micro font-bold text-on-surface-variant">
-            <span>{voiceMemo.length}</span><span>{t("voiceMax", { t: voiceMemo.max })}</span>
-          </div>
-        </div>
-        <div className="hidden items-center gap-1.5 rounded-md bg-secondary-container px-1 py-1 text-micro font-bold text-on-secondary-fixed sm:flex">
-          <Icon name="graphic_eq" className="text-[14px]" /> {t(voiceMemo.rate)}
-        </div>
-      </div>
-      <label className={`flex cursor-pointer items-start gap-1 rounded-lg bg-container px-2 py-1 ${use ? "" : "opacity-60"}`}>
-        <Icon name="neurology" className="mt-0.5 text-[16px] text-outline" />
-        <span className="flex-1">
-          <span className="text-micro font-bold text-on-surface-variant">{t("speechToText")}</span>
-          <span className="text-small italic">&ldquo;{t("transcript")}&rdquo;</span>
-        </span>
-        <input type="checkbox" checked={use} onChange={(e) => onUse(e.target.checked)} className="mt-1 accent-[var(--primary)]" aria-label={t("attachAria")} />
-      </label>
-    </div>
-  );
-}
-
-function MediaPicker({ media, setMedia }: {
-  media: { name: string; url: string; video: boolean }[];
-  setMedia: React.Dispatch<React.SetStateAction<{ name: string; url: string; video: boolean }[]>>;
-}) {
-  const t = useT(M);
-  const urls = useRef<string[]>([]);
-  useEffect(() => () => urls.current.forEach((u) => URL.revokeObjectURL(u)), []);
-  function add(files: FileList | null, video: boolean) {
-    if (!files) return;
-    const next = [...files].slice(0, 4 - media.length).map((f) => {
-      const url = URL.createObjectURL(f);
-      urls.current.push(url);
-      return { name: f.name, url, video };
-    });
-    setMedia((m) => [...m, ...next].slice(0, 4));
-  }
-  return (
-    <div className="flex flex-col gap-1">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold">{t("mediaTitle")}</span>
-        <span className="text-micro font-bold text-on-surface-variant">{t("mediaHint")}</span>
-      </div>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        {media.map((m) => (
-          <div key={m.url} className="group relative aspect-video overflow-hidden rounded-xl bg-container-high shadow-sm">
-            {m.video ? <video src={m.url} className="h-full w-full object-cover" muted /> : (
-              // eslint-disable-next-line @next/next/no-img-element -- local preview of a user-picked file
-              <img src={m.url} alt={m.name} className="h-full w-full object-cover" />
-            )}
-            <button type="button" onClick={() => setMedia((all) => all.filter((x) => x.url !== m.url))} aria-label={t("removeAria", { name: m.name })}
-              className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-container-lowest text-error opacity-0 transition-opacity group-hover:opacity-100">
-              <Icon name="close" className="text-[16px]" />
-            </button>
-            <span className="absolute bottom-1 left-1.5 max-w-[90%] truncate rounded bg-black/70 px-1.5 py-0.5 text-micro font-bold text-white">{m.name}</span>
-          </div>
-        ))}
-        {media.length < 4 && (
-          <>
-            <label className="group flex aspect-video cursor-pointer flex-col items-center justify-center gap-1 rounded-xl bg-container p-2 text-center transition-colors hover:bg-container-high">
-              <Icon name="add_a_photo" className="text-[24px] text-outline transition-colors group-hover:text-primary" />
-              <span className="text-micro font-semibold text-on-surface-variant">{t("addSnapshot")}</span>
-              <span className="text-micro text-outline">{t("photoHint")}</span>
-              <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => add(e.target.files, false)} />
-            </label>
-            <label className="group flex aspect-video cursor-pointer flex-col items-center justify-center gap-1 rounded-xl bg-container p-2 text-center transition-colors hover:bg-container-high">
-              <Icon name="videocam" className="text-[24px] text-outline transition-colors group-hover:text-primary" />
-              <span className="text-micro font-semibold text-on-surface-variant">{t("dashcam")}</span>
-              <span className="text-micro text-outline">{t("videoHint")}</span>
-              <input type="file" accept="video/*" className="hidden" onChange={(e) => add(e.target.files, true)} />
-            </label>
-          </>
-        )}
-        <div className="flex aspect-video flex-col justify-between rounded-xl bg-container-low p-1">
-          <div className="flex items-center gap-1 text-primary">
-            <Icon name="verified" className="text-[16px]" />
-            <span className="text-micro font-bold uppercase">{t("notUploaded")}</span>
-          </div>
-          <p className="text-micro leading-tight text-on-surface-variant">{t("notSentNote")}</p>
-          <span className="text-micro text-outline">{t("attached", { n: media.length })}</span>
-        </div>
-      </div>
     </div>
   );
 }

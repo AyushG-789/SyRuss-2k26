@@ -12,6 +12,7 @@ import { useT } from "@/lib/i18n";
 import { COMMON } from "@/lib/i18n/common";
 import { M } from "@/lib/i18n/messages/EventDetail";
 import Icon from "./Icon";
+import Loader from "./Loader";
 import MapView from "./MapView";
 
 const SOURCE: Record<string, { icon: string; label: "src.official" | "src.news" | "src.crowd" | "src.weather"; cls: string }> = {
@@ -43,7 +44,7 @@ export default function EventDetail({ id }: { id: string }) {
 
   if (error === "not_found") return <Empty text={t("notFound")} />;
   if (error === "offline") return <Empty text={t("offline")} />;
-  if (!detail) return <main className="px-6 py-10 text-sm text-on-surface-variant">{tc("loading")}</main>;
+  if (!detail) return <main className="px-6 py-10 text-sm"><Loader label={tc("loading")} /></main>;
 
   const { event: ev, breakdown: b } = detail;
   const style = STATUS_STYLE[ev.status];

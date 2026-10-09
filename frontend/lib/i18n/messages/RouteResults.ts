@@ -37,7 +37,6 @@ export const M = defineMessages({
     minShort: "{n} min",
     noModePlan: "No route uses this. Try another.",
     pcChanged: "What Pakka Check changed",
-    rejected: "Routes we skipped",
     // no-route explanation
     "mw.local": "local trains",
     "mw.metro": "metro",
@@ -176,7 +175,6 @@ export const M = defineMessages({
     minShort: "{n} मिनट",
     noModePlan: "कोई रूट इससे नहीं जाता। दूसरा चुनें।",
     pcChanged: "Pakka Check ने क्या बदला",
-    rejected: "जो रूट हमने छोड़े",
     "mw.local": "लोकल ट्रेन",
     "mw.metro": "मेट्रो",
     "mw.bus": "BEST बस",
@@ -309,7 +307,6 @@ export const M = defineMessages({
     minShort: "{n} मिनिटे",
     noModePlan: "कोणताही रूट याने जात नाही. दुसरे निवडा.",
     pcChanged: "Pakka Check ने काय बदलले",
-    rejected: "आम्ही सोडलेले रूट",
     "mw.local": "लोकल ट्रेन",
     "mw.metro": "मेट्रो",
     "mw.bus": "BEST बस",

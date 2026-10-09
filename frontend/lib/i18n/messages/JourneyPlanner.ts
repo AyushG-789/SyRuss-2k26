@@ -3,6 +3,11 @@ import { defineMessages } from "../../i18n";
 
 export const M = defineMessages({
   en: {
+    layersTitle: "Show on the map",
+    layerMetro: "Metro",
+    layerLocal: "Local train",
+    layerRoad: "Roads · BEST bus",
+    layerWalk: "Walking links",
     engine: "TravelBuddy Trip Planner",
     engineSub: "Local, Metro, BEST, auto, taxi · every route checked by Pakka Check first",
     liveStatus: "Live at {time}: {confirmed} problems · {possible} not sure yet",
@@ -95,6 +100,11 @@ export const M = defineMessages({
     notCovered: "We don't cover this place — pick one from the list",
   },
   hi: {
+    layersTitle: "मैप पर दिखाएँ",
+    layerMetro: "मेट्रो",
+    layerLocal: "लोकल ट्रेन",
+    layerRoad: "सड़क · BEST बस",
+    layerWalk: "पैदल रास्ते",
     engine: "TravelBuddy ट्रिप प्लानर",
     engineSub: "लोकल, मेट्रो, BEST, ऑटो, टैक्सी · हर रूट पहले Pakka Check से जाँचा जाता है",
     liveStatus: "लाइव {time}: {confirmed} समस्या · {possible} अभी पक्का नहीं",
@@ -187,6 +197,11 @@ export const M = defineMessages({
     notCovered: "यह जगह हमारे पास नहीं है — लिस्ट से चुनें",
   },
   mr: {
+    layersTitle: "नकाशावर दाखवा",
+    layerMetro: "मेट्रो",
+    layerLocal: "लोकल ट्रेन",
+    layerRoad: "रस्ते · BEST बस",
+    layerWalk: "चालण्याचे रस्ते",
     engine: "TravelBuddy ट्रिप प्लॅनर",
     engineSub: "लोकल, मेट्रो, BEST, रिक्षा, टॅक्सी · प्रत्येक रूट आधी Pakka Check ने तपासलेला",
     liveStatus: "लाइव्ह {time}: {confirmed} अडचणी · {possible} अजून नक्की नाही",

@@ -56,21 +56,22 @@ export interface Profile {
 const KEY = PROFILE_KEY;
 const MAX_ACTIVITY = 40;
 
+/** A first-time visitor: a guest until they create an account (lib/accounts.ts). */
 export const DEFAULT_PROFILE: Profile = {
-  signedIn: true,
-  name: "Rohan Sharma",
-  email: "rohan.sharma@example.in",
-  phone: "+91 98201 23456",
+  signedIn: false,
+  name: "",
+  email: "",
+  phone: "",
   appLanguage: "en",
   territory: "Mumbai Region (MMR)",
-  memberSince: "Oct 2023",
+  memberSince: "",
   modes: ["metro", "local", "bus"],
   priority: "fastest",
   stepFree: false,
-  smsAlerts: true,
+  smsAlerts: false,
   places: [
-    { id: "home", title: "Home", place: "Andheri station" },
-    { id: "work", title: "Work", place: "Jio World Centre, BKC" },
+    { id: "home", title: "Home", place: "" },
+    { id: "work", title: "Work", place: "" },
   ],
   privacy: { rememberTrips: true },
   appearance: "light",
@@ -78,20 +79,10 @@ export const DEFAULT_PROFILE: Profile = {
   activity: [],
 };
 
-export const GUEST_PROFILE: Profile = {
-  ...DEFAULT_PROFILE,
-  signedIn: false,
-  name: "Guest commuter",
-  email: "",
-  phone: "",
-  memberSince: "",
-  places: [
-    { id: "home", title: "Home", place: "" },
-    { id: "work", title: "Work", place: "" },
-  ],
-  stats: { planned: 0, started: 0, reportIds: [] },
-  activity: [],
-};
+export const GUEST_PROFILE: Profile = DEFAULT_PROFILE;
+
+/** Home areas a commuter can pick (stored in English; shown translated). */
+export const TERRITORIES = ["Mumbai Region (MMR)", "Mumbai City", "Mumbai Suburban", "Thane", "Navi Mumbai"];
 
 /* ---------------------------------------------------------------- store */
 
@@ -144,28 +135,13 @@ export function updateProfile(patch: Partial<Profile> | ((p: Profile) => Partial
   write({ ...cur, ...(typeof patch === "function" ? patch(cur) : patch) });
 }
 
-/** Sign out: personal details go, travel preferences and counts stay. */
-export function signOut() {
-  const { modes, priority, stepFree, privacy, appearance, appLanguage, stats, activity } = read();
-  write({ ...GUEST_PROFILE, modes, priority, stepFree, privacy, appearance, appLanguage, stats, activity, smsAlerts: false });
-}
-
-export interface SignInDetails {
-  name: string;
-  email: string;
-  phone: string;
-  appLanguage: Language;
-  territory: string;
-}
-
-/** Sign in with the details typed in the panel; travel preferences and counts carry over. */
-export function signIn(details: SignInDetails) {
-  const { modes, priority, stepFree, privacy, appearance, stats, activity } = read();
-  write({
-    ...DEFAULT_PROFILE, ...details, modes, priority, stepFree, privacy, appearance, stats, activity,
-    memberSince: new Date().toLocaleDateString("en-IN", { month: "short", year: "numeric" }),
-    smsAlerts: Boolean(details.phone),
-  });
+/** Replace the whole active profile (used by lib/accounts.ts when signing in, out or switching). */
+export function replaceProfile(next: Profile) {
+  write(next);
+  if (typeof document !== "undefined") {
+    applyTheme(next.appearance);
+    document.documentElement.lang = LANG_HTML[next.appLanguage];
+  }
 }
 
 /** Switch the app language (saved with the profile). */

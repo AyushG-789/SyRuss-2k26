@@ -24,6 +24,7 @@ import { clearTrip, loadTrip, type SavedTrip, saveTrip, startTrip } from "@/lib/
 import type { Leg, Mode, RouteCard } from "@/lib/types";
 import { useLiveEvents, useRefreshLiveEvents } from "@/lib/useLiveEvents";
 import Icon from "./Icon";
+import Loader from "./Loader";
 import MapView from "./MapView";
 
 type Modal = null | "report" | "share" | "sos";
@@ -88,7 +89,7 @@ export default function TrackView() {
     Promise.resolve().then(() => setTrip(loadTrip()));
   }, []);
 
-  if (trip === undefined) return <main className="px-6 py-10 text-sm text-on-surface-variant">{t("loadingTrip")}</main>;
+  if (trip === undefined) return <main className="px-6 py-10 text-sm"><Loader label={t("loadingTrip")} /></main>;
   if (!trip) return <NoTrip onStarted={setTrip} />;
   return <LiveTrip trip={trip} onTrip={setTrip} />;
 }
@@ -206,7 +207,7 @@ function LiveTrip({ trip, onTrip }: { trip: SavedTrip; onTrip: (t: SavedTrip | n
         <ReplanBanner journey={journey} name={name} onDecided={setJourney} />
       )}
       {!journey?.proposal && journey?.notice && (
-        <div className="mb-2 flex items-start gap-2 rounded-xl bg-tertiary-fixed p-3 text-small text-tertiary">
+        <div key={journey.notice} className="anim-in mb-2 flex items-start gap-2 rounded-xl bg-tertiary-fixed p-3 text-small text-tertiary">
           <Icon name="info" className="text-[18px]" /> {journey.notice}
         </div>
       )}
@@ -671,7 +672,7 @@ function ReplanBanner({ journey, name, onDecided }: { journey: Journey; name: (i
     }
   }
   return (
-    <div className="mb-2 flex flex-col gap-3 rounded-xl border-2 border-error bg-container-lowest p-4 shadow-md" role="alert">
+    <div className="anim-in mb-2 flex flex-col gap-3 rounded-xl border-2 border-error bg-container-lowest p-4 shadow-md" role="alert">
       <div className="flex items-start gap-2">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-error text-white"><Icon name="alt_route" className="text-[20px]" /></span>
         <div className="min-w-0">
@@ -713,8 +714,8 @@ function ModalShell({ title, sub, icon, iconCls, onClose, children }: {
   }, [onClose]);
   return (
     <div className="fixed inset-0 z-[1300] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label={title}>
-      <button className="absolute inset-0 bg-scrim backdrop-blur-sm" aria-label={tc("close")} onClick={onClose} />
-      <div className="relative flex w-full max-w-lg flex-col gap-4 rounded-2xl bg-container-lowest p-6 shadow-xl">
+      <button className="anim-backdrop absolute inset-0 bg-scrim backdrop-blur-sm" aria-label={tc("close")} onClick={onClose} />
+      <div className="anim-dialog relative flex w-full max-w-lg flex-col gap-4 rounded-2xl bg-container-lowest p-6 shadow-xl">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-2">
             <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${iconCls}`}><Icon name={icon} className="text-[24px]" /></div>

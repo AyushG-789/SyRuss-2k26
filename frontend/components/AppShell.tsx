@@ -13,6 +13,7 @@ import { applyTheme } from "@/lib/theme";
 import { LiveEventsProvider, useLiveEvents } from "@/lib/useLiveEvents";
 import ChatAssistant from "./ChatAssistant";
 import Icon from "./Icon";
+import AuthHost from "./AuthDialog";
 import ProfilePanel from "./ProfilePanel";
 
 type NavKey = Extract<keyof typeof M.en, `nav.${string}`>;
@@ -194,6 +195,7 @@ export function ProfileButton() {
         {profile.signedIn ? initials(profile.name) : <Icon name="person" className="text-[20px]" />}
       </button>
       <ProfilePanel open={open} section={section} onClose={close} />
+      <AuthHost />
     </>
   );
 }
@@ -220,10 +222,10 @@ export function LanguageMenu() {
         className="flex h-10 items-center gap-1.5 rounded-xl bg-container pl-2.5 pr-2 text-small font-semibold hover:bg-container-high sm:min-w-[7.5rem] sm:pl-3">
         <Icon name="translate" className="text-[20px] text-primary" />
         <span lang={current.html} className="flex-1 whitespace-nowrap text-left">{current.label}</span>
-        <Icon name={open ? "expand_less" : "expand_more"} className="hidden text-[18px] text-outline sm:inline" />
+        <Icon name="expand_more" className={`hidden text-[18px] text-outline transition-transform duration-200 sm:inline ${open ? "rotate-180" : ""}`} />
       </button>
       {open && (
-        <div role="menu" aria-label={t("language")} className="absolute right-0 top-12 z-10 w-48 overflow-hidden rounded-xl bg-container-lowest p-1 shadow-float">
+        <div role="menu" aria-label={t("language")} className="anim-pop absolute right-0 top-12 z-10 w-48 overflow-hidden rounded-xl bg-container-lowest p-1 shadow-float">
           {LANGS.map((l) => (
             <button key={l.value} type="button" role="menuitemradio" aria-checked={l.value === lang} lang={l.html}
               onClick={() => { setAppLanguage(l.value); setOpen(false); }}
@@ -266,8 +268,8 @@ function Shell({ children }: { children: React.ReactNode }) {
       {/* Mobile drawer */}
       {open && (
         <div className="fixed inset-0 z-[1200] lg:hidden" role="dialog" aria-modal="true" aria-label={t("menu")}>
-          <button className="absolute inset-0 bg-scrim" aria-label={t("closeMenu")} onClick={() => setOpen(false)} />
-          <div className="absolute inset-y-0 left-0 flex w-72 flex-col justify-between overflow-y-auto bg-container-lowest shadow-float">
+          <button className="anim-backdrop absolute inset-0 bg-scrim" aria-label={t("closeMenu")} onClick={() => setOpen(false)} />
+          <div className="anim-drawer absolute inset-y-0 left-0 flex w-72 flex-col justify-between overflow-y-auto bg-container-lowest shadow-float">
             <button onClick={() => setOpen(false)} aria-label={t("closeMenu")} className="absolute right-3 top-4 rounded-lg p-1 hover:bg-container-low">
               <Icon name="close" />
             </button>

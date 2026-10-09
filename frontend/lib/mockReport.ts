@@ -26,17 +26,7 @@ export const categories: {
   { id: "other", label: "cat.other", text: "cat.other.text", icon: "report_problem", iconCls: "text-outline", type: "delay", severity: "medium" },
 ];
 
-/** Sample voice memo (real speech-to-text arrives with Sarvam, A8 / B7). */
-export const voiceMemo = {
-  length: "0:08",
-  max: "0:30",
-  /** Shown as a small sound-quality chip (was "44.1 kHz"). */
-  rate: "voiceRate" as ReportKey,
-  /** Sent with the report in English; shown translated (key "transcript"). */
-  transcript: "Waterlogged near subway underpass causing slow movement. Left 2 lanes blocked with knee-deep water.",
-};
 
-export const defaultDescription = "Left 2 lanes blocked due to sudden culvert overflow. Vehicles diverting into single right lane.";
 
 export const location = {
   title: "locTitle" as ReportKey,

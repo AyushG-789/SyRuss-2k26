@@ -12,11 +12,13 @@ import { useEffect } from "react";
 import { setActiveLang, useLang, useT } from "@/lib/i18n";
 import { M } from "@/lib/i18n/messages/Landing";
 import { activeEvents, lineStatuses, TONE_CLASS } from "@/lib/network";
-import { openProfile, setAppearance, useProfile } from "@/lib/profile";
+import { openAuth } from "@/lib/accounts";
+import { setAppearance, useProfile } from "@/lib/profile";
 import { applyTheme } from "@/lib/theme";
 import { LiveEventsProvider, useLiveEvents } from "@/lib/useLiveEvents";
 import { LanguageMenu, ProfileButton } from "./AppShell";
 import Icon from "./Icon";
+import Reveal from "./Reveal";
 import MapView from "./MapView";
 
 type Key = keyof typeof M.en;
@@ -45,7 +47,7 @@ const TONE = {
 } as const;
 
 /** "Get started" style button: champagne gold in both themes, readable text on top. */
-const goldBtn = "inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-tertiary px-6 text-small font-semibold text-on-primary shadow-md transition hover:-translate-y-0.5 hover:shadow-lg";
+const goldBtn = "min-h-12 items-center justify-center gap-2 rounded-xl bg-tertiary px-6 text-small font-semibold text-on-primary shadow-md transition hover:-translate-y-0.5 hover:shadow-lg";
 
 export default function Landing() {
   return (
@@ -96,10 +98,10 @@ function Header() {
           </span>
         </Link>
 
-        <nav aria-label={t("navHome")} className="hidden items-center gap-1 lg:flex">
+        <nav aria-label={t("navHome")} className="hidden items-center gap-1 xl:flex">
           {NAV.map((n, i) => (
             <a key={n.href} href={n.href}
-              className={`rounded-lg px-3 py-2 text-small font-semibold ${i === 0 ? "bg-primary text-on-primary" : "text-on-surface-variant hover:bg-container-low hover:text-on-surface"}`}>
+              className={`whitespace-nowrap rounded-lg px-3 py-2 text-small font-semibold ${i === 0 ? "bg-primary text-on-primary" : "text-on-surface-variant hover:bg-container-low hover:text-on-surface"}`}>
               {t(n.label)}
             </a>
           ))}
@@ -113,10 +115,15 @@ function Header() {
             <Icon name={dark ? "light_mode" : "dark_mode"} className="text-[20px] text-primary" />
           </button>
           {!profile.signedIn && (
-            <button type="button" onClick={() => openProfile("top")}
-              className="hidden rounded-lg px-3 py-2 text-small font-semibold text-on-surface-variant hover:text-on-surface md:inline-flex">
-              {t("signIn")}
-            </button>
+            <>
+              <button type="button" onClick={() => openAuth("signin")}
+                className="inline-flex h-10 items-center whitespace-nowrap rounded-xl px-3 text-small font-semibold text-on-surface hover:bg-container-low">
+                {t("signIn")}
+              </button>
+              <button type="button" onClick={() => openAuth("signup")} className="btn-primary hidden !min-h-10 !px-4 md:inline-flex">
+                <Icon name="person_add" className="text-[18px]" /> {t("createAccount")}
+              </button>
+            </>
           )}
           <Link href="/home" className={`${goldBtn} hidden !min-h-10 !px-4 sm:inline-flex`}>{t("openApp")}</Link>
           <ProfileButton />
@@ -145,7 +152,7 @@ function Hero() {
       {/* soft background tint (very light, both themes) */}
       <div className="pointer-events-none absolute -top-40 left-1/2 h-[28rem] w-[56rem] max-w-[140%] -translate-x-1/2 rounded-full bg-primary-soft opacity-70 blur-3xl" aria-hidden />
       <div className="relative mx-auto flex max-w-7xl flex-col gap-8 px-4 md:px-6">
-        <div className="mx-auto flex max-w-3xl flex-col items-center gap-4 text-center">
+        <div className="anim-in mx-auto flex max-w-3xl flex-col items-center gap-4 text-center">
           <span className="inline-flex flex-wrap items-center justify-center gap-x-2 gap-y-1 rounded-full bg-primary-soft px-4 py-1.5 text-caption font-semibold text-primary-ink">
             <span className="relative flex h-2 w-2">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-60 motion-reduce:hidden" />
@@ -160,11 +167,12 @@ function Hero() {
           </h1>
           <p className="max-w-2xl text-body leading-relaxed text-on-surface-variant sm:text-subtitle">{t("heroSub")}</p>
           <div className="flex flex-wrap items-center justify-center gap-3 pt-1">
-            <Link href="/home" className={goldBtn}>{t("getStarted")} <Icon name="arrow_forward" className="text-[18px]" /></Link>
+            <Link href="/home" className={`${goldBtn} inline-flex`}>{t("getStarted")} <Icon name="arrow_forward" className="text-[18px]" /></Link>
             <a href="#features" className="btn-secondary !min-h-12 !px-6">
               <Icon name="explore" className="text-[18px] text-primary" /> {t("seeFeatures")}
             </a>
           </div>
+          <NewHere />
         </div>
 
         {/* Live network map instead of a stock photo */}
@@ -186,7 +194,7 @@ function Hero() {
           </div>
 
           {/* three cards over the bottom of the map */}
-          <div className="relative z-10 -mt-12 grid grid-cols-1 gap-3 px-2 sm:-mt-14 md:grid-cols-3 md:gap-4">
+          <div className="anim-stagger relative z-10 -mt-12 grid grid-cols-1 gap-3 px-2 sm:-mt-14 md:grid-cols-3 md:gap-4">
             <Link href={`/plan?from=${encodeURIComponent("Andheri station")}&to=${encodeURIComponent("Jio World Centre, BKC")}`}
               className="card card-interactive flex flex-col gap-1.5 p-4">
               <span className="flex items-center justify-between">
@@ -228,6 +236,27 @@ function Hero() {
   );
 }
 
+/** "New here? Create a free account" for guests; "Signed in as …" once they have an account. */
+function NewHere({ onDark = false }: { onDark?: boolean }) {
+  const t = useT(M);
+  const profile = useProfile();
+  if (profile.signedIn) {
+    return <p className={`text-small ${onDark ? "opacity-85" : "text-on-surface-variant"}`}>{t("signedInAs", { name: profile.name })}</p>;
+  }
+  return (
+    <p className={`text-small ${onDark ? "opacity-90" : "text-on-surface-variant"}`}>
+      {t("newHere")}{" "}
+      <button type="button" onClick={() => openAuth("signup")} className={`font-semibold underline-offset-2 hover:underline ${onDark ? "" : "text-primary"}`}>
+        {t("createFree")}
+      </button>
+      {" · "}
+      <button type="button" onClick={() => openAuth("signin")} className={`font-semibold underline-offset-2 hover:underline ${onDark ? "" : "text-primary"}`}>
+        {t("signIn")}
+      </button>
+    </p>
+  );
+}
+
 /* ---------------------------------------------------------------- stats */
 
 function Stats() {
@@ -240,7 +269,8 @@ function Stats() {
   ];
   return (
     <section className="bg-container-low py-8">
-      <div className="mx-auto grid max-w-7xl grid-cols-2 gap-4 px-4 md:grid-cols-4 md:px-6">
+      <Reveal className="mx-auto max-w-7xl px-4 md:px-6">
+      <div className="anim-stagger grid grid-cols-2 gap-4 md:grid-cols-4">
         {items.map((x) => (
           <a key={x.v} href={x.href} className="flex flex-col gap-1 rounded-xl p-2 text-center hover:bg-container md:text-left">
             <span className={`text-title font-bold tracking-tight sm:text-display ${x.cls}`}>{t(x.v)}</span>
@@ -249,6 +279,7 @@ function Stats() {
           </a>
         ))}
       </div>
+      </Reveal>
     </section>
   );
 }
@@ -269,9 +300,9 @@ function Features() {
   const t = useT(M);
   return (
     <section id="features" className="scroll-mt-20 py-12 lg:py-24">
-      <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 md:px-6">
+      <Reveal className="mx-auto flex max-w-7xl flex-col gap-8 px-4 md:px-6">
         <SectionHead kicker={t("featKicker")} title={t("featTitle")} sub={t("featSub")} />
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 lg:gap-5">
+        <div className="anim-stagger grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 lg:gap-5">
           {FEATURES.map((f) => (
             <Link key={f.n} href={f.href} className="card card-interactive group flex flex-col gap-4 p-6">
               <span className={`grid h-12 w-12 place-items-center rounded-xl transition-transform group-hover:scale-110 motion-reduce:transform-none ${TONE[f.tone].box}`}>
@@ -288,7 +319,7 @@ function Features() {
             </Link>
           ))}
         </div>
-      </div>
+      </Reveal>
     </section>
   );
 }
@@ -299,9 +330,9 @@ function HowItWorks() {
   const t = useT(M);
   return (
     <section id="how" className="scroll-mt-20 bg-container-low py-12 lg:py-24">
-      <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 md:px-6">
+      <Reveal className="mx-auto flex max-w-7xl flex-col gap-8 px-4 md:px-6">
         <SectionHead kicker={t("howKicker")} title={t("howTitle")} sub={t("howSub")} kickerCls="text-tertiary" />
-        <ol className="grid grid-cols-1 gap-4 md:grid-cols-3 lg:gap-5">
+        <ol className="anim-stagger grid grid-cols-1 gap-4 md:grid-cols-3 lg:gap-5">
           <Step n={1} icon="search" cls={TONE.primary.box} title={t("s1t")} text={t("s1d")}>
             <span className="flex items-center gap-2 rounded-lg bg-container-low px-3 py-2 text-small">
               <span className="h-2 w-2 rounded-full bg-primary" /> {t("s1ex")}
@@ -319,7 +350,7 @@ function HowItWorks() {
             </span>
           </Step>
         </ol>
-      </div>
+      </Reveal>
     </section>
   );
 }
@@ -355,7 +386,7 @@ function About() {
   ];
   return (
     <section id="about" className="scroll-mt-20 py-12 lg:py-24">
-      <div className="mx-auto max-w-7xl px-4 md:px-6">
+      <Reveal className="mx-auto max-w-7xl px-4 md:px-6">
         <div className="flex flex-col items-center gap-8 rounded-3xl bg-container p-6 shadow-sm lg:flex-row lg:p-14">
           <div className="flex flex-1 flex-col gap-4">
             <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-primary-soft px-4 py-1.5 text-caption font-semibold text-primary-ink">
@@ -398,7 +429,7 @@ function About() {
             </div>
           </div>
         </div>
-      </div>
+      </Reveal>
     </section>
   );
 }
@@ -409,7 +440,7 @@ function Cta() {
   const t = useT(M);
   return (
     <section className="pb-12 lg:pb-24">
-      <div className="mx-auto max-w-7xl px-4 md:px-6">
+      <Reveal className="mx-auto max-w-7xl px-4 md:px-6">
         <div className="flex flex-col items-center gap-4 rounded-3xl bg-primary px-6 py-12 text-center text-on-primary shadow-lg lg:py-20">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-on-primary/10 px-4 py-1.5 text-caption font-semibold">
             <Icon name="bolt" className="text-[16px]" /> {t("ctaPill")}
@@ -424,13 +455,14 @@ function Cta() {
               <Icon name="route" className="text-[18px]" /> {t("ctaPlan")}
             </Link>
           </div>
+          <NewHere onDark />
           <ul className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 pt-3 text-caption opacity-85">
             {(["ctaC1", "ctaC2", "ctaC3"] as Key[]).map((k) => (
               <li key={k} className="flex items-center gap-1"><Icon name="check_circle" className="text-[16px]" /> {t(k)}</li>
             ))}
           </ul>
         </div>
-      </div>
+      </Reveal>
     </section>
   );
 }

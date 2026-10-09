@@ -12,6 +12,7 @@ import { useT } from "@/lib/i18n";
 import { COMMON } from "@/lib/i18n/common";
 import { M } from "@/lib/i18n/messages/TransparencyView";
 import Icon from "./Icon";
+import Loader from "./Loader";
 
 const ROUTE_KEYS = ["baseline", "aware", "replan"] as const;
 type RouteKey = (typeof ROUTE_KEYS)[number];
@@ -35,7 +36,7 @@ export default function TransparencyView() {
   }, []);
 
   if (error && !t) return <main className="px-6 py-10 text-sm text-on-surface-variant">{tr("offline")}</main>;
-  if (!t) return <main className="px-6 py-10 text-sm text-on-surface-variant">{tc("loading")}</main>;
+  if (!t) return <main className="px-6 py-10 text-sm"><Loader label={tc("loading")} /></main>;
 
   const p = t.policy as Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
   const thresholds = p.thresholds ?? { confirmed: p.confirmed_at, possible: p.possible_at };

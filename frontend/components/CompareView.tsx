@@ -13,6 +13,7 @@ import { storyText } from "@/lib/i18n/messages/StoryPanel";
 import { COMMON } from "@/lib/i18n/common";
 import { M } from "@/lib/i18n/messages/CompareView";
 import Icon from "./Icon";
+import Loader from "./Loader";
 
 export default function CompareView() {
   const [r, setR] = useState<EvalResult | null>(null);
@@ -26,7 +27,7 @@ export default function CompareView() {
   }, []);
 
   if (error) return <main className="px-6 py-10 text-sm text-on-surface-variant">{tr("offline")}</main>;
-  if (!r) return <main className="px-6 py-10 text-sm text-on-surface-variant">{tr("running")}</main>;
+  if (!r) return <main className="px-6 py-10 text-sm"><Loader label={tr("running")} /></main>;
 
   const b = r.schedule_only;
   const t = r.travelbuddy;

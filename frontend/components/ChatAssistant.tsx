@@ -368,7 +368,7 @@ export default function ChatAssistant() {
         <section
           role="dialog"
           aria-label={t("dialog")}
-          className="fixed inset-x-0 bottom-0 z-[1150] flex h-[85dvh] flex-col overflow-hidden rounded-t-2xl bg-container-lowest shadow-float sm:inset-x-auto sm:bottom-5 sm:right-5 sm:h-[min(640px,calc(100dvh-6rem))] sm:w-[400px] sm:rounded-2xl"
+          className="anim-dialog fixed inset-x-0 bottom-0 z-[1150] flex h-[85dvh] flex-col overflow-hidden rounded-t-2xl bg-container-lowest shadow-float sm:inset-x-auto sm:bottom-5 sm:right-5 sm:h-[min(640px,calc(100dvh-6rem))] sm:w-[400px] sm:rounded-2xl"
         >
           <header className="flex items-center justify-between gap-2 bg-primary px-4 py-3 text-on-primary">
             <div className="flex items-center gap-2">

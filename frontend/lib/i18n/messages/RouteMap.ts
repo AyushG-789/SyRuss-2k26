@@ -2,6 +2,7 @@ import { defineMessages } from "../../i18n";
 
 export const M = defineMessages({
   en: {
+    walkLink: "Walk {a} ↔ {b} · about {min} min",
     start: "Start",
     startAt: "From: {label}",
     endAt: "To: {label}",
@@ -11,6 +12,7 @@ export const M = defineMessages({
     sure: "{pct} sure",
   },
   hi: {
+    walkLink: "पैदल {a} ↔ {b} · लगभग {min} मिनट",
     start: "शुरू",
     startAt: "कहाँ से: {label}",
     endAt: "कहाँ तक: {label}",
@@ -20,6 +22,7 @@ export const M = defineMessages({
     sure: "{pct} पक्का",
   },
   mr: {
+    walkLink: "चालत {a} ↔ {b} · साधारण {min} मिनिटे",
     start: "सुरुवात",
     startAt: "कुठून: {label}",
     endAt: "कुठे: {label}",
