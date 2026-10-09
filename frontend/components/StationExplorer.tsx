@@ -14,7 +14,7 @@ import MapView from "./MapView";
 
 const CROWD = {
   ok: "bg-primary-fixed text-on-primary-fixed",
-  warn: "bg-tertiary-fixed text-[#2f1500]",
+  warn: "bg-tertiary-fixed text-on-tertiary-fixed",
   neutral: "bg-container-high text-on-surface-variant",
 } as const;
 const DOT = { ok: "bg-primary", warn: "bg-tertiary", neutral: "bg-outline" } as const;
@@ -103,7 +103,7 @@ export default function StationExplorer() {
                 className={`flex shrink-0 items-center gap-1 rounded-full px-4 py-2 text-xs font-semibold shadow-sm ${on ? "bg-primary text-on-primary" : "bg-container-lowest hover:bg-container"}`}>
                 <Icon name={f.icon} className={`text-[18px] ${on ? "" : f.iconCls}`} />
                 <span>{f.label}</span>
-                <span className={`rounded-full px-1.5 text-micro font-bold ${on ? "bg-white/20" : "bg-container-high text-on-surface-variant"}`}>{f.count}</span>
+                <span className={`rounded-full px-1.5 text-micro font-bold ${on ? "bg-on-primary/20" : "bg-container-high text-on-surface-variant"}`}>{f.count}</span>
               </button>
             );
           })}
@@ -142,7 +142,7 @@ export default function StationExplorer() {
                   <span className="text-micro font-bold">{skywalk}</span>
                 </div>
               </div>
-              <div className="absolute inset-x-4 bottom-4 z-[500] flex items-center justify-between gap-2 rounded-xl bg-[#2d3133]/85 px-4 py-2 text-small text-[#eff1f3] shadow-xl backdrop-blur-md">
+              <div className="absolute inset-x-4 bottom-4 z-[500] flex items-center justify-between gap-2 rounded-xl bg-inverse-surface/90 px-4 py-2 text-small text-inverse-on-surface shadow-xl backdrop-blur-md">
                 <div className="flex items-center gap-2">
                   <Icon name="navigation" className="text-[18px] text-primary-fixed-dim" />
                   <span>Your Location: <strong>{hub.you.text}</strong> {hub.you.dist}</span>

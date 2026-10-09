@@ -13,6 +13,7 @@ import { legColor, lineShortName, MODE_LABEL, PLAN_LABEL, pct, placeName, readab
 import { toMin } from "@/lib/geo";
 import { activeEvents } from "@/lib/network";
 import { startTrip } from "@/lib/savedTrip";
+import { recordPlanned, recordStarted } from "@/lib/profile";
 import { tripHref } from "@/lib/tripUrl";
 import type { Leg, Mode, PlanLabel, PlanResponse, RouteCard, Traveller } from "@/lib/types";
 import { useLiveEvents } from "@/lib/useLiveEvents";
@@ -67,6 +68,7 @@ export default function RouteResults({ traveller }: { traveller: Traveller | nul
       .then((plan) => {
         if (cancelled) return;
         setState({ status: "ready", plan });
+        recordPlanned(traveller, window.location.pathname + window.location.search);
         setSelectedId((plan.cards.find((c) => c.recommended) ?? plan.cards[0])?.plan_id ?? null);
       })
       .catch((err: unknown) => {
@@ -94,6 +96,7 @@ export default function RouteResults({ traveller }: { traveller: Traveller | nul
     const qs = search.toString();
     const fresh = await freshCard(traveller!, card);
     await startTrip({ traveller: traveller!, destination, card: fresh, resultsHref: qs ? `${pathname}?${qs}` : pathname, savedAt: new Date().toISOString() });
+    recordStarted(traveller!, fresh.label);
     router.push("/track");
   }
 

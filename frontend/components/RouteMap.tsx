@@ -9,6 +9,8 @@ import { CircleMarker, Marker, Polyline, Popup, TileLayer, Tooltip, useMap } fro
 import { lines, stations } from "@/lib/api";
 import { evidenceSummary, eventPosition, eventTitle, legColor, pct, STATUS_STYLE } from "@/lib/format";
 import { legPath, type LatLon } from "@/lib/geo";
+import { useProfile } from "@/lib/profile";
+import { MAP_COLORS } from "@/lib/theme";
 import type { DisruptionEvent, Place, RouteCard } from "@/lib/types";
 
 const MUMBAI: LatLon = [19.05, 72.87];
@@ -24,14 +26,16 @@ export interface MapStop {
   active?: boolean;
 }
 
-function stopIcon(badge: string, active: boolean, start: boolean) {
-  const bg = start ? "#545f73" : active ? "#8d4b00" : "#006948";
+type MapColors = (typeof MAP_COLORS)["light"];
+
+function stopIcon(badge: string, active: boolean, start: boolean, c: MapColors) {
+  const bg = start ? c.start : active ? c.accent : c.brand;
   const size = active ? 34 : 28;
   return divIcon({
     className: "",
     iconSize: [size, size],
     iconAnchor: [size / 2, size / 2],
-    html: `<div style="width:${size}px;height:${size}px;border-radius:9999px;background:${bg};color:#fff;display:grid;place-items:center;font:700 ${active ? 15 : 13}px/1 'Plus Jakarta Sans',system-ui,sans-serif;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35)">${badge}</div>`,
+    html: `<div style="width:${size}px;height:${size}px;border-radius:9999px;background:${bg};color:${c.pinText};display:grid;place-items:center;font:700 ${active ? 15 : 13}px/1 'Plus Jakarta Sans',system-ui,sans-serif;border:3px solid ${c.ring};box-shadow:0 2px 6px rgba(0,0,0,.35)">${badge}</div>`,
   });
 }
 
@@ -99,6 +103,7 @@ export default function RouteMap({
   stops?: MapStop[];
   onStopClick?: (index: number) => void;
 }) {
+  const c = MAP_COLORS[useProfile().appearance];
   const paths = useMemo(
     () => (card ? card.legs.map((leg) => ({ leg, path: legPath(leg, origin, destination) })) : []),
     [card, origin, destination],
@@ -181,10 +186,10 @@ export default function RouteMap({
       })}
 
       {stops.length > 1 && (
-        <Polyline positions={stops.map((p) => [p.lat, p.lon] as LatLon)} pathOptions={{ color: "#006948", weight: 2, opacity: 0.45, dashArray: "2 8" }} />
+        <Polyline positions={stops.map((p) => [p.lat, p.lon] as LatLon)} pathOptions={{ color: c.brand, weight: 2, opacity: 0.55, dashArray: "2 8" }} />
       )}
       {stops.map((p, i) => (
-        <Marker key={`${p.badge}-${p.lat}-${p.lon}`} position={[p.lat, p.lon]} icon={stopIcon(p.badge, !!p.active, p.badge === "S")}
+        <Marker key={`${p.badge}-${p.lat}-${p.lon}`} position={[p.lat, p.lon]} icon={stopIcon(p.badge, !!p.active, p.badge === "S", c)}
           zIndexOffset={p.active ? 1000 : 0} eventHandlers={onStopClick ? { click: () => onStopClick(i) } : undefined}>
           <Tooltip direction="top" offset={[0, -14]}>
             <b>{p.badge === "S" ? "Start" : `${p.badge}.`} {p.label}</b>{p.sub ? <><br />{p.sub}</> : null}
@@ -193,17 +198,17 @@ export default function RouteMap({
       ))}
 
       {origin && stops.length === 0 && (
-        <CircleMarker center={[origin.lat, origin.lon]} radius={8} pathOptions={{ color: "#006948", fillColor: "#ffffff", fillOpacity: 1, weight: 3 }}>
+        <CircleMarker center={[origin.lat, origin.lon]} radius={8} pathOptions={{ color: c.brand, fillColor: c.ring, fillOpacity: 1, weight: 3 }}>
           <Tooltip>Start: {origin.label}</Tooltip>
         </CircleMarker>
       )}
       {destination && stops.length === 0 && (
-        <CircleMarker center={[destination.lat, destination.lon]} radius={8} pathOptions={{ color: "#8d4b00", fillColor: "#b15f00", fillOpacity: 1, weight: 3 }}>
+        <CircleMarker center={[destination.lat, destination.lon]} radius={8} pathOptions={{ color: c.accent, fillColor: c.accentFill, fillOpacity: 1, weight: 3 }}>
           <Tooltip>End: {destination.label}</Tooltip>
         </CircleMarker>
       )}
       {here && (
-        <CircleMarker center={here} radius={9} pathOptions={{ color: "#ffffff", fillColor: "#006948", fillOpacity: 1, weight: 4 }}>
+        <CircleMarker center={here} radius={9} pathOptions={{ color: c.ring, fillColor: c.brand, fillOpacity: 1, weight: 4 }}>
           <Tooltip permanent direction="top">You are here</Tooltip>
         </CircleMarker>
       )}
