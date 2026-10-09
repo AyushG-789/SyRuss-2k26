@@ -7,14 +7,14 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useId, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { getPlan } from "@/lib/api";
 import { eventTitle, evidenceSummary, lineShortName, MODE_LABEL, pct, PLAN_LABEL, STATUS_STYLE } from "@/lib/format";
 import { defaults, quickChips } from "@/lib/mockPlanner";
 import { getProfile, openProfile, useProfile } from "@/lib/profile";
 import { activeEvents } from "@/lib/network";
 import { useLiveEvents } from "@/lib/useLiveEvents";
-import { findPlace, PLACE_OPTIONS } from "@/lib/places";
+import { findPlace } from "@/lib/places";
 import { useT } from "@/lib/i18n";
 import { COMMON } from "@/lib/i18n/common";
 import { M } from "@/lib/i18n/messages/JourneyPlanner";
@@ -24,6 +24,7 @@ import type { Mode, PlanResponse, RouteCard } from "@/lib/types";
 import Icon from "./Icon";
 import Loader from "./Loader";
 import MapView from "./MapView";
+import PlacePicker from "./PlacePicker";
 import { DEFAULT_LAYERS, LAYER_COLORS, type NetworkLayer } from "@/lib/mapLayers";
 
 type Departure = "now" | "at" | "by";
@@ -53,11 +54,10 @@ function snap(text: string | null): string | null {
 export default function JourneyPlanner() {
   const router = useRouter();
   const params = useSearchParams();
-  const listId = useId();
   const [form, setForm] = useState<FormState>(() => ({
     ...EMPTY_FORM,
-    from: snap(params.get("from")) ?? defaults.from,
-    to: snap(params.get("to")) ?? defaults.to,
+    from: snap(params.get("from")) ?? "",
+    to: snap(params.get("to")) ?? "",
     priority: "fastest",
     modes: ["local", "metro", "bus", "auto", "taxi", "cab"],
   }));
@@ -78,7 +78,7 @@ export default function JourneyPlanner() {
     Promise.resolve().then(() => {
       if (cancelled) return;
       const p = getProfile();
-      setForm((f) => ({ ...f, priority: p.priority, stepFree: p.stepFree, language: p.appLanguage, modes: p.modes.length ? [...p.modes] : f.modes }));
+      setForm((f) => ({ ...f, priority: p.priority, stepFree: p.stepFree, language: p.appLanguage, modes: p.modes.length ? [...new Set([...p.modes, "walk" as Mode])] : f.modes }));
     });
     return () => { cancelled = true; };
   }, []);
@@ -89,15 +89,23 @@ export default function JourneyPlanner() {
   const problems = useMemo(() => activeEvents(live?.events).sort((a, b) => b.confidence - a.confidence), [live]);
   const preview = usePreview(departure === "now" ? { ...form, timeMode: "leave", time: NOW } : form);
 
+  // "All" stands on its own: when it is on, the single options are off (and every vehicle is allowed).
+  // Otherwise any mix of Metro, Local, Bus, Auto/Cab and Walk can be picked. Walking is always
+  // possible to reach a station; picking only Walk plans a walking-only trip.
+  const ALL_VEHICLES = MODALITIES[0].modes;
+  const allOn = ALL_VEHICLES.every((x) => form.modes.includes(x));
+  const modeKey = (m: (typeof MODALITIES)[number]): Mode[] => (m.id === "walk" ? ["walk"] : m.modes);
   function modalityOn(m: (typeof MODALITIES)[number]): boolean {
-    if (m.id === "walk") return true;
-    if (m.id === "overall") return MODALITIES[0].modes.every((x) => form.modes.includes(x));
-    return m.modes.every((x) => form.modes.includes(x));
+    if (m.id === "overall") return allOn;
+    return !allOn && modeKey(m).every((x) => form.modes.includes(x));
   }
   function toggleModality(m: (typeof MODALITIES)[number]) {
-    if (m.id === "walk") return; // walking is always part of a trip
-    if (m.id === "overall") { set("modes", modalityOn(m) ? ["local", "metro"] : [...MODALITIES[0].modes]); return; }
-    set("modes", modalityOn(m) ? form.modes.filter((x) => !m.modes.includes(x)) : [...new Set([...form.modes, ...m.modes])]);
+    if (m.id === "overall") { set("modes", [...ALL_VEHICLES]); return; }
+    const keys = modeKey(m);
+    // Leaving "All": the tapped option plus Walk (picked for you, tap Walk to turn it off).
+    if (allOn) { set("modes", [...new Set<Mode>([...keys, "walk"])]); return; }
+    const next = modalityOn(m) ? form.modes.filter((x) => !keys.includes(x)) : [...new Set([...form.modes, ...keys])];
+    set("modes", next.length ? next : [...ALL_VEHICLES]);
   }
 
   function chooseDeparture(d: Departure) {
@@ -139,7 +147,6 @@ export default function JourneyPlanner() {
 
       {/* ---- Trip form: three columns on a wide (landscape) screen, one column on a phone ---- */}
       <form onSubmit={submit} noValidate className="flex flex-col gap-5 rounded-2xl bg-container-lowest p-5 shadow-sm lg:p-6">
-        <datalist id={listId}>{PLACE_OPTIONS.map((p) => <option key={p.label} value={p.label} />)}</datalist>
         <div className="flex items-start justify-between">
           <div>
             <p className="text-micro font-bold uppercase tracking-[0.12em] text-primary">{t("eyebrow")}</p>
@@ -166,8 +173,8 @@ export default function JourneyPlanner() {
                   <Icon name="my_location" className="text-[16px]" /> {t("myLocation")}
                 </button>
               </div>
-              <PlaceInput listId={listId} value={form.from} onChange={(v) => set("from", v)} dot="bg-primary"
-                placeholder={t("fromPlaceholder")} label={t("fromLabel")} />
+              <PlacePicker value={form.from} onChange={(v) => set("from", v)}
+                placeholder={t("fromPlaceholder")} label={t("fromLabel")} lead={<span className="grid h-7 w-7 place-items-center rounded-full bg-primary-soft"><span className="h-3 w-3 rounded-full bg-primary" /></span>} />
 
               <div className="flex items-center justify-between py-1 text-small">
                 {via === null ? (
@@ -175,11 +182,13 @@ export default function JourneyPlanner() {
                     <Icon name="add_circle" className="text-[20px]" /> {t("addVia")}
                   </button>
                 ) : (
-                  <div className="flex w-full items-center gap-2">
-                    <input list={listId} value={via} onChange={(e) => setVia(e.target.value)} aria-label={t("viaLabel")}
-                      placeholder={t("viaPlaceholder")}
-                      className="min-w-0 flex-1 rounded-lg border border-dashed border-outline-variant bg-container-lowest px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
-                    <button type="button" onClick={() => setVia(null)} aria-label={t("removeVia")} className="text-outline hover:text-on-surface"><Icon name="close" /></button>
+                  <div className="flex w-full items-start gap-2">
+                    <div className="min-w-0 flex-1">
+                      <PlacePicker compact value={via} onChange={setVia} placeholder={t("viaPlaceholder")} label={t("viaLabel")}
+                        lead={<Icon name="more_vert" className="text-[20px] text-outline" />} />
+                    </div>
+                    <button type="button" onClick={() => setVia(null)} aria-label={t("removeVia")}
+                      className="grid h-12 w-10 shrink-0 place-items-center rounded-lg text-outline hover:bg-container-low hover:text-on-surface"><Icon name="close" /></button>
                   </div>
                 )}
                 {via === null && <span className="text-on-surface-variant">{t("direct")}</span>}
@@ -189,8 +198,8 @@ export default function JourneyPlanner() {
                 <span className="font-semibold text-slate">{t("finalDest")}</span>
                 <span className="text-on-surface-variant">{t("zone")}</span>
               </div>
-              <PlaceInput listId={listId} value={form.to} onChange={(v) => set("to", v)} pin
-                placeholder={t("toPlaceholder")} label={t("toLabel")} />
+              <PlacePicker value={form.to} onChange={(v) => set("to", v)}
+                placeholder={t("toPlaceholder")} label={t("toLabel")} lead={<span className="grid h-7 w-7 place-items-center rounded-full bg-error-container"><Icon name="location_on" className="text-[18px] text-error" /></span>} />
             </div>
 
 
@@ -264,12 +273,11 @@ export default function JourneyPlanner() {
               <div className="grid grid-cols-3 gap-2">
                 {MODALITIES.map((m) => {
                   const on = modalityOn(m);
-                  const primary = m.id === "overall" && on;
                   return (
-                    <button key={m.id} type="button" onClick={() => toggleModality(m)} aria-pressed={on} title={m.id === "walk" ? t("walkAlways") : undefined}
-                      className={`flex items-center justify-center gap-1.5 rounded-xl px-2 py-2.5 text-small font-semibold transition ${
-                        primary ? "bg-primary text-on-primary" : on ? "bg-primary-soft text-primary-ink" : "bg-container-low text-on-surface-variant hover:bg-container"}`}>
-                      <Icon name={m.icon} className="text-[20px]" /> {"M" in m.label ? t(m.label.M) : tc(m.label.C)}
+                    <button key={m.id} type="button" onClick={() => toggleModality(m)} aria-pressed={on}
+                      className={`flex h-11 items-center justify-center gap-1.5 rounded-xl px-2 text-small font-semibold transition ${
+                        on ? "bg-primary text-on-primary shadow-sm" : "bg-container-low text-on-surface-variant ring-1 ring-transparent hover:bg-container hover:ring-hairline"}`}>
+                      <Icon name={on ? "check_circle" : m.icon} fill={on} className="text-[20px]" /> {"M" in m.label ? t(m.label.M) : tc(m.label.C)}
                     </button>
                   );
                 })}
@@ -309,11 +317,11 @@ export default function JourneyPlanner() {
             {/* Trip limits (PS: budget, walking, changes, deadline, luggage, crowds, language) */}
             <div className="flex flex-col gap-2">
               <span className="text-small font-semibold text-slate">{t("limits")}</span>
-              <div className="grid grid-cols-3 gap-2">
-                <NumberBox label={t("budget")} value={form.budget} onChange={(v) => set("budget", v)} placeholder={t("any")} />
-                <NumberBox label={t("maxWalk")} value={form.maxWalk} onChange={(v) => set("maxWalk", v)} placeholder="15" />
-                <NumberBox label={t("maxChanges")} value={form.maxTransfers} onChange={(v) => set("maxTransfers", v)} placeholder="2" />
-              </div>
+              <NumberBox label={t("budget")} value={form.budget} onChange={(v) => set("budget", v)} placeholder={t("any")} />
+              <ChoiceRow icon="directions_walk" label={t("maxWalk")} value={form.maxWalk} onChange={(v) => set("maxWalk", v)}
+                options={WALK_CHOICES.map((v) => ({ value: v, label: v ? `${v}` : t("any") }))} />
+              <ChoiceRow icon="sync_alt" label={t("maxChanges")} value={form.maxTransfers} onChange={(v) => set("maxTransfers", v)}
+                options={CHANGE_CHOICES.map((v) => ({ value: v, label: v === "0" ? t("noChange") : v ? v : t("any") }))} />
               {departure === "by" && (
                 <Toggle icon="flag" label={t("hardDeadline")} checked={form.hardDeadline} onChange={(v) => set("hardDeadline", v)} />
               )}
@@ -486,6 +494,34 @@ function PreviewCard({ card }: { card: RouteCard }) {
   );
 }
 
+const WALK_CHOICES = ["5", "10", "15", "20", "30", ""];   // minutes; "" = any
+const CHANGE_CHOICES = ["0", "1", "2", "3", ""];          // "" = any
+
+/** A row of tap-to-pick options (one is always chosen), dark when picked. */
+function ChoiceRow({ icon, label, value, onChange, options }: {
+  icon: string; label: string; value: string; onChange: (v: string) => void; options: { value: string; label: string }[];
+}) {
+  return (
+    <div className="flex flex-col gap-1.5 rounded-xl bg-container-low px-3 py-2.5">
+      <span className="flex items-center gap-1.5 text-caption font-semibold text-on-surface-variant">
+        <Icon name={icon} className="text-[18px] text-primary" /> {label}
+      </span>
+      <div role="radiogroup" aria-label={label} className="grid gap-1" style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}>
+        {options.map((o) => {
+          const on = value === o.value;
+          return (
+            <button key={o.value || "any"} type="button" role="radio" aria-checked={on} onClick={() => onChange(o.value)}
+              className={`h-9 truncate rounded-lg px-1 text-small font-semibold tabular-nums transition ${
+                on ? "bg-primary text-on-primary shadow-sm" : "bg-container-lowest text-on-surface hover:bg-container"}`}>
+              {o.label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function NumberBox({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (v: string) => void; placeholder: string }) {
   return (
     <label className="flex flex-col gap-1 rounded-xl bg-container-low px-3 py-2">
@@ -543,28 +579,3 @@ function MapLayers({ layers, onToggle }: { layers: Record<NetworkLayer, boolean>
   );
 }
 
-function PlaceInput({ listId, value, onChange, placeholder, label, dot, pin = false }: {
-  listId: string; value: string; onChange: (v: string) => void; placeholder: string; label: string; dot?: string; pin?: boolean;
-}) {
-  const t = useT(M);
-  const known = value === "" || Boolean(findPlace(value));
-  return (
-    <div className="flex flex-col gap-1">
-      <div className={`flex min-h-[56px] items-center gap-3 rounded-xl border bg-container-low px-4 focus-within:ring-2 focus-within:ring-primary ${known ? "border-transparent" : "border-error"}`}>
-        {pin ? (
-          <span className="grid h-7 w-7 place-items-center rounded-full bg-error-container"><Icon name="location_on" className="text-[18px] text-error" /></span>
-        ) : (
-          <span className="grid h-7 w-7 place-items-center rounded-full bg-primary-soft"><span className={`h-3 w-3 rounded-full ${dot}`} /></span>
-        )}
-        <input list={listId} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} aria-label={label} autoComplete="off"
-          className="min-w-0 flex-1 bg-transparent text-subtitle placeholder:text-outline focus:outline-none" />
-        {value && (
-          <button type="button" onClick={() => onChange("")} aria-label={t("clear", { label })} className="text-outline hover:text-on-surface">
-            <Icon name="close" />
-          </button>
-        )}
-      </div>
-      {!known && <span className="text-caption text-error">{t("notCovered")}</span>}
-    </div>
-  );
-}

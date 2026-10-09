@@ -24,7 +24,6 @@ import { useLiveEvents } from "@/lib/useLiveEvents";
 import Icon from "./Icon";
 import Loader from "./Loader";
 import MapView from "./MapView";
-import StoryPanel from "./StoryPanel";
 
 type Plan = PlanResponse & { sample?: boolean };
 type State = { status: "loading" } | { status: "error"; message: string } | { status: "not_connected" } | { status: "ready"; plan: Plan };
@@ -72,9 +71,11 @@ export default function RouteResults({ traveller }: { traveller: Traveller | nul
   const [state, setState] = useState<State>({ status: "loading" });
   const [baseline, setBaseline] = useState<PlanResponse | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [filter, setFilter] = useState("all");
+  // Filters start from what was picked in the planner (traveller.modes_allowed). "All" stands alone;
+  // otherwise any mix of Metro / Local / Bus / Auto-taxi can be on.
+  const [picked, setPicked] = useState<Set<string>>(() => filtersFor(traveller?.modes_allowed ?? []));
+  const filterKey = [...picked].sort().join(",");
   const [copied, setCopied] = useState(false);
-  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     if (!traveller) return;
@@ -92,7 +93,7 @@ export default function RouteResults({ traveller }: { traveller: Traveller | nul
       });
     getBaselinePlan(traveller).then((b) => !cancelled && setBaseline(b)).catch(() => undefined);
     return () => { cancelled = true; };
-  }, [traveller, reloadKey]);
+  }, [traveller]);
 
   const plan = state.status === "ready" ? state.plan : null;
   const active = useMemo(() => activeEvents(live?.events), [live]);
@@ -102,7 +103,18 @@ export default function RouteResults({ traveller }: { traveller: Traveller | nul
     return plan ? [...plan.cards].sort((a, b) => Number(b.recommended) - Number(a.recommended) || order.indexOf(a.label) - order.indexOf(b.label)) : [];
   }, [plan]);
   const counts = useMemo(() => Object.fromEntries(FILTERS.map((f) => [f.id, ordered.filter((c) => usesModes(c, f.modes)).length])), [ordered]);
-  const shown = ordered.filter((c) => usesModes(c, FILTERS.find((f) => f.id === filter)!.modes));
+  const shown = picked.has("all") ? ordered
+    : ordered.filter((c) => FILTERS.some((f) => picked.has(f.id) && usesModes(c, f.modes)));
+  function toggleFilter(id: string) {
+    setPicked((cur) => {
+      if (id === "all") return new Set(["all"]);
+      const next = new Set(cur);
+      next.delete("all");
+      if (next.has(id)) next.delete(id); else next.add(id);
+      const singles = FILTERS.filter((f) => f.id !== "all");
+      return next.size === 0 || singles.every((f) => next.has(f.id)) ? new Set(["all"]) : next;
+    });
+  }
   const selected = plan?.cards.find((c) => c.plan_id === selectedId) ?? null;
 
   if (!traveller) return <p className="mx-auto w-full max-w-7xl px-6 py-6">{t("broken")}</p>;
@@ -170,10 +182,6 @@ export default function RouteResults({ traveller }: { traveller: Traveller | nul
         </div>
       </section>
 
-      {traveller.demo && traveller.traveller_id !== "CUSTOM" && (
-        <StoryPanel traveller={traveller} onReplan={() => setReloadKey((k) => k + 1)} resultsHref={pathname} />
-      )}
-
       {state.status === "loading" && <Loader label={t("loadingRoutes")} />}
       {state.status === "error" && <p className="rounded-xl bg-error-container p-3 text-sm text-on-error-container">{t("loadError", { msg: state.message })}</p>}
       {state.status === "not_connected" && <NotConnected traveller={traveller} destination={destination} />}
@@ -185,25 +193,30 @@ export default function RouteResults({ traveller }: { traveller: Traveller | nul
       {plan && plan.cards.length > 0 && (
         <>
           {/* ---- Mode filter + sort ---- */}
-          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-            <div className="flex flex-wrap gap-1 rounded-2xl bg-container-low p-1">
+          <div className="card flex flex-col divide-y divide-hairline-soft">
+            <div className="flex items-center gap-3 overflow-x-auto px-3 py-2.5">
+              <span className="w-12 shrink-0 text-caption font-bold uppercase tracking-wider text-outline">{t("filterLabel")}</span>
+              <div className="flex shrink-0 gap-1.5">
               {FILTERS.map((f) => (
-                <button key={f.id} type="button" onClick={() => setFilter(f.id)} aria-pressed={filter === f.id} disabled={!counts[f.id]}
-                  className={`flex items-center gap-1.5 rounded-xl px-3 py-2 text-small font-semibold transition disabled:opacity-40 ${
-                    filter === f.id ? "bg-container-lowest text-primary shadow-sm" : "text-on-surface-variant hover:text-on-surface"}`}>
-                  <Icon name={f.icon} className="text-[18px]" /> {t(f.label)}
-                  {f.id === "all" && <span className="rounded-full bg-primary-fixed px-1.5 text-micro text-on-primary-fixed">{counts.all}</span>}
+                <button key={f.id} type="button" onClick={() => toggleFilter(f.id)} aria-pressed={picked.has(f.id)}
+                  disabled={!counts[f.id] && !picked.has(f.id)}
+                  className={`flex h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl px-3 text-small font-semibold transition disabled:opacity-40 ${
+                    picked.has(f.id) ? "bg-primary text-on-primary shadow-sm" : "bg-container-low text-on-surface-variant hover:bg-container hover:text-on-surface"}`}>
+                  <Icon name={picked.has(f.id) && f.id !== "all" ? "check_circle" : f.icon} fill={picked.has(f.id) && f.id !== "all"} className="text-[18px]" /> {t(f.label)}
+                  <span className={`rounded-full px-1.5 text-micro tabular-nums ${picked.has(f.id) ? "bg-on-primary/20" : "bg-container text-on-surface-variant"}`}>{counts[f.id] ?? 0}</span>
                 </button>
               ))}
+              </div>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-caption font-bold uppercase tracking-wider text-outline">{t("sort")}</span>
+            <div className="flex items-center gap-3 overflow-x-auto px-3 py-2.5">
+              <span className="w-12 shrink-0 text-caption font-bold uppercase tracking-wider text-outline">{t("sort")}</span>
+              <div className="flex shrink-0 gap-1.5">
               {ordered.map((c) => {
                 const on = c.plan_id === selectedId;
                 return (
                   <button key={c.plan_id} onClick={() => setSelectedId(c.plan_id)} aria-pressed={on}
-                    className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-small font-semibold transition ${
-                      on ? "bg-primary text-on-primary shadow-sm" : "bg-container-lowest text-on-surface shadow-sm hover:bg-container-low"}`}>
+                    className={`flex h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl px-3.5 text-small font-semibold transition ${
+                      on ? "bg-primary text-on-primary shadow-sm" : "bg-container-low text-on-surface hover:bg-container"}`}>
                     <Icon name={LABEL_STYLE[c.label].icon} className="text-[18px]" />
                     {PLAN_LABEL[c.label]}{c.recommended ? t("recommendedSuffix") : ""}
                     <span className={on ? "text-on-primary/80" : "text-on-surface-variant"}>
@@ -212,12 +225,19 @@ export default function RouteResults({ traveller }: { traveller: Traveller | nul
                   </button>
                 );
               })}
+              </div>
             </div>
           </div>
 
           <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
             {/* ---- Cards (arrive one after another; re-run when the filter changes) ---- */}
-            <div key={filter} className="anim-stagger flex flex-col gap-4">
+            <div key={filterKey} className="anim-stagger flex flex-col gap-4">
+              {shown.length === 0 && ordered.length > 0 && (
+                <div className="card flex flex-wrap items-center justify-between gap-3 p-4 text-small text-on-surface-variant">
+                  <span className="flex items-center gap-2"><Icon name="filter_alt_off" className="text-[20px]" /> {t("filter.none")}</span>
+                  <button type="button" onClick={() => toggleFilter("all")} className="btn-secondary !min-h-9">{t("filter.showAll")}</button>
+                </div>
+              )}
               {shown.map((card) => (
                 <ResultCard key={card.plan_id} card={card} traveller={traveller} destinationLabel={destination?.label}
                   fastest={Math.min(...ordered.map((c) => c.duration_min))}
@@ -400,6 +420,13 @@ function NoRoute({ traveller, rejected }: { traveller: Traveller; rejected: Plan
 }
 
 /* ---------------------------------------------------------------- helpers */
+
+/** Which filter buttons match the modes picked in the planner ("all" when every vehicle was allowed). */
+function filtersFor(allowed: Mode[]): Set<string> {
+  const singles = FILTERS.filter((f) => f.modes);
+  const on = singles.filter((f) => f.modes!.some((m) => allowed.includes(m))).map((f) => f.id);
+  return on.length === 0 || on.length === singles.length ? new Set(["all"]) : new Set(on);
+}
 
 function usesModes(card: RouteCard, modes: Mode[] | null): boolean {
   return !modes || card.legs.some((l) => modes.includes(l.mode));

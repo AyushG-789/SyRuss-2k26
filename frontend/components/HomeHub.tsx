@@ -179,11 +179,10 @@ function TransportModes() {
                 <span className={`h-2.5 w-2.5 rounded-full ${TONE[m.tone].dot}`} title={t("liveStatus", { label: m.label })} />
               </div>
               <div className="mt-4">
-                <div className="flex flex-wrap items-baseline justify-between gap-x-2">
-                  <span className="text-lg font-semibold">{m.name}</span>
-                  <span className="text-micro font-bold text-on-surface-variant">{m.detail}</span>
-                </div>
-                <div className={`mt-1 flex items-center gap-1 text-micro font-bold ${TONE[m.tone].text}`}>
+                {/* name on its own line, detail under it: every card lines up the same way */}
+                <span className="block truncate text-lg font-semibold">{m.name}</span>
+                <span className="block truncate text-caption font-semibold text-on-surface-variant">{m.detail}</span>
+                <div className={`mt-2 flex items-center gap-1 text-micro font-bold ${TONE[m.tone].text}`}>
                   <Icon name={STATUS_ICON[m.tone]} className="text-[14px]" /> {m.label}
                 </div>
               </div>
@@ -227,7 +226,7 @@ function NetworkPulse() {
               {i > 0 && <div className="h-px bg-container" />}
               <div className="grid grid-cols-12 items-center px-4 py-3 transition-colors hover:bg-container-low/50">
                 <div className="col-span-5 flex items-center gap-2">
-                  <span className="flex h-8 min-w-8 shrink-0 items-center justify-center rounded-lg px-1 text-micro font-bold text-white" style={{ background: r.color }}>{r.code}</span>
+                  <span className="flex h-8 w-16 shrink-0 items-center justify-center truncate rounded-lg px-1 text-micro font-bold text-white" style={{ background: r.color }}>{r.code}</span>
                   <span className="truncate text-sm font-semibold">{r.name}</span>
                 </div>
                 <div className="col-span-5 flex justify-center">

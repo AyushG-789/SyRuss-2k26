@@ -2,6 +2,9 @@ import { defineMessages } from "../../i18n";
 
 export const M = defineMessages({
   en: {
+    filterLabel: "Show:",
+    "filter.none": "No route uses only what you picked.",
+    "filter.showAll": "Show all routes",
     "label.optimal": "Best overall",
     "label.fastest": "Fastest",
     "label.cheapest": "Cheapest",
@@ -140,6 +143,9 @@ export const M = defineMessages({
     "nc.request": "What we will send",
   },
   hi: {
+    filterLabel: "दिखाएँ:",
+    "filter.none": "आपके चुने साधनों से कोई रूट नहीं।",
+    "filter.showAll": "सारे रूट दिखाएँ",
     "label.optimal": "सबसे अच्छा",
     "label.fastest": "सबसे तेज़",
     "label.cheapest": "सबसे सस्ता",
@@ -272,6 +278,9 @@ export const M = defineMessages({
     "nc.request": "हम यह भेजेंगे",
   },
   mr: {
+    filterLabel: "दाखवा:",
+    "filter.none": "तुम्ही निवडलेल्या वाहनांनी एकही मार्ग नाही.",
+    "filter.showAll": "सगळे मार्ग दाखवा",
     "label.optimal": "सर्वात चांगला",
     "label.fastest": "सर्वात जलद",
     "label.cheapest": "सर्वात स्वस्त",

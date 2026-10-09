@@ -416,7 +416,7 @@ function About() {
               {rows.map((r) => (
                 <li key={r.line_id} className="flex items-center justify-between gap-3 rounded-xl bg-container-low p-2.5">
                   <span className="flex min-w-0 items-center gap-2.5">
-                    <span className="grid h-8 min-w-8 shrink-0 place-items-center rounded-md px-1 text-micro font-bold text-white" style={{ background: r.color }}>{r.code.split(" ")[0]}</span>
+                    <span className="grid h-8 w-12 shrink-0 place-items-center rounded-md px-1 text-micro font-bold text-white" style={{ background: r.color }}>{r.code.split(" ")[0]}</span>
                     <span className="truncate text-small font-semibold">{r.name}</span>
                   </span>
                   <span className={`chip shrink-0 ${TONE_CLASS[r.tone]}`}>{r.label}</span>

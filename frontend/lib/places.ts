@@ -7,6 +7,8 @@ import type { Place } from "./types";
 
 export interface PlaceOption extends Place {
   kind: "place" | "station";
+  /** For stations: which network it is on (shown as an icon in the place picker). */
+  mode?: "local" | "metro";
 }
 
 const pois = poisMock.pois as unknown as Record<string, { name: string; lat: number; lon: number }>;
@@ -15,7 +17,7 @@ export const PLACE_OPTIONS: PlaceOption[] = [
   ...Object.entries(pois).map(([id, p]) => ({ label: p.name, lat: p.lat, lon: p.lon, poi_id: id, kind: "place" as const })),
   ...Object.entries(stations)
     .filter(([, s]) => s.mode !== "bus")
-    .map(([, s]) => ({ label: `${s.name} station`, lat: s.lat, lon: s.lon, poi_id: null, kind: "station" as const })),
+    .map(([, s]) => ({ label: `${s.name} station`, lat: s.lat, lon: s.lon, poi_id: null, kind: "station" as const, mode: s.mode as "local" | "metro" })),
 ].sort((a, b) => a.label.localeCompare(b.label));
 
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
