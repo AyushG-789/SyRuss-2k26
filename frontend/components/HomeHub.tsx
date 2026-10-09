@@ -46,15 +46,15 @@ function Welcome() {
       <div className="relative z-10 mb-5 flex flex-col justify-between gap-5 xl:flex-row xl:items-center">
         <div className="flex max-w-2xl flex-col">
           <div className="mb-1 flex flex-wrap items-center gap-1">
-            <span className="rounded-full bg-primary-fixed px-1 py-0.5 text-[11px] font-bold uppercase leading-[14px] tracking-wider text-on-primary-fixed">
+            <span className="rounded-full bg-primary-fixed px-1 py-0.5 text-micro font-bold uppercase leading-[14px] tracking-wider text-on-primary-fixed">
               {hero.badge}
             </span>
-            <span className="flex items-center gap-1 text-[13px] text-on-surface-variant">
+            <span className="flex items-center gap-1 text-small text-on-surface-variant">
               <span className={`h-2 w-2 rounded-full ${live?.source === "backend" ? "animate-ping bg-primary" : "bg-outline"}`} />
               {live?.source === "backend" ? `Pakka Check live · demo time ${live.asOf}` : "Server offline · sample data"}
             </span>
           </div>
-          <h1 className="text-[26px] font-bold leading-snug tracking-tight md:text-[32px]">{hero.title}</h1>
+          <h1 className="text-[26px] font-bold leading-snug tracking-tight md:text-display">{hero.title}</h1>
           <p className="mt-1 text-base font-medium text-on-surface-variant">{hero.subtitle}</p>
         </div>
         <div className="flex items-center gap-4 self-start rounded-xl bg-container-low px-5 py-2 xl:self-auto">
@@ -62,7 +62,7 @@ function Welcome() {
             <div key={s.label} className="flex items-center gap-4">
               {i > 0 && <div className="h-8 w-px bg-container-highest" />}
               <div className="flex flex-col">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">{s.label}</span>
+                <span className="eyebrow">{s.label}</span>
                 <span className={`text-xl font-bold ${s.accent ? "text-primary" : "text-on-surface"}`}>{s.value}</span>
               </div>
             </div>
@@ -103,7 +103,7 @@ function FrequentTrips() {
           <Icon name="bookmark" className="text-[20px] text-primary" />
           <h2 className="text-lg font-semibold">Daily Frequent Trips</h2>
         </div>
-        <span className="text-[13px] text-on-surface-variant">Tap a card to plan it right now, around live problems</span>
+        <span className="text-small text-on-surface-variant">Tap a card to plan it right now, around live problems</span>
       </div>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         {frequentTrips.map((t) => (
@@ -116,12 +116,12 @@ function FrequentTrips() {
                 </div>
                 <div className="flex flex-col">
                   <span className="text-sm font-semibold transition-colors group-hover:text-primary">{t.title}</span>
-                  <span className="max-w-[180px] truncate text-[13px] text-on-surface-variant">{t.place}</span>
+                  <span className="max-w-[180px] truncate text-small text-on-surface-variant">{t.place}</span>
                 </div>
               </div>
             </div>
             <div className="mt-4 flex items-center justify-between pt-1">
-              <div className="flex min-w-0 items-center gap-1 text-[13px] text-on-surface-variant">
+              <div className="flex min-w-0 items-center gap-1 text-small text-on-surface-variant">
                 <Icon name="route" className="text-[16px] text-primary" /> <span className="truncate">{t.from} → {t.to}</span>
               </div>
               <Icon name="arrow_forward" className="text-[20px] text-outline transition-all group-hover:translate-x-1 group-hover:text-primary" />
@@ -134,7 +134,7 @@ function FrequentTrips() {
             <Icon name="add" className="text-[20px]" />
           </span>
           <span className="mt-1 text-sm font-semibold">Plan any trip</span>
-          <span className="text-[13px] text-on-surface-variant">Budget, walking, deadline, step-free…</span>
+          <span className="text-small text-on-surface-variant">Budget, walking, deadline, step-free…</span>
         </Link>
       </div>
     </section>
@@ -156,7 +156,7 @@ function TransportModes() {
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-col">
           <h2 className="text-lg font-semibold">5 City Transport Modes</h2>
-          <span className="text-[13px] text-on-surface-variant">Live status from Pakka Check: only confirmed or possible problems are shown</span>
+          <span className="text-small text-on-surface-variant">Live status from Pakka Check: only confirmed or possible problems are shown</span>
         </div>
         <Link href="/report" className="flex items-center gap-0.5 text-xs font-semibold text-primary hover:underline">
           Live reports <Icon name="open_in_new" className="text-[16px]" />
@@ -175,9 +175,9 @@ function TransportModes() {
               <div className="mt-4">
                 <div className="flex flex-wrap items-baseline justify-between gap-x-2">
                   <span className="text-lg font-semibold">{m.name}</span>
-                  <span className="text-[11px] font-bold text-on-surface-variant">{m.detail}</span>
+                  <span className="text-micro font-bold text-on-surface-variant">{m.detail}</span>
                 </div>
-                <div className={`mt-1 flex items-center gap-1 text-[11px] font-bold ${TONE[m.tone].text}`}>
+                <div className={`mt-1 flex items-center gap-1 text-micro font-bold ${TONE[m.tone].text}`}>
                   <Icon name={STATUS_ICON[m.tone]} className="text-[14px]" /> {m.label}
                 </div>
               </div>
@@ -200,17 +200,17 @@ function NetworkPulse() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h2 className="text-lg font-semibold">Live Transit Network Pulse</h2>
-          <p className="text-[13px] text-on-surface-variant">Every line, with its worst problem checked by Pakka Check</p>
+          <p className="text-small text-on-surface-variant">Every line, with its worst problem checked by Pakka Check</p>
         </div>
         <div className="flex items-center gap-1 rounded-lg bg-container px-2 py-1">
           <span className={`h-2 w-2 rounded-full ${live?.source === "backend" ? "animate-pulse bg-primary" : "bg-outline"}`} />
-          <span className="text-[11px] font-bold">{live?.source === "backend" ? `Refreshes every 5 s · ${live.asOf}` : "Sample data"}</span>
+          <span className="text-micro font-bold">{live?.source === "backend" ? `Refreshes every 5 s · ${live.asOf}` : "Sample data"}</span>
         </div>
       </div>
 
       <div className="overflow-x-auto rounded-xl bg-container-lowest shadow-sm">
         <div className="min-w-[520px]">
-          <div className="grid grid-cols-12 bg-container-low px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">
+          <div className="grid grid-cols-12 bg-container-low px-4 py-2 eyebrow">
             <div className="col-span-5">Transit Corridor</div>
             <div className="col-span-5 text-center">Status (Pakka Check)</div>
             <div className="col-span-2 text-right">Problems</div>
@@ -220,14 +220,14 @@ function NetworkPulse() {
               {i > 0 && <div className="h-px bg-container" />}
               <div className="grid grid-cols-12 items-center px-4 py-3 transition-colors hover:bg-container-low/50">
                 <div className="col-span-5 flex items-center gap-2">
-                  <span className="flex h-8 min-w-8 shrink-0 items-center justify-center rounded-lg px-1 text-[11px] font-bold text-white" style={{ background: r.color }}>{r.code}</span>
+                  <span className="flex h-8 min-w-8 shrink-0 items-center justify-center rounded-lg px-1 text-micro font-bold text-white" style={{ background: r.color }}>{r.code}</span>
                   <span className="truncate text-sm font-semibold">{r.name}</span>
                 </div>
                 <div className="col-span-5 flex justify-center">
                   {r.event ? (
-                    <Link href={`/events/${r.event.event_id}`} className={`rounded-full px-2 py-0.5 text-[11px] font-semibold hover:underline ${TONE[r.tone].chip}`}>{r.label}</Link>
+                    <Link href={`/events/${r.event.event_id}`} className={`rounded-full px-2 py-0.5 text-micro font-semibold hover:underline ${TONE[r.tone].chip}`}>{r.label}</Link>
                   ) : (
-                    <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${TONE[r.tone].chip}`}>{r.label}</span>
+                    <span className={`rounded-full px-2 py-0.5 text-micro font-semibold ${TONE[r.tone].chip}`}>{r.label}</span>
                   )}
                 </div>
                 <div className="col-span-2 text-right text-xs font-semibold">{r.reports}</div>
@@ -240,9 +240,9 @@ function NetworkPulse() {
       <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-primary-fixed/40 p-4">
         <div className="flex items-center gap-2">
           <Icon name="verified_user" className="text-[24px] text-primary" />
-          <span className="text-[13px] text-on-primary-fixed">A problem changes your route only after Pakka Check confirms it from several sources (≥ 70%).</span>
+          <span className="text-small text-on-primary-fixed">A problem changes your route only after Pakka Check confirms it from several sources (≥ 70%).</span>
         </div>
-        <Link href="/transparency" className="rounded bg-container-lowest px-2 py-1 text-[11px] font-bold text-primary shadow-sm hover:bg-container">
+        <Link href="/transparency" className="rounded bg-container-lowest px-2 py-1 text-micro font-bold text-primary shadow-sm hover:bg-container">
           How it works
         </Link>
       </div>
@@ -260,9 +260,9 @@ function LiveMap() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-semibold">Live Transit Map</h2>
-          <p className="text-[13px] text-on-surface-variant">Rail &amp; metro network with live problems</p>
+          <p className="text-small text-on-surface-variant">Rail &amp; metro network with live problems</p>
         </div>
-        <span className="rounded-full bg-container px-1.5 py-0.5 text-[11px] font-semibold">{active.length} on map</span>
+        <span className="rounded-full bg-container px-1.5 py-0.5 text-micro font-semibold">{active.length} on map</span>
       </div>
 
       <div className="relative h-[370px] w-full overflow-hidden rounded-xl bg-container-lowest shadow-sm">
@@ -271,7 +271,7 @@ function LiveMap() {
         </div>
         <div className="pointer-events-none absolute left-14 top-3 z-[500] flex items-center gap-1 rounded-lg bg-container-lowest/95 px-2 py-1 shadow-sm backdrop-blur-md">
           <span className={`h-2 w-2 rounded-full ${confirmed ? "animate-ping bg-error" : "bg-primary"}`} />
-          <span className="text-[11px] font-semibold">{confirmed ? `${confirmed} confirmed problem${confirmed === 1 ? "" : "s"}` : "No confirmed problems"}</span>
+          <span className="text-micro font-semibold">{confirmed ? `${confirmed} confirmed problem${confirmed === 1 ? "" : "s"}` : "No confirmed problems"}</span>
         </div>
         <div className="absolute inset-x-3 bottom-3 z-[500] flex items-center justify-between rounded-xl bg-container-lowest/95 p-2 shadow-md backdrop-blur-md">
           <div className="flex items-center gap-2">
@@ -280,10 +280,10 @@ function LiveMap() {
             </div>
             <div className="flex flex-col">
               <span className="text-sm font-semibold">Seeing a problem?</span>
-              <span className="text-[13px] text-on-surface-variant">Your report is checked before it reroutes anyone</span>
+              <span className="text-small text-on-surface-variant">Your report is checked before it reroutes anyone</span>
             </div>
           </div>
-          <Link href="/report" className="rounded-lg bg-primary px-2 py-1.5 text-[11px] font-bold text-on-primary shadow-sm transition-colors hover:bg-primary-container">
+          <Link href="/report" className="rounded-lg bg-primary px-2 py-1.5 text-micro font-bold text-on-primary shadow-sm transition-colors hover:bg-primary-container">
             Report
           </Link>
         </div>
@@ -301,7 +301,7 @@ function DemoTravellers() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h2 className="text-lg font-semibold">Try a demo traveller</h2>
-          <p className="text-[13px] text-on-surface-variant">Five real Mumbai situations, one click each. Routes use the live demo clock.</p>
+          <p className="text-small text-on-surface-variant">Five real Mumbai situations, one click each. Routes use the live demo clock.</p>
         </div>
         <Link href="/compare" className="text-xs font-semibold text-primary hover:underline">How they do vs a normal app →</Link>
       </div>
@@ -315,11 +315,11 @@ function DemoTravellers() {
               </span>
               <span className="min-w-0">
                 <span className="block truncate text-sm font-semibold group-hover:text-primary">{t.name}</span>
-                <span className="block text-[11px] font-bold text-on-surface-variant">{t.traveller_id}{t.itinerary ? " · day plan" : ""}</span>
+                <span className="block text-micro font-bold text-on-surface-variant">{t.traveller_id}{t.itinerary ? " · day plan" : ""}</span>
               </span>
             </div>
-            <p className="line-clamp-3 text-[12px] text-on-surface-variant">{t.story}</p>
-            <span className="mt-auto flex items-center gap-1 text-[12px] font-semibold text-primary">
+            <p className="line-clamp-3 text-caption text-on-surface-variant">{t.story}</p>
+            <span className="mt-auto flex items-center gap-1 text-caption font-semibold text-primary">
               <Icon name="play_circle" className="text-[16px]" /> Open story{t.demo ? ` · moment at ${t.demo.moment}` : ""}
             </span>
           </Link>

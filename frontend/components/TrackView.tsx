@@ -144,14 +144,14 @@ function LiveTrip({ trip, onTrip }: { trip: SavedTrip; onTrip: (t: SavedTrip | n
               <span className="text-lg font-semibold">Live Trip</span>
               <PhasePill phase={phase} />
               <Link href="/admin" title="The demo runs on a simulated clock — move it on Demo control"
-                className="flex items-center gap-1 rounded-full bg-container px-2 py-0.5 font-mono text-[11px] font-bold text-on-surface-variant hover:bg-container-high">
+                className="flex items-center gap-1 rounded-full bg-container px-2 py-0.5 font-mono text-micro font-bold text-on-surface-variant hover:bg-container-high">
                 <Icon name="schedule" className="text-[14px]" /> {clock ? `Demo time ${clock.now}${clock.speed ? ` · ${clock.speed}×` : " · paused"}` : "Demo clock offline"}
               </Link>
               {clock && phase !== "arrived" && (
                 <ClockButtons speed={clock.speed} onChange={setClock} />
               )}
             </div>
-            <p className="truncate text-[13px] text-on-surface-variant">
+            <p className="truncate text-small text-on-surface-variant">
               {traveller.origin.label} → {destLabel} · {card.label} route · {routeText(legs)}
             </p>
           </div>
@@ -171,12 +171,12 @@ function LiveTrip({ trip, onTrip }: { trip: SavedTrip; onTrip: (t: SavedTrip | n
 
       {/* ---- Demo story (TR1–TR5) ---- */}
       {traveller.demo?.kind === "track" && clock && phase !== "arrived" && (
-        <div className="mb-2 flex flex-wrap items-center gap-2 rounded-xl border-2 border-primary/30 bg-primary-fixed/20 p-3 text-[13px]">
+        <div className="mb-2 flex flex-wrap items-center gap-2 rounded-xl border-2 border-primary/30 bg-primary-fixed/20 p-3 text-small">
           <Icon name="theater_comedy" className="text-[18px] text-primary" />
           <span className="min-w-0 flex-1"><b>Demo story ({traveller.traveller_id}):</b> the moment is at <b>{traveller.demo.moment}</b>. {traveller.demo.watch}</span>
           {clock.now < traveller.demo.moment && (
             <button type="button" onClick={() => updateClock({ set: traveller.demo!.moment }).then(setClock).catch(() => undefined)}
-              className="flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-[12px] font-bold text-on-primary hover:bg-primary-container">
+              className="flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-caption font-bold text-on-primary hover:bg-primary-container">
               <Icon name="fast_forward" className="text-[16px]" /> Jump to {traveller.demo.moment}
             </button>
           )}
@@ -188,18 +188,18 @@ function LiveTrip({ trip, onTrip }: { trip: SavedTrip; onTrip: (t: SavedTrip | n
         <ReplanBanner journey={journey} name={name} onDecided={setJourney} />
       )}
       {!journey?.proposal && journey?.notice && (
-        <div className="mb-2 flex items-start gap-2 rounded-xl bg-tertiary-fixed p-3 text-[13px] text-tertiary">
+        <div className="mb-2 flex items-start gap-2 rounded-xl bg-tertiary-fixed p-3 text-small text-tertiary">
           <Icon name="info" className="text-[18px]" /> {journey.notice}
         </div>
       )}
       {lost && (
-        <div className="mb-2 flex items-start gap-2 rounded-xl bg-amber-soft p-3 text-[13px] text-amber-ink">
+        <div className="mb-2 flex items-start gap-2 rounded-xl bg-amber-soft p-3 text-small text-amber-ink">
           <Icon name="sync_problem" className="text-[18px]" />
           The demo was reset, so the server no longer knows this trip (no replan alerts). End it and start again to watch it live.
         </div>
       )}
       {!trip.journeyId && (
-        <div className="mb-2 flex items-start gap-2 rounded-xl bg-amber-soft p-3 text-[13px] text-amber-ink">
+        <div className="mb-2 flex items-start gap-2 rounded-xl bg-amber-soft p-3 text-small text-amber-ink">
           <Icon name="cloud_off" className="text-[18px]" />
           The TravelBuddy server wasn&apos;t reachable when this trip started, so it is tracked on this device only (no replan alerts).
         </div>
@@ -208,24 +208,24 @@ function LiveTrip({ trip, onTrip }: { trip: SavedTrip; onTrip: (t: SavedTrip | n
       {/* ---- 4 metric cards ---- */}
       <div className="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard label={phase === "upcoming" ? "Starts In" : "Remaining Time"} icon="schedule" iconCls="bg-primary-fixed/40 text-primary"
-          value={<><span className="text-[32px] font-bold leading-10 tracking-tight">{phase === "upcoming" ? startMin - nowMin : remaining}</span><span className="text-lg font-bold text-primary">mins</span></>}
+          value={<><span className="text-display font-bold tracking-tight tabular-nums">{phase === "upcoming" ? startMin - nowMin : remaining}</span><span className="text-lg font-bold text-primary">mins</span></>}
           footLeft={<span className="flex items-center gap-1 text-primary"><Icon name="update" className="text-[16px]" /> Follows the demo clock</span>}
-          footRight={<span className="font-mono text-[11px] font-bold text-outline">{card.duration_min} min trip</span>} />
+          footRight={<span className="font-mono text-micro font-bold text-outline">{card.duration_min} min trip</span>} />
         <MetricCard label="Est. Arrival" icon="sports_score" iconCls="bg-secondary-container text-on-secondary-container"
-          value={<span className="text-[32px] font-bold leading-10 tracking-tight">{hhmm(eta)}</span>}
+          value={<span className="text-display font-bold tracking-tight tabular-nums">{hhmm(eta)}</span>}
           footLeft={confirmedDelay > 0 || blocked
             ? <span className="flex items-center gap-1 font-semibold text-error"><Icon name="warning" className="text-[16px]" /> {blocked ? "Route blocked" : `+${confirmedDelay} min (confirmed)`}</span>
             : <span className="flex items-center gap-1 font-semibold text-primary"><Icon name="check_circle" className="text-[16px]" /> On schedule</span>}
-          footRight={<span className="max-w-[9rem] truncate text-[11px] font-bold">{destLabel}</span>} />
+          footRight={<span className="max-w-[9rem] truncate text-micro font-bold">{destLabel}</span>} />
         <MetricCard label="Fare" icon="payments" iconCls="bg-tertiary-fixed text-tertiary"
-          value={<><span className="text-[32px] font-bold leading-10 tracking-tight">₹{card.cost_inr}</span><span className="text-xs font-semibold text-on-surface-variant">total</span></>}
+          value={<><span className="text-display font-bold tracking-tight tabular-nums">₹{card.cost_inr}</span><span className="text-xs font-semibold text-on-surface-variant">total</span></>}
           footLeft={<span className="flex items-center gap-1 text-on-surface-variant"><span className="h-2 w-2 rounded-full bg-primary" /> ₹{paid} so far</span>}
-          footRight={<span className="text-[11px] font-bold text-tertiary">{card.transfers} change{card.transfers === 1 ? "" : "s"}</span>} />
+          footRight={<span className="text-micro font-bold text-tertiary">{card.transfers} change{card.transfers === 1 ? "" : "s"}</span>} />
         <button onClick={() => setModal("report")} disabled={!target}
           className="group flex flex-col justify-between rounded-xl bg-gradient-to-br from-tertiary-fixed to-container p-5 text-left shadow-sm transition-all hover:shadow-md disabled:opacity-50">
           <div className="flex w-full items-start justify-between">
             <div className="flex flex-col">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-tertiary">Pakka Check</span>
+              <span className="eyebrow text-tertiary">Pakka Check</span>
               <span className="mt-1 text-xl font-semibold transition-colors group-hover:text-tertiary">Report Issue</span>
             </div>
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-tertiary text-white transition-transform group-hover:scale-105">
@@ -233,7 +233,7 @@ function LiveTrip({ trip, onTrip }: { trip: SavedTrip; onTrip: (t: SavedTrip | n
             </div>
           </div>
           <div className="mt-4 flex w-full items-center justify-between pt-1">
-            <span className="truncate text-[13px] text-tertiary">{target ? `At ${target.label}` : "Delay • Crowding • Lift out"}</span>
+            <span className="truncate text-small text-tertiary">{target ? `At ${target.label}` : "Delay • Crowding • Lift out"}</span>
             <Icon name="arrow_forward" className="text-[18px] text-tertiary transition-transform group-hover:translate-x-1" />
           </div>
         </button>
@@ -249,10 +249,10 @@ function LiveTrip({ trip, onTrip }: { trip: SavedTrip; onTrip: (t: SavedTrip | n
           <div className="flex flex-col rounded-xl bg-container-lowest p-5 shadow-sm">
             <div className="flex items-center justify-between pb-2">
               <div className="flex flex-col">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">Your route, step by step</span>
+                <span className="eyebrow">Your route, step by step</span>
                 <span className="text-lg font-semibold">Journey Milestones</span>
               </div>
-              <span className="rounded-full bg-container px-2 py-1 font-mono text-[11px] font-bold text-on-surface-variant">{legs.length} legs</span>
+              <span className="rounded-full bg-container px-2 py-1 font-mono text-micro font-bold text-on-surface-variant">{legs.length} legs</span>
             </div>
             <div className="relative mt-4 flex flex-col">
               {legs.map((leg, i) => (
@@ -279,17 +279,17 @@ function LiveTrip({ trip, onTrip }: { trip: SavedTrip; onTrip: (t: SavedTrip | n
           <div className="relative flex flex-col overflow-hidden rounded-xl bg-container-lowest shadow-sm">
             <div className="z-20 flex items-center justify-between bg-container-lowest p-4 shadow-sm">
               <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1.5 rounded-full bg-primary-fixed px-2 py-1 text-[11px] font-bold text-on-primary-fixed">
+                <div className="flex items-center gap-1.5 rounded-full bg-primary-fixed px-2 py-1 text-micro font-bold text-on-primary-fixed">
                   <span className={`h-2 w-2 rounded-full bg-primary ${phase === "moving" ? "animate-ping" : ""}`} />
                   {phase === "moving" ? "Your position (from the timetable)" : phase === "upcoming" ? "Not started yet" : "Arrived"}
                 </div>
               </div>
-              <span className="text-[13px] text-on-surface-variant">{mapEvents.length ? `${mapEvents.length} problem${mapEvents.length === 1 ? "" : "s"} on route` : "No problems on route"}</span>
+              <span className="text-small text-on-surface-variant">{mapEvents.length ? `${mapEvents.length} problem${mapEvents.length === 1 ? "" : "s"} on route` : "No problems on route"}</span>
             </div>
             <div className="h-[520px] w-full">
               <MapView card={card} origin={traveller.origin} destination={destination} events={mapEvents} here={here} />
             </div>
-            <div className="flex flex-wrap items-center gap-4 bg-container-lowest p-4 text-[13px]">
+            <div className="flex flex-wrap items-center gap-4 bg-container-lowest p-4 text-small">
               {legendFor(legs).map((l) => (
                 <span key={l.label} className="flex items-center gap-1"><span className="h-1.5 w-4 rounded-full" style={{ background: l.color }} /> {l.label}</span>
               ))}
@@ -355,8 +355,8 @@ function NoTrip({ onStarted }: { onStarted: (t: SavedTrip) => void }) {
             <Icon name="play_circle" className="text-[18px] text-primary" /> {busy ? "Starting…" : "Demo: Thane → Wankhede"}
           </button>
         </div>
-        <p className="text-[12px] text-outline">Demo trip: Arjun&apos;s route via the Dadar foot-overbridge (leaves 16:44). Reset and play the clock on Demo control.</p>
-        {error && <p className="rounded-xl bg-amber-soft px-3 py-2 text-[13px] text-amber-ink">{error}</p>}
+        <p className="text-caption text-outline">Demo trip: Arjun&apos;s route via the Dadar foot-overbridge (leaves 16:44). Reset and play the clock on Demo control.</p>
+        {error && <p className="rounded-xl bg-amber-soft px-3 py-2 text-small text-amber-ink">{error}</p>}
       </div>
     </main>
   );
@@ -421,7 +421,7 @@ function reportTargetFor(legs: Leg[], from: number, nowMin: number): { stop_id: 
 /** The demo clock is paused after a reset; let the presenter play it from here (same as Demo control). */
 function ClockButtons({ speed, onChange }: { speed: number; onChange: (c: ClockState) => void }) {
   const set = (body: { speed?: number; advance_min?: number }) => updateClock(body).then(onChange).catch(() => undefined);
-  const btn = "flex items-center gap-0.5 rounded-full bg-primary px-2 py-0.5 text-[11px] font-bold text-on-primary hover:bg-primary-container";
+  const btn = "flex items-center gap-0.5 rounded-full bg-primary px-2 py-0.5 text-micro font-bold text-on-primary hover:bg-primary-container";
   return speed === 0 ? (
     <>
       <button type="button" onClick={() => set({ speed: 10 })} className={btn} title="Play the demo clock at 10× (1 demo minute every 6 seconds)">
@@ -445,7 +445,7 @@ function PhasePill({ phase }: { phase: "upcoming" | "moving" | "arrived" }) {
     arrived: { text: "Arrived", cls: "bg-secondary-container text-on-secondary-container" },
   }[phase];
   return (
-    <span className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold uppercase ${map.cls}`}>
+    <span className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-micro font-bold uppercase ${map.cls}`}>
       {phase === "moving" && <span className="h-1.5 w-1.5 animate-ping rounded-full bg-primary" />} {map.text}
     </span>
   );
@@ -477,12 +477,12 @@ function CurrentLeg({ phase, leg, nowMin, name, destLabel }: {
   }
   return (
     <div className="mt-4 flex flex-col items-start gap-2 rounded-xl bg-container-lowest p-4 shadow-sm sm:flex-row sm:items-center">
-      <div className="flex shrink-0 items-center gap-1 rounded-lg bg-primary px-2 py-1 text-[11px] font-bold uppercase text-on-primary">
+      <div className="flex shrink-0 items-center gap-1 rounded-lg bg-primary px-2 py-1 text-micro font-bold uppercase text-on-primary">
         <Icon name={leg ? MODE_ICON[leg.mode] ?? "route" : "flag"} className="text-[16px]" /> {badge}
       </div>
       <div className="flex min-w-0 flex-col">
         <span className="truncate text-sm font-semibold">{title}</span>
-        <span className="text-[13px] text-on-surface-variant">{sub}</span>
+        <span className="text-small text-on-surface-variant">{sub}</span>
       </div>
     </div>
   );
@@ -505,14 +505,14 @@ function MetricCard({ label, icon, iconCls, value, footLeft, footRight }: {
     <div className="flex flex-col justify-between rounded-xl bg-container-lowest p-5 shadow-sm">
       <div className="flex items-start justify-between">
         <div className="flex flex-col">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">{label}</span>
+          <span className="eyebrow">{label}</span>
           <div className="mt-1 flex items-baseline gap-1">{value}</div>
         </div>
         <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${iconCls}`}>
           <Icon name={icon} className="text-[22px]" />
         </div>
       </div>
-      <div className="mt-4 flex items-center justify-between gap-2 pt-1 text-[13px]">
+      <div className="mt-4 flex items-center justify-between gap-2 pt-1 text-small">
         {footLeft}
         {footRight}
       </div>
@@ -547,19 +547,19 @@ function Milestone({ leg, state, name, hits, nowMin }: {
       <div className={`flex min-w-0 flex-1 flex-col rounded-xl p-2 ${BOX[state]}`}>
         <div className="flex flex-wrap items-center justify-between gap-1">
           <div className="flex min-w-0 items-center gap-1">
-            {leg.line_id && <span className="rounded bg-container-highest px-1.5 py-0.5 text-[11px] font-bold">{lineShortName(leg.line_id)}</span>}
+            {leg.line_id && <span className="rounded bg-container-highest px-1.5 py-0.5 text-micro font-bold">{lineShortName(leg.line_id)}</span>}
             <span className={`text-sm ${state === "now" ? "font-bold text-primary" : "font-semibold"}`}>{legVerb(leg, name)}</span>
-            {state === "now" && <span className="rounded-full bg-primary px-1 py-0.5 text-[11px] font-bold uppercase text-on-primary">Now</span>}
+            {state === "now" && <span className="rounded-full bg-primary px-1 py-0.5 text-micro font-bold uppercase text-on-primary">Now</span>}
           </div>
-          <span className={`font-mono text-[11px] font-bold ${state === "now" ? "text-primary" : "text-on-surface-variant"}`}>{leg.depart}–{leg.arrive}</span>
+          <span className={`font-mono text-micro font-bold ${state === "now" ? "text-primary" : "text-on-surface-variant"}`}>{leg.depart}–{leg.arrive}</span>
         </div>
-        <p className="mt-0.5 text-[13px] text-on-surface-variant">
+        <p className="mt-0.5 text-small text-on-surface-variant">
           {leg.duration_min} min{stops > 0 ? ` · ${stops} stop${stops === 1 ? "" : "s"}` : ""}{leg.cost_inr ? ` · ₹${leg.cost_inr}` : ""}
           {state === "now" && !leg.line_id ? ` · ${Math.max(0, toMin(leg.arrive) - nowMin)} min left` : ""}
           {!leg.step_free ? " · stairs" : ""}
         </p>
         {hits.map((h) => (
-          <span key={h.event_id} className="mt-1 flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold"
+          <span key={h.event_id} className="mt-1 flex items-center gap-1 rounded-md px-2 py-1 text-micro font-semibold"
             style={{ background: h.status === "confirmed" ? "var(--error-container)" : "var(--tertiary-fixed)", color: h.status === "confirmed" ? "var(--on-error-container)" : "var(--tertiary)" }}>
             <Icon name={h.blocked ? "block" : "schedule"} className="text-[14px]" />
             {h.title} · {STATUS_STYLE[h.status].label} {pct(h.confidence)}{h.blocked ? " · can't be used" : h.delay_min ? ` · +${h.delay_min} min` : ""}
@@ -578,7 +578,7 @@ function Arrival({ label, time, reached, delayed }: { label: string; time: strin
       </div>
       <div className="flex min-w-0 flex-1 items-center justify-between gap-2 rounded-xl p-2">
         <span className="text-sm font-bold">Arrive: {label}</span>
-        <span className={`font-mono text-[11px] font-bold ${delayed ? "text-error" : "text-on-surface-variant"}`}>{time}{delayed ? " (delayed)" : ""}</span>
+        <span className={`font-mono text-micro font-bold ${delayed ? "text-error" : "text-on-surface-variant"}`}>{time}{delayed ? " (delayed)" : ""}</span>
       </div>
     </div>
   );
@@ -593,26 +593,26 @@ function RouteProblems({ hits, connected, journeyId }: { hits: LegHit[]; connect
           <Icon name="verified_user" className="text-[20px] text-primary" />
           <span className="text-sm font-semibold">Problems on the rest of your route</span>
         </div>
-        <span className="text-[11px] font-bold text-primary">Pakka Check</span>
+        <span className="text-micro font-bold text-primary">Pakka Check</span>
       </div>
       {!journeyId ? (
-        <p className="mt-3 text-[13px] text-on-surface-variant">Live checks need the TravelBuddy server.</p>
+        <p className="mt-3 text-small text-on-surface-variant">Live checks need the TravelBuddy server.</p>
       ) : !connected ? (
-        <p className="mt-3 text-[13px] text-on-surface-variant">Checking…</p>
+        <p className="mt-3 text-small text-on-surface-variant">Checking…</p>
       ) : unique.length === 0 ? (
-        <p className="mt-3 flex items-center gap-1 text-[13px] text-primary"><Icon name="check_circle" className="text-[16px]" /> Nothing reported on the legs ahead.</p>
+        <p className="mt-3 flex items-center gap-1 text-small text-primary"><Icon name="check_circle" className="text-[16px]" /> Nothing reported on the legs ahead.</p>
       ) : (
         <ul className="mt-3 flex flex-col gap-2">
           {unique.map((h) => (
             <li key={h.event_id} className="flex items-center justify-between gap-2 rounded-lg bg-container-low p-2">
               <span className="min-w-0">
-                <Link href={`/events/${h.event_id}`} className="block truncate text-[13px] font-semibold hover:text-primary hover:underline">{h.title}</Link>
-                <span className="text-[11px] text-on-surface-variant">
+                <Link href={`/events/${h.event_id}`} className="block truncate text-small font-semibold hover:text-primary hover:underline">{h.title}</Link>
+                <span className="text-micro text-on-surface-variant">
                   {h.blocked ? "Blocks this route" : h.delay_min ? `About +${h.delay_min} min` : "May slow you down"}
                   {h.status === "possible" ? " · not confirmed yet, no action needed" : ""}
                 </span>
               </span>
-              <span className="shrink-0 rounded-md px-2 py-0.5 text-[11px] font-bold"
+              <span className="shrink-0 rounded-md px-2 py-0.5 text-micro font-bold"
                 style={{ background: h.status === "confirmed" ? "var(--error-container)" : "var(--tertiary-fixed)", color: h.status === "confirmed" ? "var(--on-error-container)" : "var(--tertiary)" }}>
                 {STATUS_STYLE[h.status].label} {pct(h.confidence)}
               </span>
@@ -650,10 +650,10 @@ function ReplanBanner({ journey, name, onDecided }: { journey: Journey; name: (i
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-error text-white"><Icon name="alt_route" className="text-[20px]" /></span>
         <div className="min-w-0">
           <p className="text-sm font-semibold">Better route suggested</p>
-          <p className="text-[13px] text-on-surface-variant">{p.message}</p>
+          <p className="text-small text-on-surface-variant">{p.message}</p>
         </div>
       </div>
-      <div className="flex flex-wrap items-center gap-2 text-[12px]">
+      <div className="flex flex-wrap items-center gap-2 text-caption">
         <span className="rounded-md bg-container px-2 py-1 font-semibold">From {p.from_label}: {newLegs.map((l) => legVerb(l, name)).join(" · ")}</span>
         <span className="rounded-md bg-container px-2 py-1 font-semibold">Arrive {p.new_card.legs[p.new_card.legs.length - 1].arrive}</span>
         <span className={`rounded-md px-2 py-1 font-bold ${p.delta.min <= 0 ? "bg-primary-fixed text-on-primary-fixed" : "bg-tertiary-fixed text-tertiary"}`}>
@@ -669,7 +669,7 @@ function ReplanBanner({ journey, name, onDecided }: { journey: Journey; name: (i
           Keep my route
         </button>
       </div>
-      {error && <p className="text-[12px] text-error">{error}</p>}
+      {error && <p className="text-caption text-error">{error}</p>}
     </div>
   );
 }
@@ -693,7 +693,7 @@ function ModalShell({ title, sub, icon, iconCls, onClose, children }: {
             <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${iconCls}`}><Icon name={icon} className="text-[24px]" /></div>
             <div className="flex flex-col">
               <span className="text-lg font-semibold">{title}</span>
-              <span className="text-[13px] text-on-surface-variant">{sub}</span>
+              <span className="text-small text-on-surface-variant">{sub}</span>
             </div>
           </div>
           <button onClick={onClose} aria-label="Close" className="flex h-8 w-8 items-center justify-center rounded-lg text-outline hover:bg-container">
@@ -751,11 +751,11 @@ function ReportModal({ target, onClose }: { target: { stop_id: string; line_id: 
         </div>
       ) : (
         <>
-          <p className="text-[13px] text-on-surface-variant">
+          <p className="text-small text-on-surface-variant">
             This report is filed against <b>{target.label}</b>, the next stop on your trip.
           </p>
           <div className="flex flex-col gap-1">
-            <span className="text-[11px] font-bold uppercase">Issue Category</span>
+            <span className="text-micro font-bold uppercase">Issue Category</span>
             <div className="grid grid-cols-2 gap-2">
               {reportCategories.map((c) => (
                 <button key={c.id} type="button" onClick={() => setCat(c.id)} aria-pressed={cat === c.id}
@@ -766,10 +766,10 @@ function ReportModal({ target, onClose }: { target: { stop_id: string; line_id: 
             </div>
           </div>
           <label className="flex flex-col gap-1">
-            <span className="text-[11px] font-bold uppercase">Details (Optional)</span>
+            <span className="text-micro font-bold uppercase">Details (Optional)</span>
             <textarea value={details} onChange={(e) => setDetails(e.target.value)} rows={3} maxLength={500}
               placeholder="e.g. Train stopped between stations for 10 minutes, heavy queue at the exit…"
-              className="w-full resize-none rounded-xl bg-container p-2 text-[13px] placeholder:text-outline focus:outline-none focus:ring-2 focus:ring-primary" />
+              className="w-full resize-none rounded-xl bg-container p-2 text-small placeholder:text-outline focus:outline-none focus:ring-2 focus:ring-primary" />
           </label>
           <div className="flex items-center justify-end gap-2 pt-1">
             <button onClick={onClose} className="rounded-xl bg-container px-4 py-2.5 text-xs font-semibold hover:bg-container-high">Cancel</button>
@@ -787,13 +787,13 @@ function ShareModal({ destLabel, eta, onClose }: { destLabel: string; eta: strin
   const [copied, setCopied] = useState(false);
   return (
     <ModalShell title="Share Live Tracking" sub="Family & colleague safety link" icon="share_location" iconCls="bg-primary-fixed text-primary" onClose={onClose}>
-      <p className="text-[13px] text-on-surface-variant">Recipients would see your progress and expected {eta} arrival at {destLabel}.</p>
+      <p className="text-small text-on-surface-variant">Recipients would see your progress and expected {eta} arrival at {destLabel}.</p>
       <div className="flex items-center justify-between gap-2 rounded-xl bg-container p-2">
-        <span className="truncate font-mono text-[13px]">{share.link}</span>
+        <span className="truncate font-mono text-small">{share.link}</span>
         <button onClick={() => { navigator.clipboard?.writeText(share.link).catch(() => undefined); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
-          className="shrink-0 rounded-lg bg-primary px-2 py-1.5 text-[11px] font-bold text-on-primary">{copied ? "Copied!" : "Copy Link"}</button>
+          className="shrink-0 rounded-lg bg-primary px-2 py-1.5 text-micro font-bold text-on-primary">{copied ? "Copied!" : "Copy Link"}</button>
       </div>
-      <div className="flex items-center gap-1 text-[11px] font-bold text-on-surface-variant">
+      <div className="flex items-center gap-1 text-micro font-bold text-on-surface-variant">
         <Icon name="info" className="text-[16px] text-primary" /> Sample link — sharing isn&apos;t live yet
       </div>
     </ModalShell>
@@ -808,10 +808,10 @@ function SosModal({ onClose }: { onClose: () => void }) {
       </p>
       <div className="grid grid-cols-2 gap-2">
         <a href="tel:112" className="flex flex-col rounded-xl bg-error-container p-3 text-on-error-container">
-          <span className="text-2xl font-bold">112</span><span className="text-[13px]">Police / emergency</span>
+          <span className="text-2xl font-bold">112</span><span className="text-small">Police / emergency</span>
         </a>
         <a href="tel:139" className="flex flex-col rounded-xl bg-container p-3">
-          <span className="text-2xl font-bold">139</span><span className="text-[13px]">Railway helpline</span>
+          <span className="text-2xl font-bold">139</span><span className="text-small">Railway helpline</span>
         </a>
       </div>
       <button onClick={onClose} className="self-end rounded-xl bg-container px-4 py-2.5 text-xs font-semibold hover:bg-container-high">Close</button>

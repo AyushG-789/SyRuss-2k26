@@ -102,7 +102,7 @@ export default function DayPlanner() {
   return (
     <main className="flex w-full flex-col gap-4 px-4 pb-16 pt-4 md:px-6">
       <header className="flex flex-col gap-1">
-        <span className="flex items-center gap-1 text-[12px] font-bold uppercase tracking-wider text-primary"><Icon name="event_note" className="text-[16px]" /> Day Itinerary</span>
+        <span className="flex items-center gap-1 text-caption font-bold uppercase tracking-wider text-primary"><Icon name="event_note" className="text-[16px]" /> Day Itinerary</span>
         <h1 className="text-2xl font-semibold">Plan a day of stops</h1>
         <p className="max-w-3xl text-sm text-on-surface-variant">
           Choose up to {MAX_STOPS} places. TravelBuddy tries every order, keeps each visit inside opening hours, respects fixed times
@@ -117,44 +117,44 @@ export default function DayPlanner() {
         <section className="flex flex-col gap-4 rounded-2xl bg-container-lowest p-5 shadow-sm lg:col-span-4">
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={loadExample}
-              className="flex items-center gap-1 rounded-lg bg-container-low px-3 py-1.5 text-[12px] font-semibold text-primary hover:bg-container">
+              className="flex items-center gap-1 rounded-lg bg-container-low px-3 py-1.5 text-caption font-semibold text-primary hover:bg-container">
               <Icon name="family_restroom" className="text-[16px]" /> Load example day (Kulkarni family)
             </button>
             {(stops.length > 0 || start) && (
-              <button type="button" onClick={clearAll} className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-[12px] font-semibold text-on-surface-variant hover:bg-container-low">
+              <button type="button" onClick={clearAll} className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-caption font-semibold text-on-surface-variant hover:bg-container-low">
                 <Icon name="restart_alt" className="text-[16px]" /> Clear
               </button>
             )}
           </div>
           <datalist id="day-places">{PLACE_OPTIONS.map((p) => <option key={p.label} value={p.label} />)}</datalist>
-          <label className="flex flex-col gap-1 text-[13px] font-semibold">
+          <label className="flex flex-col gap-1 text-small font-semibold">
             Start from
             <input list="day-places" value={start} onChange={(e) => setStart(e.target.value)} placeholder="e.g. CSMT station, Andheri, your hotel area"
               className="rounded-xl bg-container-low px-3 py-2.5 font-normal focus:outline-none focus:ring-2 focus:ring-primary" />
           </label>
           <div className="grid grid-cols-2 gap-2">
-            <label className="flex min-w-0 flex-col gap-1 text-[13px] font-semibold">From
+            <label className="flex min-w-0 flex-col gap-1 text-small font-semibold">From
               <input type="time" value={dayStart} onChange={(e) => setDayStart(e.target.value)} className="w-full min-w-0 rounded-xl bg-container-low px-2 py-2 font-normal tabular-nums" />
             </label>
-            <label className="flex min-w-0 flex-col gap-1 text-[13px] font-semibold">Until
+            <label className="flex min-w-0 flex-col gap-1 text-small font-semibold">Until
               <input type="time" value={dayEnd} onChange={(e) => setDayEnd(e.target.value)} className="w-full min-w-0 rounded-xl bg-container-low px-2 py-2 font-normal tabular-nums" />
             </label>
-            <label className="col-span-2 flex flex-col gap-1 text-[13px] font-semibold">Budget ₹ (total fares)
+            <label className="col-span-2 flex flex-col gap-1 text-small font-semibold">Budget ₹ (total fares)
               <input inputMode="numeric" value={budget} onChange={(e) => setBudget(e.target.value.replace(/\D/g, ""))} placeholder="any"
                 className="rounded-xl bg-container-low px-2 py-2 font-normal" />
             </label>
           </div>
 
           <div className="flex flex-col gap-2">
-            <span className="text-[13px] font-semibold">Your stops ({stops.length}/{MAX_STOPS})</span>
-            {stops.length === 0 && <p className="rounded-xl bg-container-low p-3 text-[13px] text-on-surface-variant">No stops yet — add places below.</p>}
+            <span className="text-small font-semibold">Your stops ({stops.length}/{MAX_STOPS})</span>
+            {stops.length === 0 && <p className="rounded-xl bg-container-low p-3 text-small text-on-surface-variant">No stops yet — add places below.</p>}
             {stops.map((s) => (
               <div key={s.poi_id} className="flex flex-col gap-2 rounded-xl bg-container-low p-2.5">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-[13px] font-semibold">{POIS[s.poi_id]?.name ?? s.poi_id}</span>
+                  <span className="text-small font-semibold">{POIS[s.poi_id]?.name ?? s.poi_id}</span>
                   <button type="button" onClick={() => toggle(s.poi_id)} aria-label="Remove" className="rounded p-0.5 text-outline hover:text-error"><Icon name="close" className="text-[18px]" /></button>
                 </div>
-                <div className="flex flex-wrap items-center gap-2 text-[12px]">
+                <div className="flex flex-wrap items-center gap-2 text-caption">
                   <button type="button" onClick={() => update(s.poi_id, { must_visit: !s.must_visit })}
                     className={`rounded-full px-2 py-0.5 font-bold ${s.must_visit ? "bg-primary text-on-primary" : "bg-container-high text-on-surface-variant"}`}>
                     {s.must_visit ? "Must visit" : "Optional"}
@@ -166,12 +166,12 @@ export default function DayPlanner() {
             ))}
           </div>
 
-          <details className="text-[13px]" open={stops.length === 0}>
+          <details className="text-small" open={stops.length === 0}>
             <summary className="cursor-pointer font-semibold text-primary">Add places</summary>
             <div className="mt-2 flex max-h-56 flex-wrap gap-1.5 overflow-y-auto">
               {Object.entries(POIS).filter(([id]) => !stops.some((s) => s.poi_id === id)).map(([id, p]) => (
                 <button key={id} type="button" onClick={() => toggle(id)} disabled={stops.length >= MAX_STOPS}
-                  className="rounded-full bg-container-low px-2.5 py-1 text-[12px] hover:bg-primary-fixed disabled:opacity-40">+ {p.name}</button>
+                  className="rounded-full bg-container-low px-2.5 py-1 text-caption hover:bg-primary-fixed disabled:opacity-40">+ {p.name}</button>
               ))}
             </div>
           </details>
@@ -180,8 +180,8 @@ export default function DayPlanner() {
             className="flex items-center justify-center gap-1 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-on-primary hover:bg-primary-container disabled:opacity-50">
             <Icon name="auto_awesome" className="text-[18px]" /> {busy ? "Planning the day…" : "Plan my day"}
           </button>
-          {!traveller && <p className="text-[12px] text-error">Pick a start place from the list and at least one stop.</p>}
-          {error && <p className="rounded-xl bg-amber-soft p-2 text-[13px] text-amber-ink">{error}</p>}
+          {!traveller && <p className="text-caption text-error">Pick a start place from the list and at least one stop.</p>}
+          {error && <p className="rounded-xl bg-amber-soft p-2 text-small text-amber-ink">{error}</p>}
         </section>
 
         {/* ---- Result ---- */}
@@ -212,16 +212,16 @@ export default function DayPlanner() {
                       <span className="z-10 grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary text-sm font-bold text-on-primary">{i + 1}</span>
                       <button type="button" onClick={() => setFocus(i)}
                         className={`flex min-w-0 flex-1 flex-col gap-1 rounded-xl p-2 text-left transition ${focus === i ? "bg-primary-fixed/30" : "hover:bg-container-low"}`}>
-                        <span className="flex items-center gap-1 text-[12px] text-on-surface-variant">
+                        <span className="flex items-center gap-1 text-caption text-on-surface-variant">
                           <Icon name="alt_route" className="text-[14px]" /> {s.leg.depart} {s.leg.route} · {s.leg.duration_min} min · ₹{s.leg.cost_inr}
                           {s.leg.event_ids.length > 0 && <span className="rounded bg-tertiary-fixed px-1 font-bold text-tertiary">⚠ {Math.round(s.leg.reliability * 100)}%</span>}
                         </span>
                         <span className="font-semibold">{s.name}</span>
-                        <span className="text-[13px]">
+                        <span className="text-small">
                           Arrive {s.arrive}{s.wait_min > 0 ? ` · wait ${s.wait_min} min` : ""} · visit <b>{s.visit_start}–{s.leave}</b>
-                          {s.fixed_time ? <span className="ml-1 rounded bg-secondary-container px-1 text-[11px] font-bold">fixed {s.fixed_time}</span> : null}
+                          {s.fixed_time ? <span className="ml-1 rounded bg-secondary-container px-1 text-micro font-bold">fixed {s.fixed_time}</span> : null}
                         </span>
-                        <span className={`text-[12px] ${s.tight ? "font-semibold text-error" : "text-on-surface-variant"}`}>
+                        <span className={`text-caption ${s.tight ? "font-semibold text-error" : "text-on-surface-variant"}`}>
                           {s.opens ? `Open ${s.opens}–${s.closes}` : "Open 24 h"} · {s.tight ? `only ${s.slack_min} min to spare!` : `${s.slack_min >= 999 ? "plenty of" : s.slack_min + " min"} slack`}
                           {!s.must_visit ? " · optional" : ""}
                         </span>
@@ -230,7 +230,7 @@ export default function DayPlanner() {
                   ))}
                 </ol>
                 <div className="flex flex-col gap-3">
-                  <p className="flex items-center gap-1 text-[12px] text-on-surface-variant">
+                  <p className="flex items-center gap-1 text-caption text-on-surface-variant">
                     <Icon name="pin_drop" className="text-[16px] text-primary" /> Numbers = visiting order · <b>S</b> = start · click a number to see the route to it
                   </p>
                   <div className="h-[420px] overflow-hidden rounded-2xl bg-container-lowest shadow-sm">
@@ -252,17 +252,17 @@ export default function DayPlanner() {
                     )}
                   </div>
                   {!plan.partial && (plan.dropped?.length ?? 0) > 0 && (
-                    <div className="rounded-2xl bg-container-lowest p-4 text-[13px] shadow-sm">
+                    <div className="rounded-2xl bg-container-lowest p-4 text-small shadow-sm">
                       <b>Optional stops left out:</b>
                       <ul className="mt-1 flex flex-col gap-1">{plan.dropped!.map((d) => <li key={d.poi_id}>• {d.reason}</li>)}</ul>
                     </div>
                   )}
                   {(plan.warnings?.length ?? 0) > 0 && (
-                    <div className="rounded-2xl bg-tertiary-fixed p-4 text-[13px] text-tertiary">
+                    <div className="rounded-2xl bg-tertiary-fixed p-4 text-small text-tertiary">
                       {plan.warnings!.map((w) => <p key={w} className="flex items-start gap-1"><Icon name="warning" className="text-[16px]" /> {w}</p>)}
                     </div>
                   )}
-                  <p className="text-[12px] text-outline">
+                  <p className="text-caption text-outline">
                     Planned on {plan.weekday} (demo day). Each hop uses the live, disruption-aware router. <Link href="/transparency" className="font-semibold text-primary">How it works →</Link>
                   </p>
                 </div>
@@ -274,7 +274,7 @@ export default function DayPlanner() {
             <div className="flex flex-col items-center gap-2 rounded-2xl bg-container-lowest p-10 text-center shadow-sm">
               <Icon name="event_note" className="text-[40px] text-outline" />
               <p className="text-sm font-semibold">Your day plan will appear here</p>
-              <p className="max-w-sm text-[13px] text-on-surface-variant">Pick where you start, add up to {MAX_STOPS} places, then press <b>Plan my day</b>. Not sure? Load the example day.</p>
+              <p className="max-w-sm text-small text-on-surface-variant">Pick where you start, add up to {MAX_STOPS} places, then press <b>Plan my day</b>. Not sure? Load the example day.</p>
             </div>
           )}
         </section>
@@ -318,14 +318,14 @@ function LeftOut({ plan, fixes, onFix, hasFixed }: {
           <li key={d.poi_id} className="flex items-start gap-2 rounded-xl bg-amber-soft/60 px-3 py-2 text-sm">
             <Icon name="close" className="text-[18px] text-amber-ink" />
             <span>
-              {d.must_visit && <span className="mr-1 rounded bg-error-container px-1.5 py-0.5 text-[11px] font-bold text-on-error-container">must-visit</span>}
+              {d.must_visit && <span className="mr-1 rounded bg-error-container px-1.5 py-0.5 text-micro font-bold text-on-error-container">must-visit</span>}
               {d.reason}
             </span>
           </li>
         ))}
       </ul>
       <div className="flex flex-col gap-2">
-        <span className="text-[12px] font-bold uppercase tracking-wider text-on-surface-variant">Try</span>
+        <span className="text-caption font-bold uppercase tracking-wider text-on-surface-variant">Try</span>
         <div className="flex flex-wrap gap-2">
           {[
             { k: "earlier" as const, icon: "wb_sunny", label: "Start 1 hour earlier" },
@@ -334,7 +334,7 @@ function LeftOut({ plan, fixes, onFix, hasFixed }: {
             ...(mustDropped ? [{ k: "optional" as const, icon: "checklist", label: "Make every stop optional" }] : []),
           ].map((f) => (
             <button key={f.k} type="button" onClick={() => onFix(fixes[f.k])}
-              className="flex items-center gap-1 rounded-xl bg-container-low px-3 py-2 text-[13px] font-semibold hover:bg-container">
+              className="flex items-center gap-1 rounded-xl bg-container-low px-3 py-2 text-small font-semibold hover:bg-container">
               <Icon name={f.icon} className="text-[18px] text-primary" /> {f.label}
             </button>
           ))}
@@ -347,7 +347,7 @@ function LeftOut({ plan, fixes, onFix, hasFixed }: {
 function Mini({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-2xl bg-container-lowest p-4 shadow-sm">
-      <span className="block text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">{label}</span>
+      <span className="block eyebrow">{label}</span>
       <span className="text-xl font-bold">{value}</span>
     </div>
   );

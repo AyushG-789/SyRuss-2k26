@@ -105,7 +105,7 @@ export default function ReportIncident() {
     <main className="flex w-full flex-col px-4 pb-6 md:px-6">
       {/* ---- Header ---- */}
       <div className="mb-5 flex flex-col gap-2 pt-4">
-        <div className="flex items-center gap-1 text-[11px] font-bold text-on-surface-variant">
+        <div className="flex items-center gap-1 text-micro font-bold text-on-surface-variant">
           {page.breadcrumb.map((b, i) => (
             <span key={b} className="flex items-center gap-1">
               {i > 0 && <Icon name="chevron_right" className="text-[14px] text-outline" />}
@@ -118,10 +118,10 @@ export default function ReportIncident() {
           <div>
             <div className="mb-1 flex flex-wrap items-center gap-1">
               <h1 className="text-2xl font-bold tracking-tight">{page.title}</h1>
-              <span className="flex items-center gap-1 rounded-full bg-primary-fixed px-1 py-0.5 text-[11px] font-bold uppercase tracking-wider text-on-primary-fixed">
+              <span className="flex items-center gap-1 rounded-full bg-primary-fixed px-1 py-0.5 eyebrow text-on-primary-fixed">
                 <span className="h-1.5 w-1.5 animate-ping rounded-full bg-primary" /> {page.badge}
               </span>
-              <span className="rounded-full bg-container-high px-1 py-0.5 text-[11px] font-bold text-on-surface-variant">{page.synced}</span>
+              <span className="rounded-full bg-container-high px-1 py-0.5 text-micro font-bold text-on-surface-variant">{page.synced}</span>
             </div>
             <p className="text-sm text-on-surface-variant">{page.subtitle}</p>
           </div>
@@ -142,7 +142,7 @@ export default function ReportIncident() {
           <section className="flex flex-col gap-4 rounded-xl bg-container-lowest p-5 shadow-sm">
             <div className="flex items-center justify-between">
               <StepTitle n={1} title="Select Incident Classification" />
-              <span className="text-[11px] font-bold text-on-surface-variant">Tap to select category</span>
+              <span className="text-micro font-bold text-on-surface-variant">Tap to select category</span>
             </div>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3" role="radiogroup" aria-label="Incident category">
               {categories.map((c) => {
@@ -155,7 +155,7 @@ export default function ReportIncident() {
                       <Icon name={c.icon} className="text-[24px]" />
                     </div>
                     <div className={`mt-1 text-xs font-bold ${on ? "text-primary" : ""}`}>{c.label}</div>
-                    <p className="text-[13px] leading-snug text-on-surface-variant">{c.text}</p>
+                    <p className="text-small leading-snug text-on-surface-variant">{c.text}</p>
                   </button>
                 );
               })}
@@ -169,11 +169,11 @@ export default function ReportIncident() {
             <label className="flex flex-col gap-1.5">
               <span className="flex items-center justify-between">
                 <span className="text-xs font-semibold">Written Description &amp; Additional Landmarks</span>
-                <span className="text-[11px] font-bold text-on-surface-variant">{description.length} / {MAX_CHARS} characters</span>
+                <span className="text-micro font-bold text-on-surface-variant">{description.length} / {MAX_CHARS} characters</span>
               </span>
               <textarea value={description} onChange={(e) => setDescription(e.target.value.slice(0, MAX_CHARS))} rows={3}
                 placeholder="Provide specific landmark details, lane directions, or vehicle numbers... (any language)"
-                className="w-full rounded-xl bg-container p-4 text-[13px] placeholder:text-outline transition-colors focus:bg-container-lowest focus:outline-none focus:ring-2 focus:ring-primary" />
+                className="w-full rounded-xl bg-container p-4 text-small placeholder:text-outline transition-colors focus:bg-container-lowest focus:outline-none focus:ring-2 focus:ring-primary" />
             </label>
             <MediaPicker media={media} setMedia={setMedia} />
           </section>
@@ -182,7 +182,7 @@ export default function ReportIncident() {
           <section className="flex flex-col gap-4 rounded-xl bg-container-lowest p-5 shadow-sm">
             <div className="flex items-center justify-between">
               <StepTitle n={3} title="Location & Corridor Geotag" />
-              <span className="flex items-center gap-1 rounded-lg bg-container px-2 py-1 text-[11px] font-semibold text-primary">
+              <span className="flex items-center gap-1 rounded-lg bg-container px-2 py-1 text-micro font-semibold text-primary">
                 <Icon name="edit_location_alt" className="text-[16px]" /> Refine Pin
               </span>
             </div>
@@ -193,21 +193,21 @@ export default function ReportIncident() {
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-1">
                   <span className="text-xs font-bold">{location.title}</span>
-                  <span className="rounded bg-primary-fixed px-1.5 py-0.5 text-[10px] font-bold text-on-primary-fixed">GEOTAGGED</span>
+                  <span className="rounded bg-primary-fixed px-1.5 py-0.5 text-micro font-bold text-on-primary-fixed">GEOTAGGED</span>
                 </div>
-                <p className="truncate text-[13px] text-on-surface-variant">{location.sub}</p>
+                <p className="truncate text-small text-on-surface-variant">{location.sub}</p>
               </div>
             </div>
 
             <label className="flex flex-col gap-1.5">
               <span className="flex items-center justify-between text-xs font-semibold">
                 <span>Linked Station (used to verify and reroute)</span>
-                <span className="text-[11px] font-bold text-primary">Required by Pakka Check</span>
+                <span className="text-micro font-bold text-primary">Required by Pakka Check</span>
               </span>
               <span className="relative">
                 <Icon name="train" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-primary" />
                 <select value={stationId} onChange={(e) => setStationId(e.target.value)}
-                  className="h-11 w-full cursor-pointer appearance-none rounded-xl bg-container pl-10 pr-10 text-[13px] focus:outline-none focus:ring-2 focus:ring-primary">
+                  className="h-11 w-full cursor-pointer appearance-none rounded-xl bg-container pl-10 pr-10 text-small focus:outline-none focus:ring-2 focus:ring-primary">
                   {STATION_OPTIONS.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
                 </select>
                 <Icon name="expand_more" className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[20px] text-outline" />
@@ -219,7 +219,7 @@ export default function ReportIncident() {
                 <span className="text-xs font-semibold">Transit Arterial Corridor</span>
                 <span className="relative">
                   <select value={corridor} onChange={(e) => setCorridor(e.target.value)}
-                    className="h-11 w-full cursor-pointer appearance-none rounded-xl bg-container px-4 text-[13px] focus:outline-none focus:ring-2 focus:ring-primary">
+                    className="h-11 w-full cursor-pointer appearance-none rounded-xl bg-container px-4 text-small focus:outline-none focus:ring-2 focus:ring-primary">
                     {corridors.map((c) => <option key={c}>{c}</option>)}
                   </select>
                   <Icon name="expand_more" className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[20px] text-outline" />
@@ -230,7 +230,7 @@ export default function ReportIncident() {
                 <div className="grid grid-cols-3 gap-1 rounded-xl bg-container p-1" role="radiogroup" aria-label="Direction">
                   {directions.map((d) => (
                     <button key={d} type="button" role="radio" aria-checked={direction === d} onClick={() => setDirection(d)}
-                      className={`rounded-lg py-2 text-center text-[11px] ${direction === d ? "bg-container-lowest font-bold text-primary shadow-sm" : "font-medium text-on-surface-variant hover:text-on-surface"}`}>
+                      className={`rounded-lg py-2 text-center text-micro ${direction === d ? "bg-container-lowest font-bold text-primary shadow-sm" : "font-medium text-on-surface-variant hover:text-on-surface"}`}>
                       {d}
                     </button>
                   ))}
@@ -252,13 +252,13 @@ export default function ReportIncident() {
                   {draftSaved ? "Saved ✓" : "Save Draft"}
                 </button>
               </div>
-              <div className="flex items-center gap-1 text-[11px] font-bold text-outline">
+              <div className="flex items-center gap-1 text-micro font-bold text-outline">
                 <Icon name="verified_user" className="text-[18px] text-primary" /> Filed at {station?.name ?? stationId} · {TYPE_LABEL[cat.type] ?? cat.type}
               </div>
             </div>
             <div className="flex items-start gap-1 border-t border-container-high/60 pt-2">
               <Icon name="info" className="mt-0.5 text-[16px] text-outline" />
-              <p className="text-[13px] leading-relaxed text-on-surface-variant">
+              <p className="text-small leading-relaxed text-on-surface-variant">
                 Reports are cross-checked against other commuters, news and official notices. A new reporter counts for little until
                 others confirm; near-identical bursts from new accounts are flagged as suspicious and never reroute anyone.
               </p>
@@ -274,7 +274,7 @@ export default function ReportIncident() {
                 <Icon name="radar" className="text-[20px] text-primary" />
                 <span className="text-lg font-bold">Live Sector Incident Radar</span>
               </div>
-              <span className="rounded-full bg-secondary-fixed px-2 py-0.5 text-[11px] font-semibold text-[#111c2d]">
+              <span className="rounded-full bg-secondary-fixed px-2 py-0.5 text-micro font-semibold text-[#111c2d]">
                 {backend ? `Demo clock ${live?.asOf}` : "Sample data"}
               </span>
             </div>
@@ -282,15 +282,15 @@ export default function ReportIncident() {
               <MapView showNetwork events={events} here={station ? [station.lat, station.lon] : null} />
               <div className="pointer-events-none absolute left-14 top-3 z-[500] flex flex-wrap gap-1.5">
                 {radarLayers.map((l, i) => (
-                  <span key={l} className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] shadow-sm backdrop-blur ${i === 0 ? "bg-container-lowest/90 font-bold text-primary" : "bg-container-lowest/80 font-medium text-on-surface-variant"}`}>
+                  <span key={l} className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-micro shadow-sm backdrop-blur ${i === 0 ? "bg-container-lowest/90 font-bold text-primary" : "bg-container-lowest/80 font-medium text-on-surface-variant"}`}>
                     {i === 0 && <span className="h-2 w-2 rounded-full bg-primary" />} {l}
                   </span>
                 ))}
               </div>
             </div>
-            <div className="flex items-center justify-between bg-container-low p-2 text-[11px] font-bold text-on-surface-variant">
+            <div className="flex items-center justify-between bg-container-low p-2 text-micro font-bold text-on-surface-variant">
               <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-primary" /> Pin: {station?.name ?? "—"}</span>
-              <span className="font-mono text-[11px]">{station ? `${station.lat.toFixed(4)}° N, ${station.lon.toFixed(4)}° E` : ""}</span>
+              <span className="font-mono text-micro">{station ? `${station.lat.toFixed(4)}° N, ${station.lon.toFixed(4)}° E` : ""}</span>
             </div>
           </section>
 
@@ -303,26 +303,26 @@ export default function ReportIncident() {
                   <Icon name="workspace_premium" className="text-[18px]" />
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">Reputation Tier</span>
+                  <span className="eyebrow">Reputation Tier</span>
                   <span className="text-xs font-bold">{reputation.tier}</span>
                 </div>
               </div>
-              <span className="rounded-full bg-primary-fixed px-2 py-0.5 text-[11px] font-bold text-on-primary-fixed">{reputation.badge}</span>
+              <span className="rounded-full bg-primary-fixed px-2 py-0.5 text-micro font-bold text-on-primary-fixed">{reputation.badge}</span>
             </div>
             <div className="flex items-center justify-between rounded-lg bg-container-lowest/80 p-2 backdrop-blur">
               <div className="flex flex-col">
-                <span className="text-[11px] font-bold text-on-surface-variant">Citizen Impact Reward</span>
+                <span className="text-micro font-bold text-on-surface-variant">Citizen Impact Reward</span>
                 <span className="text-sm font-bold text-primary">{reputation.reward}</span>
               </div>
-              <button type="button" className="rounded-lg bg-primary px-2 py-1.5 text-[11px] font-semibold text-on-primary transition-colors hover:bg-primary-container">
+              <button type="button" className="rounded-lg bg-primary px-2 py-1.5 text-micro font-semibold text-on-primary transition-colors hover:bg-primary-container">
                 Redeem to Card
               </button>
             </div>
-            <div className="flex items-center justify-between text-[11px] font-bold text-on-surface-variant">
+            <div className="flex items-center justify-between text-micro font-bold text-on-surface-variant">
               <span>{reputation.accuracy}</span>
               <span>{reputation.reports}</span>
             </div>
-            <p className="text-[11px] text-outline">Sample profile — accounts aren&apos;t part of the prototype.</p>
+            <p className="text-micro text-outline">Sample profile — accounts aren&apos;t part of the prototype.</p>
           </section>
         </div>
       </div>
@@ -335,7 +335,7 @@ export default function ReportIncident() {
 function HeaderStat({ label, value, cls }: { label: string; value: string; cls: string }) {
   return (
     <div className="flex flex-col px-2 py-1">
-      <span className="text-[11px] font-bold text-on-surface-variant">{label}</span>
+      <span className="text-micro font-bold text-on-surface-variant">{label}</span>
       <span className={`text-lg font-bold tabular-nums ${cls}`}>{value}</span>
     </div>
   );
@@ -344,7 +344,7 @@ function HeaderStat({ label, value, cls }: { label: string; value: string; cls: 
 function StepTitle({ n, title }: { n: number; title: string }) {
   return (
     <div className="flex items-center gap-1">
-      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-fixed text-[11px] font-bold text-on-primary-fixed">{n}</span>
+      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-fixed text-micro font-bold text-on-primary-fixed">{n}</span>
       <span className="text-lg font-bold">{title}</span>
     </div>
   );
@@ -359,7 +359,7 @@ function VoiceMemo({ use, onUse }: { use: boolean; onUse: (v: boolean) => void }
         <div className="flex flex-wrap items-center gap-1">
           <Icon name="mic" className="text-[20px] text-primary" />
           <span className="text-xs font-semibold">Commuter Voice Memo Recording</span>
-          <span className="rounded-full bg-primary-fixed px-2 py-0.5 text-[11px] font-bold uppercase text-on-primary-fixed">Sample</span>
+          <span className="rounded-full bg-primary-fixed px-2 py-0.5 text-micro font-bold uppercase text-on-primary-fixed">Sample</span>
         </div>
         <button type="button" onClick={() => onUse(false)} title="Don't attach the voice memo" aria-label="Remove voice memo"
           className="rounded-lg p-1.5 text-outline transition-colors hover:bg-container-high hover:text-error">
@@ -376,19 +376,19 @@ function VoiceMemo({ use, onUse }: { use: boolean; onUse: (v: boolean) => void }
               <span key={i} className={`w-1 rounded ${i < 8 ? "bg-primary" : "bg-container-highest"}`} style={{ height: `${h * 4}px` }} />
             ))}
           </div>
-          <div className="flex items-center justify-between text-[11px] font-bold text-on-surface-variant">
+          <div className="flex items-center justify-between text-micro font-bold text-on-surface-variant">
             <span>{voiceMemo.length}</span><span>{voiceMemo.max}</span>
           </div>
         </div>
-        <div className="hidden items-center gap-1.5 rounded-md bg-secondary-container px-1 py-1 text-[11px] font-bold text-[#111c2d] sm:flex">
+        <div className="hidden items-center gap-1.5 rounded-md bg-secondary-container px-1 py-1 text-micro font-bold text-[#111c2d] sm:flex">
           <Icon name="graphic_eq" className="text-[14px]" /> {voiceMemo.rate}
         </div>
       </div>
       <label className={`flex cursor-pointer items-start gap-1 rounded-lg bg-container px-2 py-1 ${use ? "" : "opacity-60"}`}>
         <Icon name="neurology" className="mt-0.5 text-[16px] text-outline" />
         <span className="flex-1">
-          <span className="text-[11px] font-bold text-on-surface-variant">Speech-to-Text: </span>
-          <span className="text-[13px] italic">&ldquo;{voiceMemo.transcript}&rdquo;</span>
+          <span className="text-micro font-bold text-on-surface-variant">Speech-to-Text: </span>
+          <span className="text-small italic">&ldquo;{voiceMemo.transcript}&rdquo;</span>
         </span>
         <input type="checkbox" checked={use} onChange={(e) => onUse(e.target.checked)} className="mt-1 accent-[var(--primary)]" aria-label="Attach transcript to report" />
       </label>
@@ -415,7 +415,7 @@ function MediaPicker({ media, setMedia }: {
     <div className="flex flex-col gap-1">
       <div className="flex items-center justify-between">
         <span className="text-xs font-semibold">Media &amp; Photographic Evidence</span>
-        <span className="text-[11px] font-bold text-on-surface-variant">Max 4 photos or 15s clip · stays on your device</span>
+        <span className="text-micro font-bold text-on-surface-variant">Max 4 photos or 15s clip · stays on your device</span>
       </div>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {media.map((m) => (
@@ -428,21 +428,21 @@ function MediaPicker({ media, setMedia }: {
               className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-container-lowest text-error opacity-0 transition-opacity group-hover:opacity-100">
               <Icon name="close" className="text-[16px]" />
             </button>
-            <span className="absolute bottom-1 left-1.5 max-w-[90%] truncate rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-bold text-white">{m.name}</span>
+            <span className="absolute bottom-1 left-1.5 max-w-[90%] truncate rounded bg-black/70 px-1.5 py-0.5 text-micro font-bold text-white">{m.name}</span>
           </div>
         ))}
         {media.length < 4 && (
           <>
             <label className="group flex aspect-video cursor-pointer flex-col items-center justify-center gap-1 rounded-xl bg-container p-2 text-center transition-colors hover:bg-container-high">
               <Icon name="add_a_photo" className="text-[24px] text-outline transition-colors group-hover:text-primary" />
-              <span className="text-[11px] font-semibold text-on-surface-variant">Add Snapshot</span>
-              <span className="text-[10px] text-outline">JPG, PNG &lt; 10MB</span>
+              <span className="text-micro font-semibold text-on-surface-variant">Add Snapshot</span>
+              <span className="text-micro text-outline">JPG, PNG &lt; 10MB</span>
               <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => add(e.target.files, false)} />
             </label>
             <label className="group flex aspect-video cursor-pointer flex-col items-center justify-center gap-1 rounded-xl bg-container p-2 text-center transition-colors hover:bg-container-high">
               <Icon name="videocam" className="text-[24px] text-outline transition-colors group-hover:text-primary" />
-              <span className="text-[11px] font-semibold text-on-surface-variant">15s Dashcam Clip</span>
-              <span className="text-[10px] text-outline">MP4, MOV</span>
+              <span className="text-micro font-semibold text-on-surface-variant">15s Dashcam Clip</span>
+              <span className="text-micro text-outline">MP4, MOV</span>
               <input type="file" accept="video/*" className="hidden" onChange={(e) => add(e.target.files, true)} />
             </label>
           </>
@@ -450,10 +450,10 @@ function MediaPicker({ media, setMedia }: {
         <div className="flex aspect-video flex-col justify-between rounded-xl bg-container-low p-1">
           <div className="flex items-center gap-1 text-primary">
             <Icon name="verified" className="text-[16px]" />
-            <span className="text-[10px] font-bold uppercase">Not uploaded</span>
+            <span className="text-micro font-bold uppercase">Not uploaded</span>
           </div>
-          <p className="text-[11px] leading-tight text-on-surface-variant">Photos are previewed only; they aren&apos;t sent in this prototype.</p>
-          <span className="text-[10px] text-outline">{media.length} / 4 attached</span>
+          <p className="text-micro leading-tight text-on-surface-variant">Photos are previewed only; they aren&apos;t sent in this prototype.</p>
+          <span className="text-micro text-outline">{media.length} / 4 attached</span>
         </div>
       </div>
     </div>
@@ -507,7 +507,7 @@ function NearbyFeed({ events, backend }: { events: DisruptionEvent[]; backend: b
           <Icon name="stream" className="text-[20px] text-secondary" />
           <span className="text-lg font-bold">Nearby Active Feed</span>
         </div>
-        <Link href="/admin" className="text-[11px] font-semibold text-primary hover:underline">View All ({feed.length})</Link>
+        <Link href="/admin" className="text-micro font-semibold text-primary hover:underline">View All ({feed.length})</Link>
       </div>
       {feed.length === 0 && <p className="py-2 text-sm text-on-surface-variant">Nothing reported right now.</p>}
       <div className="mt-1 flex flex-col gap-1">
@@ -520,24 +520,24 @@ function NearbyFeed({ events, backend }: { events: DisruptionEvent[]; backend: b
             <div key={ev.event_id} className="flex flex-col gap-1.5 rounded-xl bg-container-low p-2 transition-colors hover:bg-container">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <span className="rounded px-1.5 py-0.5 text-[10px] font-bold uppercase text-white" style={{ backgroundColor: style.color }}>
+                  <span className="rounded px-1.5 py-0.5 text-micro font-bold uppercase text-white" style={{ backgroundColor: style.color }}>
                     {TYPE_LABEL[ev.type] ?? ev.type}
                   </span>
                   <span className="text-xs font-bold">{eventTitle(ev).split(" · ")[1]}</span>
                 </div>
-                <span className="shrink-0 text-[11px] font-bold text-outline">since {ev.first_seen}</span>
+                <span className="shrink-0 text-micro font-bold text-outline">since {ev.first_seen}</span>
               </div>
-              <p className="line-clamp-1 text-[13px] text-on-surface-variant">{evidenceSummary(ev)} · {pct(ev.confidence)}</p>
+              <p className="line-clamp-1 text-small text-on-surface-variant">{evidenceSummary(ev)} · {pct(ev.confidence)}</p>
               <div className="flex items-center justify-between pt-1">
-                <div className={`flex items-center gap-1 text-[11px] font-bold ${burst ? "text-outline" : "text-primary"}`}>
+                <div className={`flex items-center gap-1 text-micro font-bold ${burst ? "text-outline" : "text-primary"}`}>
                   <Icon name={burst ? "flag" : official ? "verified" : "groups"} className="text-[16px]" />
                   {burst ? "Suspicious burst — ignored" : official ? "Verified by official notice" : style.label === "Confirmed" ? "Community confirmed" : style.label}
                 </div>
                 <div className="flex items-center gap-2">
-                  {backend && <Link href={`/events/${ev.event_id}`} className="text-[11px] font-bold text-primary hover:underline">Why?</Link>}
-                  {confirmed[ev.event_id] && <span className="text-[11px] font-bold text-primary">{confirmed[ev.event_id]}</span>}
+                  {backend && <Link href={`/events/${ev.event_id}`} className="text-micro font-bold text-primary hover:underline">Why?</Link>}
+                  {confirmed[ev.event_id] && <span className="text-micro font-bold text-primary">{confirmed[ev.event_id]}</span>}
                   <button type="button" onClick={() => seeToo(ev)} disabled={!backend || burst} title="I see this too"
-                    className="flex items-center gap-1 rounded bg-container-lowest px-2 py-0.5 text-[11px] font-bold shadow-sm transition-colors hover:bg-container-high disabled:opacity-50">
+                    className="flex items-center gap-1 rounded bg-container-lowest px-2 py-0.5 text-micro font-bold shadow-sm transition-colors hover:bg-container-high disabled:opacity-50">
                     <Icon name="thumb_up" className="text-[14px] text-primary" /> {crowd}
                   </button>
                 </div>

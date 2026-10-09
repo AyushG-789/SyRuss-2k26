@@ -53,26 +53,26 @@ export default function StoryPanel({ traveller, onReplan, resultsHref }: {
   return (
     <section className="flex flex-col gap-3 rounded-2xl border-2 border-primary/30 bg-primary-fixed/20 p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="flex items-center gap-1 text-[12px] font-bold uppercase tracking-wider text-primary">
+        <span className="flex items-center gap-1 text-caption font-bold uppercase tracking-wider text-primary">
           <Icon name="theater_comedy" className="text-[16px]" /> Demo story · {traveller.traveller_id} {traveller.name}
         </span>
-        <span className="rounded-full bg-container-lowest px-2 py-0.5 text-[11px] font-bold text-on-surface-variant">
+        <span className="rounded-full bg-container-lowest px-2 py-0.5 text-micro font-bold text-on-surface-variant">
           {d.kind === "track" ? `trip story · moment at ${d.moment}` : d.kind === "plan" ? "planning story" : "day-plan story"}
         </span>
       </div>
       {traveller.story && <p className="text-sm">{traveller.story}</p>}
-      {traveller.demo_hook && <p className="text-[13px] text-on-surface-variant"><b>What happens:</b> {traveller.demo_hook}</p>}
+      {traveller.demo_hook && <p className="text-small text-on-surface-variant"><b>What happens:</b> {traveller.demo_hook}</p>}
       <div className="flex flex-wrap items-center gap-2">
         <button type="button" onClick={play} disabled={busy}
           className="flex items-center gap-1 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary hover:bg-primary-container disabled:opacity-50">
           <Icon name="play_circle" className="text-[20px]" /> {busy ? "Setting up…" : label}
         </button>
-        <span className="flex items-center gap-1 text-[12px] text-on-surface-variant">
+        <span className="flex items-center gap-1 text-caption text-on-surface-variant">
           <Icon name="visibility" className="text-[16px]" /> {d.watch}
         </span>
       </div>
-      {done && <p className="text-[12px] font-semibold text-primary">Demo clock set to {d.moment} — the page now shows the moment.</p>}
-      {error && <p className="text-[12px] text-error">{error}</p>}
+      {done && <p className="text-caption font-semibold text-primary">Demo clock set to {d.moment} — the page now shows the moment.</p>}
+      {error && <p className="text-caption text-error">{error}</p>}
     </section>
   );
 }

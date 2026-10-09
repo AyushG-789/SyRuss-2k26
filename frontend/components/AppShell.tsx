@@ -54,9 +54,9 @@ function NavList({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <nav className="mt-2 flex flex-col gap-1 px-4" aria-label="Main">
       {NAV.map(item)}
-      <p className="mt-4 px-4 text-[11px] font-bold uppercase tracking-wider text-outline">Trust &amp; results</p>
+      <p className="mt-4 px-4 eyebrow text-outline">Trust &amp; results</p>
       {TRUST.map(item)}
-      <p className="mt-4 px-4 text-[11px] font-bold uppercase tracking-wider text-outline">Presenter</p>
+      <p className="mt-4 px-4 eyebrow text-outline">Presenter</p>
       {PRESENTER.map(item)}
     </nav>
   );
@@ -70,7 +70,7 @@ function Brand() {
       </span>
       <span className="flex flex-col">
         <span className="text-lg font-bold leading-none tracking-tight text-primary">TravelBuddy</span>
-        <span className="text-[11px] font-bold uppercase tracking-widest text-on-surface-variant">Transit Hub</span>
+        <span className="text-micro font-bold uppercase tracking-widest text-on-surface-variant">Transit Hub</span>
       </span>
     </Link>
   );
@@ -103,9 +103,9 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
           <div className="flex items-center justify-between rounded-lg bg-container-low px-4 py-1">
             <div className="flex items-center gap-1">
               <span className={`h-2 w-2 animate-pulse rounded-full ${TONE_DOT[status.tone]}`} />
-              <span className="text-[11px] font-medium text-on-surface-variant">{status.label}</span>
+              <span className="text-micro font-medium text-on-surface-variant">{status.label}</span>
             </div>
-            <Link href="/transparency" className={`text-[11px] font-bold uppercase hover:underline ${TONE_TEXT[status.tone]}`}>{status.value}</Link>
+            <Link href="/transparency" className={`text-micro font-bold uppercase hover:underline ${TONE_TEXT[status.tone]}`}>{status.value}</Link>
           </div>
         </div>
         {/* usePathname() must sit inside Suspense on runtime routes like /events/[id] (Next 16). */}
@@ -117,12 +117,12 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
         <div className="flex flex-col gap-1 rounded-xl bg-container-low p-4">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-on-surface-variant">Active City</span>
-            <span className="rounded-full bg-primary-fixed px-1 py-0.5 text-[11px] font-bold uppercase text-on-primary-fixed">
+            <span className="rounded-full bg-primary-fixed px-1 py-0.5 text-micro font-bold uppercase text-on-primary-fixed">
               {shell.activeCity.badge}
             </span>
           </div>
           <div className="text-sm font-semibold">{shell.activeCity.name}</div>
-          <div className="text-[13px] text-on-surface-variant">{shell.activeCity.lines}</div>
+          <div className="text-small text-on-surface-variant">{shell.activeCity.lines}</div>
         </div>
       </div>
     </>
@@ -146,7 +146,7 @@ function SearchBox() {
         onChange={(e) => setQ(e.target.value)}
         placeholder="Search stations, line codes (WR, C-1, BEST), or places..."
         aria-label="Search"
-        className="h-10 w-full rounded-xl bg-container pl-9 pr-4 text-[13px] placeholder:text-outline focus:outline-none focus:ring-2 focus:ring-primary"
+        className="h-10 w-full rounded-xl bg-container pl-9 pr-4 text-small placeholder:text-outline focus:outline-none focus:ring-2 focus:ring-primary"
       />
     </form>
   );
@@ -167,7 +167,7 @@ function FeedPill() {
   return (
     <div className="flex items-center gap-1 rounded-lg bg-container-low px-2 py-1.5" title={on ? "Connected to the TravelBuddy server" : "Server offline — showing sample data"}>
       <span className={`h-2 w-2 rounded-full ${on ? "bg-primary" : "bg-outline"}`} />
-      <span className="hidden text-[11px] font-bold text-on-surface-variant sm:inline">{on ? `Live data · ${live?.asOf}` : "Offline · sample data"}</span>
+      <span className="hidden text-micro font-bold text-on-surface-variant sm:inline">{on ? `Live data · ${live?.asOf}` : "Offline · sample data"}</span>
     </div>
   );
 }

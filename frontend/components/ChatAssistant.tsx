@@ -108,13 +108,6 @@ export default function ChatAssistant() {
     if (open) input.current?.focus();
   }, [open]);
 
-  useEffect(() => {
-    return () => {
-      stopAudio();
-      stopRecordingCleanup();
-    };
-  }, []);
-
   function stopRecordingCleanup() {
     if (scriptProcessor.current) {
       scriptProcessor.current.disconnect();
@@ -144,6 +137,14 @@ export default function ChatAssistant() {
     }
     setPlayingIdx(null);
   }
+
+  // Stop any playback / recording when the chat unmounts.
+  useEffect(() => {
+    return () => {
+      stopAudio();
+      stopRecordingCleanup();
+    };
+  }, []);
 
   async function ask(question: string) {
     const q = question.trim();
@@ -236,6 +237,7 @@ export default function ChatAssistant() {
 
   async function finishRecording() {
     setRecording(false);
+    // eslint-disable-next-line react-hooks/purity -- runs in a click handler, not during render
     const durationMs = Date.now() - recordingStartTime.current;
     console.log(`[Voice:STT] Recording stopped (${durationMs}ms duration)`);
 
@@ -320,7 +322,7 @@ export default function ChatAssistant() {
         const player = new Audio(`data:${tts.mime};base64,${tts.audio_base64}`);
         audioPlayer.current = player;
         player.onended = () => setPlayingIdx(null);
-        player.onerror = () => speakBrowser(speakText, idx);
+        player.onerror = () => speakBrowser(speakText);
         await player.play();
         return;
       }
@@ -328,10 +330,10 @@ export default function ChatAssistant() {
       console.warn("Backend TTS failed, using browser synthesis fallback:", err);
     }
 
-    speakBrowser(speakText, idx);
+    speakBrowser(speakText);
   }
 
-  function speakBrowser(speakText: string, idx: number) {
+  function speakBrowser(speakText: string) {
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
       window.speechSynthesis.cancel();
       const utter = new SpeechSynthesisUtterance(speakText);
@@ -371,7 +373,7 @@ export default function ChatAssistant() {
               </span>
               <div className="leading-tight">
                 <p className="text-sm font-semibold">Ask TravelBuddy</p>
-                <p className="text-[11px] opacity-80">Voice & Routes · English, हिंदी, मराठी</p>
+                <p className="text-micro opacity-80">Voice & Routes · English, हिंदी, मराठी</p>
               </div>
             </div>
             <div className="flex items-center gap-1">
@@ -409,14 +411,14 @@ export default function ChatAssistant() {
                   Hi! Ask me to plan a trip, or whether a line or station has a problem right now.
                   Tap the 🎤 <strong>mic</strong> to speak or type below.
                 </div>
-                <p className="px-1 text-[11px] font-bold uppercase tracking-wider text-outline">Try</p>
+                <p className="px-1 eyebrow text-outline">Try</p>
                 <div className="flex flex-wrap gap-2">
                   {SUGGESTIONS.map((s) => (
                     <button
                       key={s}
                       type="button"
                       onClick={() => ask(s)}
-                      className="rounded-full bg-container-lowest px-3 py-1.5 text-left text-[13px] font-medium text-primary shadow-card hover:bg-primary-fixed"
+                      className="rounded-full bg-container-lowest px-3 py-1.5 text-left text-small font-medium text-primary shadow-card hover:bg-primary-fixed"
                     >
                       {s}
                     </button>
@@ -542,7 +544,7 @@ function Thinking() {
           <span key={d} className="h-1.5 w-1.5 animate-bounce rounded-full bg-outline" style={{ animationDelay: `${d}ms` }} />
         ))}
       </span>
-      <span className="text-[12px] text-on-surface-variant">{STEPS[step]}</span>
+      <span className="text-caption text-on-surface-variant">{STEPS[step]}</span>
     </div>
   );
 }
@@ -596,7 +598,7 @@ function AssistantBubble({
           <Link
             href={tripHref(r.trip.traveller)}
             onClick={onClose}
-            className="flex items-center justify-center gap-1 rounded-xl bg-primary px-3 py-2 text-[13px] font-semibold text-on-primary hover:bg-primary-container"
+            className="flex items-center justify-center gap-1 rounded-xl bg-primary px-3 py-2 text-small font-semibold text-on-primary hover:bg-primary-container"
           >
             Open full route details <Icon name="arrow_forward" className="text-[16px]" />
           </Link>
@@ -612,7 +614,7 @@ function AssistantBubble({
       )}
 
       {r && r.source !== "gemini" && (
-        <p className="flex items-center gap-1 px-1 text-[11px] text-outline">
+        <p className="flex items-center gap-1 px-1 text-micro text-outline">
           <Icon name="info" className="text-[14px]" />
           {r.source === "fallback" ? "AI is busy or offline, so this is a basic answer from live data."
                 : r.note?.includes("slow") ? "AI was slow, so this is a quick answer from live data." : "Answer simplified so every number matches live data."}
@@ -629,21 +631,21 @@ function OptionCard({ option: o }: { option: ChatOption }) {
       className={`rounded-xl bg-container-lowest p-2.5 shadow-card ${o.recommended ? "ring-2 ring-primary" : ""}`}
     >
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[11px] font-bold uppercase tracking-wide text-primary">
+        <span className="text-micro font-bold uppercase tracking-wide text-primary">
           {PLAN_LABEL[o.label]}
           {o.recommended ? " · recommended" : ""}
         </span>
-        <span className="text-[13px] font-semibold">
+        <span className="text-small font-semibold">
           {o.duration_min} min · ₹{o.cost_inr}
         </span>
       </div>
-      <p className="mt-0.5 text-[13px] font-medium">{o.route}</p>
-      <p className="text-[12px] text-on-surface-variant">
+      <p className="mt-0.5 text-small font-medium">{o.route}</p>
+      <p className="text-caption text-on-surface-variant">
         {o.depart} → {o.arrive} · {o.changes} change{o.changes === 1 ? "" : "s"} · {o.walk_min} min walk
       </p>
       {problem && (
         <p
-          className={`mt-1.5 rounded-md px-2 py-1 text-[11px] font-semibold ${
+          className={`mt-1.5 rounded-md px-2 py-1 text-micro font-semibold ${
             STATUS_STYLE[problem.status] ?? ""
           }`}
         >
@@ -659,10 +661,10 @@ function ProblemRow({ p }: { p: ChatProblem }) {
   return (
     <li className="flex items-center justify-between gap-2 rounded-xl bg-container-lowest px-2.5 py-2 shadow-card">
       <span className="min-w-0">
-        <span className="block truncate text-[13px] font-medium">{p.title}</span>
-        <span className="block truncate text-[11px] text-on-surface-variant">{p.sources}</span>
+        <span className="block truncate text-small font-medium">{p.title}</span>
+        <span className="block truncate text-micro text-on-surface-variant">{p.sources}</span>
       </span>
-      <span className={`shrink-0 rounded-md px-2 py-0.5 text-[11px] font-bold ${STATUS_STYLE[p.status] ?? ""}`}>
+      <span className={`shrink-0 rounded-md px-2 py-0.5 text-micro font-bold ${STATUS_STYLE[p.status] ?? ""}`}>
         {p.status === "coordinated" ? "fake burst" : p.status} {p.trust_pct}%
       </span>
     </li>
