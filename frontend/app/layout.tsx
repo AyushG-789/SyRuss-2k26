@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import { Geist_Mono, Noto_Sans_Devanagari, Plus_Jakarta_Sans } from "next/font/google";
-import AppShell from "@/components/AppShell";
 import { THEME_BOOT_SCRIPT } from "@/lib/theme";
 import "./globals.css";
 
@@ -56,7 +55,7 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full font-sans">
-        <AppShell>{children}</AppShell>
+        {children}
       </body>
     </html>
   );

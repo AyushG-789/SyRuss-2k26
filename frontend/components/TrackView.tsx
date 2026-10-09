@@ -163,7 +163,7 @@ function LiveTrip({ trip, onTrip }: { trip: SavedTrip; onTrip: (t: SavedTrip | n
               <PhasePill phase={phase} />
               <Link href="/admin" title={t("clockTitle")}
                 className="flex items-center gap-1 rounded-full bg-container px-2 py-0.5 font-mono text-micro font-bold text-on-surface-variant hover:bg-container-high">
-                <Icon name="schedule" className="text-[14px]" /> {clock ? `${t("demoTime", { time: clock.now })}${clock.speed ? ` · ${clock.speed}×` : ` · ${t("paused")}`}` : t("clockOffline")}
+                <Icon name="schedule" className="text-[14px]" /> {clock ? `${t("demoTime", { time: clock.now })}${clock.speed ? ` · ${t("speedX", { n: clock.speed })}` : ` · ${t("paused")}`}` : t("clockOffline")}
               </Link>
               {clock && phase !== "arrived" && (
                 <ClockButtons speed={clock.speed} onChange={setClock} />
@@ -553,7 +553,6 @@ function Milestone({ leg, state, name, hits, nowMin }: {
   leg: Leg; state: LegState; name: (id: string) => string; hits: LegHit[]; nowMin: number;
 }) {
   const t = useT(M);
-  const tc = useT(COMMON);
   const stops = leg.line_id ? rideStops(leg).length - 1 : 0;
   return (
     <div className="relative flex items-start gap-4 pb-5">
@@ -586,7 +585,7 @@ function Milestone({ leg, state, name, hits, nowMin }: {
           <span key={h.event_id} className="mt-1 flex items-center gap-1 rounded-md px-2 py-1 text-micro font-semibold"
             style={{ background: h.status === "confirmed" ? "var(--error-container)" : "var(--tertiary-fixed)", color: h.status === "confirmed" ? "var(--on-error-container)" : "var(--tertiary)" }}>
             <Icon name={h.blocked ? "block" : "schedule"} className="text-[14px]" />
-            {h.title} · {STATUS_STYLE[h.status].label} {pct(h.confidence)}{h.blocked ? ` · ${t("cantUse")}` : h.delay_min ? ` · +${h.delay_min} ${tc("min")}` : ""}
+            {h.title} · {STATUS_STYLE[h.status].label} · {t("pctSure", { pct: pct(h.confidence) })}{h.blocked ? ` · ${t("cantUse")}` : h.delay_min ? ` · ${t("minLate", { min: h.delay_min })}` : ""}
           </span>
         ))}
       </div>
@@ -640,7 +639,7 @@ function RouteProblems({ hits, connected, journeyId }: { hits: LegHit[]; connect
               </span>
               <span className="shrink-0 rounded-md px-2 py-0.5 text-micro font-bold"
                 style={{ background: h.status === "confirmed" ? "var(--error-container)" : "var(--tertiary-fixed)", color: h.status === "confirmed" ? "var(--on-error-container)" : "var(--tertiary)" }}>
-                {STATUS_STYLE[h.status].label} {pct(h.confidence)}
+                {STATUS_STYLE[h.status].label} · {t("pctSure", { pct: pct(h.confidence) })}
               </span>
             </li>
           ))}
@@ -652,7 +651,6 @@ function RouteProblems({ hits, connected, journeyId }: { hits: LegHit[]; connect
 
 function ReplanBanner({ journey, name, onDecided }: { journey: Journey; name: (id: string) => string; onDecided: (j: Journey) => void }) {
   const t = useT(M);
-  const tc = useT(COMMON);
   const p = journey.proposal!;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -685,9 +683,9 @@ function ReplanBanner({ journey, name, onDecided }: { journey: Journey; name: (i
         <span className="rounded-md bg-container px-2 py-1 font-semibold">{t("fromPlace", { place: p.from_label, steps: newLegs.map((l) => legVerb(l, name)).join(" · ") })}</span>
         <span className="rounded-md bg-container px-2 py-1 font-semibold">{t("arriveTime", { time: p.new_card.legs[p.new_card.legs.length - 1].arrive })}</span>
         <span className={`rounded-md px-2 py-1 font-bold ${p.delta.min <= 0 ? "bg-primary-fixed text-on-primary-fixed" : "bg-tertiary-fixed text-tertiary"}`}>
-          {p.delta.min > 0 ? "+" : ""}{p.delta.min} {tc("min")}
+          {p.delta.min > 0 ? t("minLater", { min: p.delta.min }) : p.delta.min < 0 ? t("minSooner", { min: -p.delta.min }) : t("sameTime")}
         </span>
-        <span className="rounded-md bg-container px-2 py-1 font-bold">{p.delta.inr >= 0 ? "+" : "−"}₹{Math.abs(p.delta.inr)}</span>
+        <span className="rounded-md bg-container px-2 py-1 font-bold">{p.delta.inr > 0 ? t("costMore", { amt: p.delta.inr }) : p.delta.inr < 0 ? t("costLess", { amt: -p.delta.inr }) : t("sameFare")}</span>
       </div>
       <div className="flex gap-2">
         <button onClick={() => decide(true)} disabled={busy} className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-on-primary hover:bg-primary-container disabled:opacity-50">

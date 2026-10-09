@@ -142,8 +142,10 @@ def build_route_cards(
         rel_colour = "green" if cand.reliability >= 0.90 else "yellow" if cand.reliability >= 0.70 else "red"
         rel_pct = round(cand.reliability * 100)
 
+        n = cand.transfers
+        changes = tr(language, "changes.none") if n == 0 else tr(language, "changes.one") if n == 1 else tr(language, "changes.many", n=n)
         reason = tr(language, "card.reason", label=tr(language, f"label.{label}"), min=cand.duration_min,
-                    cost=cand.cost_inr, transfers=cand.transfers, rel=rel_pct)
+                    cost=cand.cost_inr, changes=changes, rel=rel_pct)
         facts: dict[str, Any] = {
             "duration_min": cand.duration_min,
             "cost_inr": cand.cost_inr,

@@ -540,7 +540,7 @@ function Activity({ profile, onNavigate }: { profile: Profile; onNavigate: () =>
               <ul className="divide-y divide-hairline-soft">
                 {profile.activity.map((a, i) => (
                   <li key={`${a.at}-${i}`}>
-                    <Link href={a.href ?? "/"} onClick={onNavigate} className="flex items-center gap-3 rounded-lg px-2 py-2.5 hover:bg-container-low">
+                    <Link href={a.href ?? "/home"} onClick={onNavigate} className="flex items-center gap-3 rounded-lg px-2 py-2.5 hover:bg-container-low">
                       <Icon name={a.kind === "planned" ? "alt_route" : a.kind === "started" ? "fmd_good" : "campaign"}
                         className={a.kind === "reported" ? "text-tertiary" : "text-primary"} />
                       <span className="min-w-0 flex-1">

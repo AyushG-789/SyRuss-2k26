@@ -19,7 +19,7 @@ type NavKey = Extract<keyof typeof M.en, `nav.${string}`>;
 type NavItem = { href: string; label: NavKey; icon: string; match: (p: string) => boolean };
 
 const NAV: NavItem[] = [
-  { href: "/", label: "nav./", icon: "hub", match: (p) => p === "/" },
+  { href: "/home", label: "nav./", icon: "hub", match: (p) => p === "/home" },
   { href: "/plan", label: "nav./plan", icon: "alt_route", match: (p) => p === "/plan" },
   { href: "/routes/TR3", label: "nav./routes/TR3", icon: "directions_subway", match: (p) => p.startsWith("/routes") },
   { href: "/track", label: "nav./track", icon: "fmd_good", match: (p) => p.startsWith("/track") },
@@ -68,14 +68,14 @@ function NavList({ onNavigate }: { onNavigate?: () => void }) {
   );
 }
 
-function Brand() {
+function Brand({ compact = false }: { compact?: boolean }) {
   const t = useT(M);
   return (
     <Link href="/" className="flex items-center gap-2">
       <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary text-on-primary">
         <Icon name="route" className="text-[20px]" />
       </span>
-      <span className="flex flex-col">
+      <span className={`flex-col ${compact ? "hidden min-[400px]:flex" : "flex"}`}>
         <span className="text-lg font-bold leading-none tracking-tight text-primary">TravelBuddy</span>
         <span className="text-micro font-bold uppercase tracking-widest text-on-surface-variant">{t("transitHub")}</span>
       </span>
@@ -106,7 +106,7 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <>
       <div className="flex flex-col">
-        <div className="flex h-16 items-center px-6">
+        <div className="flex h-[4.5rem] items-center px-6">
           <Brand />
         </div>
         <div className="px-4 py-2">
@@ -151,13 +151,13 @@ function SearchBox() {
         if (q.trim()) router.push(`/plan?to=${encodeURIComponent(q.trim())}`);
       }}
     >
-      <Icon name="search" className="absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-outline" />
+      <Icon name="search" className="absolute left-3 top-1/2 -translate-y-1/2 text-[20px] text-outline" />
       <input
         value={q}
         onChange={(e) => setQ(e.target.value)}
         placeholder={t("searchPh")}
         aria-label={t("search")}
-        className="h-10 w-full rounded-xl bg-container pl-9 pr-4 text-small placeholder:text-outline focus:outline-none focus:ring-2 focus:ring-primary"
+        className="h-11 w-full rounded-xl bg-container pl-10 pr-4 text-body placeholder:text-outline focus:outline-none focus:ring-2 focus:ring-primary"
       />
     </form>
   );
@@ -172,7 +172,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 }
 
 /** Top-bar avatar: opens the Commuter Profile panel (also opened from elsewhere via openProfile()). */
-function ProfileButton() {
+export function ProfileButton() {
   const t = useT(M);
   const profile = useProfile();
   const [open, setOpen] = useState(false);
@@ -190,8 +190,8 @@ function ProfileButton() {
     <>
       <button type="button" onClick={() => { setSection("top"); setOpen(true); }} aria-haspopup="dialog" aria-expanded={open}
         aria-label={profile.signedIn ? t("profileOf", { name: profile.name }) : t("profileGuest")} title={t("yourProfile")}
-        className={`flex h-9 w-9 items-center justify-center rounded-full bg-primary text-caption font-bold text-on-primary transition hover:ring-2 hover:ring-primary/30 ${open ? "ring-2 ring-primary ring-offset-2" : ""}`}>
-        {profile.signedIn ? initials(profile.name) : <Icon name="person" className="text-[18px]" />}
+        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-small font-bold text-on-primary transition hover:ring-2 hover:ring-primary/30 ${open ? "ring-2 ring-primary ring-offset-2" : ""}`}>
+        {profile.signedIn ? initials(profile.name) : <Icon name="person" className="text-[20px]" />}
       </button>
       <ProfilePanel open={open} section={section} onClose={close} />
     </>
@@ -200,7 +200,7 @@ function ProfileButton() {
 
 /** Whether pages show live backend data or the bundled sample (backend offline). */
 /** Quick language switch in the top bar (the same choice as Profile → Language). */
-function LanguageMenu() {
+export function LanguageMenu() {
   const t = useT(M);
   const lang = useLang();
   const [open, setOpen] = useState(false);
@@ -217,16 +217,17 @@ function LanguageMenu() {
   return (
     <div ref={ref} className="relative">
       <button type="button" onClick={() => setOpen(!open)} aria-haspopup="menu" aria-expanded={open} aria-label={t("changeLanguage")} title={t("changeLanguage")}
-        className="flex h-9 items-center gap-1 rounded-lg bg-container px-2 text-xs font-semibold hover:bg-container-high">
-        <Icon name="translate" className="text-[18px] text-primary" />
-        <span lang={current.html}>{current.short}</span>
+        className="flex h-10 items-center gap-1.5 rounded-xl bg-container pl-2.5 pr-2 text-small font-semibold hover:bg-container-high sm:min-w-[7.5rem] sm:pl-3">
+        <Icon name="translate" className="text-[20px] text-primary" />
+        <span lang={current.html} className="flex-1 whitespace-nowrap text-left">{current.label}</span>
+        <Icon name={open ? "expand_less" : "expand_more"} className="hidden text-[18px] text-outline sm:inline" />
       </button>
       {open && (
-        <div role="menu" aria-label={t("language")} className="absolute right-0 top-11 z-10 w-44 overflow-hidden rounded-xl bg-container-lowest p-1 shadow-float">
+        <div role="menu" aria-label={t("language")} className="absolute right-0 top-12 z-10 w-48 overflow-hidden rounded-xl bg-container-lowest p-1 shadow-float">
           {LANGS.map((l) => (
             <button key={l.value} type="button" role="menuitemradio" aria-checked={l.value === lang} lang={l.html}
               onClick={() => { setAppLanguage(l.value); setOpen(false); }}
-              className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-small hover:bg-container-low ${l.value === lang ? "font-bold text-primary" : ""}`}>
+              className={`flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-body hover:bg-container-low ${l.value === lang ? "font-bold text-primary" : ""}`}>
               <span>{l.label} <span className="text-caption font-normal text-on-surface-variant">{l.value === "en" ? "" : l.english}</span></span>
               {l.value === lang && <Icon name="check" className="text-[18px]" />}
             </button>
@@ -242,9 +243,10 @@ function FeedPill() {
   const live = useLiveEvents();
   const on = live?.source === "backend";
   return (
-    <div className="flex items-center gap-1 rounded-lg bg-container-low px-2 py-1.5" title={on ? t("connected") : t("offlineTip")}>
-      <span className={`h-2 w-2 rounded-full ${on ? "bg-primary" : "bg-outline"}`} />
-      <span className="hidden text-micro font-bold text-on-surface-variant sm:inline">{on ? t("liveData", { time: live?.asOf ?? "" }) : t("offline")}</span>
+    <div className="flex h-10 items-center gap-2 rounded-xl bg-container-low px-2.5 sm:px-3" title={on ? t("connected") : t("offlineTip")}
+      role="status" aria-label={on ? t("liveData", { time: live?.asOf ?? "" }) : t("offline")}>
+      <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${on ? "bg-primary" : "bg-outline"}`} />
+      <span className="hidden whitespace-nowrap text-caption font-semibold text-on-surface sm:inline">{on ? t("liveData", { time: live?.asOf ?? "" }) : t("offline")}</span>
     </div>
   );
 }
@@ -275,20 +277,20 @@ function Shell({ children }: { children: React.ReactNode }) {
       )}
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-[1100] flex h-16 items-center justify-between gap-3 bg-container-lowest/90 px-4 shadow-xs backdrop-blur-xl md:px-6">
-          <button onClick={() => setOpen(true)} aria-label={t("openMenu")} className="rounded-lg p-1.5 hover:bg-container-low lg:hidden">
-            <Icon name="menu" />
+        <header className="sticky top-0 z-[1100] flex h-[4.5rem] items-center justify-between gap-2 bg-container-lowest/90 px-3 shadow-xs backdrop-blur-xl sm:gap-3 sm:px-4 md:px-6">
+          <button onClick={() => setOpen(true)} aria-label={t("openMenu")} className="shrink-0 rounded-lg p-1.5 hover:bg-container-low lg:hidden">
+            <Icon name="menu" className="text-[26px]" />
           </button>
-          <div className="lg:hidden">
-            <Brand />
+          <div className="min-w-0 lg:hidden">
+            <Brand compact />
           </div>
           <div className="hidden max-w-2xl flex-1 items-center gap-5 md:flex">
             <SearchBox />
           </div>
-          <div className="flex items-center gap-2 sm:gap-4">
-            <span className="hidden items-center gap-1 rounded-lg bg-container px-4 py-1.5 xl:flex">
-              <Icon name="location_city" className="text-[18px] text-primary" />
-              <span className="text-xs font-semibold">{t("city")}</span>
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+            <span className="hidden h-10 items-center gap-1.5 rounded-xl bg-container px-3 xl:flex">
+              <Icon name="location_city" className="text-[20px] text-primary" />
+              <span className="whitespace-nowrap text-small font-semibold">{t("city")}</span>
             </span>
             <LanguageMenu />
             <FeedPill />

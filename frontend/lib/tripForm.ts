@@ -35,11 +35,11 @@ export const VEHICLE_MODES: { mode: Mode; label: string; icon: string }[] = [
 ];
 
 export const PRIORITIES: { value: Traveller["priority"]; label: string; hint: string; icon: string }[] = [
-  { value: "balanced", label: "Optimal", hint: "Best balance of time, cost and reliability", icon: "auto_awesome" },
-  { value: "fastest", label: "Fastest", hint: "Shortest door-to-door time", icon: "bolt" },
+  { value: "balanced", label: "Best overall", hint: "Good mix of time, fare and on time", icon: "auto_awesome" },
+  { value: "fastest", label: "Fastest", hint: "Least time", icon: "bolt" },
   { value: "cheapest", label: "Cheapest", hint: "Lowest fare", icon: "savings" },
-  { value: "fewest_transfers", label: "Fewest changes", hint: "Fewer vehicle switches", icon: "sync_alt" },
-  { value: "most_reliable", label: "Most reliable", hint: "Avoid anything reported", icon: "verified" },
+  { value: "fewest_transfers", label: "Fewest changes", hint: "Change trains or buses less", icon: "sync_alt" },
+  { value: "most_reliable", label: "Most on time", hint: "Avoid reported problems", icon: "verified" },
 ];
 
 export const NOW = "now";

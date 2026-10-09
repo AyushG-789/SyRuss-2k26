@@ -238,7 +238,7 @@ def plan_itinerary(traveller: Traveller, on: date | None = None) -> dict:
         slack = min(hours[1] - leave, day_end - leave, (_m(s.fixed_time) - arrive) if s.fixed_time else 10_000)
         problems = sorted({i for l in card.legs for i in l.event_ids})
         if problems:
-            warnings.append(tr(lang, "warn.problems", name=poi["name"], ids=", ".join(problems),
+            warnings.append(tr(lang, "warn.problems", name=poi["name"], n=len(problems),
                                rel=round(card.reliability * 100)))
         nearby = _nearby_problems(here, dest, card.legs[0].depart)
         for n in nearby:

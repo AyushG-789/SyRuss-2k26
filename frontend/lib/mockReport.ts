@@ -12,7 +12,7 @@ export const page: { breadcrumb: ReportKey[] } = {
 };
 
 /** Shown in the header strip when the backend is offline (otherwise live counts are used). */
-export const sampleStats = { active: "1,428", verified: "94.2%", alerted: "62.8k" };
+export const sampleStats = { active: "1,428", verified: "94.2%", alerted: "62,800" };
 
 export const categories: {
   id: string; label: ReportKey; text: ReportKey; icon: string; iconCls: string;
@@ -30,7 +30,8 @@ export const categories: {
 export const voiceMemo = {
   length: "0:08",
   max: "0:30",
-  rate: "44.1 kHz",
+  /** Shown as a small sound-quality chip (was "44.1 kHz"). */
+  rate: "voiceRate" as ReportKey,
   /** Sent with the report in English; shown translated (key "transcript"). */
   transcript: "Waterlogged near subway underpass causing slow movement. Left 2 lanes blocked with knee-deep water.",
 };
@@ -39,7 +40,7 @@ export const defaultDescription = "Left 2 lanes blocked due to sudden culvert ov
 
 export const location = {
   title: "locTitle" as ReportKey,
-  sub: "Andheri East, Mumbai MMR • 19.1158° N, 72.8564° E",
+  sub: "Andheri East, Mumbai",
   /** Station the report is filed against (Pakka Check needs a stop or line). */
   defaultStation: "weh_m1",
 };

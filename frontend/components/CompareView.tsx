@@ -111,7 +111,7 @@ function Side({ s, deadline }: { s: EvalTrip["schedule_only"]; deadline: string 
         {s.late && deadline ? <span className="ml-1 rounded bg-error-container px-1 text-micro font-bold text-on-error-container">{tr("late")}</span> : null}
       </span>
       <span className="block text-caption text-on-surface-variant">
-        ₹{s.cost_inr} · {tr("walk", { min: s.walk_min })}{s.hit_by.length ? ` · ${tr("hitBy", { list: s.hit_by.map((h) => `${h.event} (+${h.extra_min})`).join(", ") })}` : ""}
+        ₹{s.cost_inr} · {tr("walk", { min: s.walk_min })}{s.hit_by.length ? ` · ${tr("hitBy", { list: s.hit_by.map((h) => tr("hitItem", { event: h.event, min: h.extra_min })).join(", ") })}` : ""}
       </span>
     </td>
   );

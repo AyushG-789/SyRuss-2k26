@@ -119,7 +119,7 @@ export default function ReportIncident() {
           {page.breadcrumb.map((b, i) => (
             <span key={b} className="flex items-center gap-1">
               {i > 0 && <Icon name="chevron_right" className="text-[14px] text-outline" />}
-              {i === 0 ? <Link href="/" className="hover:text-primary">{t(b)}</Link>
+              {i === 0 ? <Link href="/home" className="hover:text-primary">{t(b)}</Link>
                 : <span className={i === page.breadcrumb.length - 1 ? "font-semibold text-primary" : ""}>{t(b)}</span>}
             </span>
           ))}
@@ -391,7 +391,7 @@ function VoiceMemo({ use, onUse }: { use: boolean; onUse: (v: boolean) => void }
           </div>
         </div>
         <div className="hidden items-center gap-1.5 rounded-md bg-secondary-container px-1 py-1 text-micro font-bold text-on-secondary-fixed sm:flex">
-          <Icon name="graphic_eq" className="text-[14px]" /> {voiceMemo.rate}
+          <Icon name="graphic_eq" className="text-[14px]" /> {t(voiceMemo.rate)}
         </div>
       </div>
       <label className={`flex cursor-pointer items-start gap-1 rounded-lg bg-container px-2 py-1 ${use ? "" : "opacity-60"}`}>
@@ -447,13 +447,13 @@ function MediaPicker({ media, setMedia }: {
             <label className="group flex aspect-video cursor-pointer flex-col items-center justify-center gap-1 rounded-xl bg-container p-2 text-center transition-colors hover:bg-container-high">
               <Icon name="add_a_photo" className="text-[24px] text-outline transition-colors group-hover:text-primary" />
               <span className="text-micro font-semibold text-on-surface-variant">{t("addSnapshot")}</span>
-              <span className="text-micro text-outline">JPG, PNG &lt; 10MB</span>
+              <span className="text-micro text-outline">{t("photoHint")}</span>
               <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => add(e.target.files, false)} />
             </label>
             <label className="group flex aspect-video cursor-pointer flex-col items-center justify-center gap-1 rounded-xl bg-container p-2 text-center transition-colors hover:bg-container-high">
               <Icon name="videocam" className="text-[24px] text-outline transition-colors group-hover:text-primary" />
               <span className="text-micro font-semibold text-on-surface-variant">{t("dashcam")}</span>
-              <span className="text-micro text-outline">MP4, MOV</span>
+              <span className="text-micro text-outline">{t("videoHint")}</span>
               <input type="file" accept="video/*" className="hidden" onChange={(e) => add(e.target.files, true)} />
             </label>
           </>
@@ -482,7 +482,7 @@ function ResultBanner({ result }: { result: Result }) {
         <Icon name="check_circle" /> {t("received", { time: r.reported_at })} — {r.created_event ? t("newReport") : t("addedExisting")}
       </p>
       <p>
-        {t("verdictPre")} <b style={{ color: style.color }}>{style.label}</b> {t("verdictAt")} <b>{pct(r.confidence)}</b>.{" "}
+        {t("verdictPre")} <b style={{ color: style.color }}>{style.label}</b> {t("verdictAt")} <b>{t("sure", { pct: pct(r.confidence) })}</b>.{" "}
         {r.status === "confirmed" ? t("confirmedNote") : t("pendingNote")}
       </p>
     </div>
@@ -546,7 +546,7 @@ function NearbyFeed({ events, backend }: { events: DisruptionEvent[]; backend: b
                 </div>
                 <span className="shrink-0 text-micro font-bold text-outline">{t("since", { time: ev.first_seen })}</span>
               </div>
-              <p className="line-clamp-1 text-small text-on-surface-variant">{evidenceSummary(ev)} · {pct(ev.confidence)}</p>
+              <p className="line-clamp-1 text-small text-on-surface-variant">{evidenceSummary(ev)} · {t("sure", { pct: pct(ev.confidence) })}</p>
               <div className="flex items-center justify-between pt-1">
                 <div className={`flex items-center gap-1 text-micro font-bold ${burst ? "text-outline" : "text-primary"}`}>
                   <Icon name={burst ? "flag" : official ? "verified" : "groups"} className="text-[16px]" />

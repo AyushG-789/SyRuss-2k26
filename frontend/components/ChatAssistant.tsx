@@ -658,7 +658,7 @@ function OptionCard({ option: o }: { option: ChatOption }) {
           }`}
         >
           {o.blocked_by_confirmed_problem ? t("blocked") : ""}
-          {problem.title} · {isStatusKey(problem.status) ? tc(`status.${problem.status}`) : problem.status} {problem.trust_pct}%
+          {problem.title} · {t("statusPct", { status: isStatusKey(problem.status) ? tc(`status.${problem.status}`) : problem.status, pct: problem.trust_pct })}
         </p>
       )}
     </div>
@@ -675,7 +675,7 @@ function ProblemRow({ p }: { p: ChatProblem }) {
         <span className="block truncate text-micro text-on-surface-variant">{p.sources}</span>
       </span>
       <span className={`shrink-0 rounded-md px-2 py-0.5 text-micro font-bold ${STATUS_STYLE[p.status] ?? ""}`}>
-        {p.status === "coordinated" ? t("fakeBurst") : isStatusKey(p.status) ? tc(`status.${p.status}`) : p.status} {p.trust_pct}%
+        {t("statusPct", { status: p.status === "coordinated" ? t("fakeBurst") : isStatusKey(p.status) ? tc(`status.${p.status}`) : p.status, pct: p.trust_pct })}
       </span>
     </li>
   );

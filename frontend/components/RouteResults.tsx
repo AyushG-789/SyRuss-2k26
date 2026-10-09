@@ -9,7 +9,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { getBaselinePlan, getClock, getPlan, planRequest, RoutingNotConnected, stations } from "@/lib/api";
-import { legColor, lineShortName, MODE_LABEL, PLAN_LABEL, pct, placeName, readableRoute } from "@/lib/format";
+import { eventTitle, legColor, lineShortName, MODE_LABEL, PLAN_LABEL, pct, placeName, readableRoute } from "@/lib/format";
 import { toMin } from "@/lib/geo";
 import { activeLang, translate, useT, type Vars } from "@/lib/i18n";
 import { storyText } from "@/lib/i18n/messages/StoryPanel";
@@ -447,6 +447,12 @@ function ResultCard({ card, traveller, destinationLabel, fastest, selected, onSe
 }) {
   const t = useT(M);
   const tc = useT(COMMON);
+  const live = useLiveEvents();
+  // Problem chips show the problem's name ("Delay · Saki Naka"), not its internal id.
+  const problemName = (id: string) => {
+    const ev = live?.events.find((e) => e.event_id === id);
+    return ev ? eventTitle(ev) : tc("problem");
+  };
   const [panel, setPanel] = useState<null | "steps" | "fare">(null);
   const last = card.legs[card.legs.length - 1];
   const risky = card.legs.filter((l) => l.event_ids.length > 0 && l.risk >= 0.3);
@@ -533,7 +539,7 @@ function ResultCard({ card, traveller, destinationLabel, fastest, selected, onSe
               {leg.event_ids.map((id) => (
                 <Link key={id} href={`/events/${id}`} onClick={(e) => e.stopPropagation()}
                   className="ml-1 rounded bg-error-container px-1.5 py-0.5 text-micro font-bold text-on-error-container hover:underline">
-                  {t("risk", { id, pct: pct(leg.risk) })}
+                  {t("risk", { id: problemName(id), pct: pct(leg.risk) })}
                 </Link>
               ))}
             </li>

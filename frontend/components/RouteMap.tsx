@@ -178,7 +178,7 @@ export default function RouteMap({
             <Popup>
               <strong>{eventTitle(ev)}</strong>
               <br />
-              {style.label} · {pct(ev.confidence)} · {evidenceSummary(ev)}
+              {style.label} · {t("sure", { pct: pct(ev.confidence) })} · {evidenceSummary(ev)}
               <br />
               <span style={{ opacity: 0.7 }}>
                 {t("seen", { first: ev.first_seen, last: ev.last_seen })}

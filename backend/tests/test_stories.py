@@ -74,7 +74,7 @@ def test_tr1_lift_outage_routes_wheelchair_user_around_bkc(world):
     uses_bkc = lambda c: any("bkc_m3" in (l.from_id, l.to_id) for l in c.legs)  # noqa: E731
     assert uses_bkc(base)            # a normal app goes straight to BKC metro
     assert not uses_bkc(rec)         # TravelBuddy avoids the reported lift outage
-    assert any("lift outage" in n for n in aware.notes)
+    assert any("lift not working" in n for n in aware.notes)
     assert all(l.step_free for l in rec.legs)
 
 
@@ -104,7 +104,7 @@ def test_tr4_possible_waterlogging_warns_but_keeps_plan(world):
     mr = client.post("/itinerary", json={"traveller": {**tr4, "language": "mr"}}).json()
     client.post("/admin/reset")
     assert r["feasible"] and r["stops"][-1]["visit_start"] == "18:30"
-    assert any("waterlogging" in w and "plan kept" in w for w in r["warnings"])
+    assert any("waterlogging" in w and "plan stays the same" in w for w in r["warnings"])
     assert any("पाणी साचले" in w and "प्लॅन तसाच" in w for w in mr["warnings"])
 
 

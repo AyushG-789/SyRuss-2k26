@@ -6,10 +6,13 @@ import { M } from "@/lib/i18n/messages/ComingSoon";
 import Icon from "./Icon";
 
 type Key = keyof typeof M.en;
-/** Page texts we know, by their English wording, so they show in the app language too. */
-const KNOWN: Record<string, Key> = Object.fromEntries(
-  (Object.keys(M.en) as Key[]).map((k) => [M.en[k], k]),
-);
+/** Page texts we know, by their English wording, so they show in the app language too.
+ *  The older wording that pages still pass in maps to the same (now simpler) text. */
+const KNOWN: Record<string, Key> = {
+  ...Object.fromEntries((Object.keys(M.en) as Key[]).map((k) => [M.en[k], k])),
+  "Commuter Dashboard & Passes": "dashboard.title",
+  "Your saved places, trip history and passes in one place. This screen will be built after the core journey screens.": "dashboard.text",
+};
 
 /** Placeholder for screens in the design that aren't built yet. */
 export default function ComingSoon({ icon, title, text }: { icon: string; title: string; text: string }) {
@@ -24,7 +27,7 @@ export default function ComingSoon({ icon, title, text }: { icon: string; title:
         <span className="rounded-full bg-container px-2 py-0.5 eyebrow">{t("badge")}</span>
         <h1 className="text-2xl font-bold">{tx(title)}</h1>
         <p className="text-on-surface-variant">{tx(text)}</p>
-        <Link href="/" className="btn-primary mt-2"><Icon name="hub" /> {t("back")}</Link>
+        <Link href="/home" className="btn-primary mt-2"><Icon name="hub" /> {t("back")}</Link>
       </section>
     </main>
   );
