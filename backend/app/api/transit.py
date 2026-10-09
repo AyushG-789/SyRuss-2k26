@@ -189,7 +189,7 @@ def get_upcoming_local_trains(
     trains_list: list[LocalTrainDeparture] = []
     is_live = False
     data_source = "timetable"
-    source_note = "Scheduled timetable (verified Mumbai suburban schedule)"
+    source_note = "Planned times from how often trains usually run (no live feed)"
 
     # If RailRadar API is active and station code is available, attempt to check live RailRadar board
     if settings.active_railway_key and stn_code:
@@ -223,7 +223,7 @@ def get_upcoming_local_trains(
                 clock_12h = _format_12h(dep)
                 countdown_str = f"{diff} min" if diff > 0 else "Due"
                 trains_list.append(LocalTrainDeparture(
-                    train_number=t.get("train_number") or "Local",
+                    train_number=str(t.get("train_number") or ""),
                     train_name=t.get("train_name") or f"{t.get('destination')} Local",
                     line_id=line_id or "SUBURBAN",
                     line_name=line_id or "Mumbai Suburban Railway",
@@ -245,9 +245,9 @@ def get_upcoming_local_trains(
                     data_source="railradar",
                 ))
 
-    # If live trains were not retrieved (or unconfigured), generate verified timetable schedule
+    # If live trains were not retrieved (or unconfigured), plan departures from the usual frequency.
+    # Train numbers come only from the live feed; planned trains have none.
     if not trains_list:
-        train_counter = 90100
         for lid in active_line_ids:
             if lid not in seed.lines:
                 continue
@@ -289,13 +289,12 @@ def get_upcoming_local_trains(
                     dh = dep_min // 60
                     dm = dep_min % 60
                     dep_str = f"{dh:02d}:{dm:02d}"
-                    train_counter += 1
                     clock_12h = _format_12h(dep_str)
                     cd_str = f"{offset} min"
 
                     pf = "PF 1" if is_fast else ("PF 3" if "WR" in lid else "PF 1")
                     trains_list.append(LocalTrainDeparture(
-                        train_number=f"{train_counter}",
+                        train_number="",  # no real number without the live feed — never invent one
                         train_name=f"{dest_name} {fast_slow_val}",
                         line_id=lid,
                         line_name=line["name"],
@@ -331,13 +330,12 @@ def get_upcoming_local_trains(
                     dh = dep_min // 60
                     dm = dep_min % 60
                     dep_str = f"{dh:02d}:{dm:02d}"
-                    train_counter += 1
                     clock_12h = _format_12h(dep_str)
                     cd_str = f"{offset} min"
 
                     pf = "PF 2" if is_fast else ("PF 4" if "WR" in lid else "PF 2")
                     trains_list.append(LocalTrainDeparture(
-                        train_number=f"{train_counter}",
+                        train_number="",  # no real number without the live feed — never invent one
                         train_name=f"{dest_name} {fast_slow_val}",
                         line_id=lid,
                         line_name=line["name"],
@@ -475,7 +473,7 @@ def get_bus_arrivals(
         as_of=now_hhmm,
         buses=buses[:limit],
         live_feed_status="unavailable",
-        note="Arrival times are calculated from verified BEST timetables. Live GPS vehicle tracking is currently unavailable.",
+        note="Planned times from how often each route usually runs. BEST bus GPS is not connected yet.",
     )
 
 

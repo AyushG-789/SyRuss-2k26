@@ -23,7 +23,6 @@ type NavItem = { href: string; label: NavKey; icon: string; match: (p: string) =
 const NAV: NavItem[] = [
   { href: "/home", label: "nav./", icon: "hub", match: (p) => p === "/home" },
   { href: "/plan", label: "nav./plan", icon: "alt_route", match: (p) => p === "/plan" },
-  { href: "/trains", label: "nav./trains", icon: "train", match: (p) => p.startsWith("/trains") },
   { href: "/routes/TR3", label: "nav./routes/TR3", icon: "directions_subway", match: (p) => p.startsWith("/routes") },
   { href: "/track", label: "nav./track", icon: "fmd_good", match: (p) => p.startsWith("/track") },
   { href: "/report", label: "nav./report", icon: "campaign", match: (p) => p.startsWith("/report") },
@@ -109,7 +108,7 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <>
       <div className="flex flex-col">
-        <div className="flex h-[4.5rem] items-center px-6">
+        <div className="flex h-20 items-center px-6">
           <Brand />
         </div>
         <div className="px-4 py-2">
@@ -193,8 +192,8 @@ export function ProfileButton() {
     <>
       <button type="button" onClick={() => { setSection("top"); setOpen(true); }} aria-haspopup="dialog" aria-expanded={open}
         aria-label={profile.signedIn ? t("profileOf", { name: profile.name }) : t("profileGuest")} title={t("yourProfile")}
-        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-small font-bold text-on-primary transition hover:ring-2 hover:ring-primary/30 ${open ? "ring-2 ring-primary ring-offset-2" : ""}`}>
-        {profile.signedIn ? initials(profile.name) : <Icon name="person" className="text-[20px]" />}
+        className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary text-body font-bold text-on-primary transition hover:ring-2 hover:ring-primary/30 ${open ? "ring-2 ring-primary ring-offset-2" : ""}`}>
+        {profile.signedIn ? initials(profile.name) : <Icon name="person" className="text-[26px]" />}
       </button>
       <ProfilePanel open={open} section={section} onClose={close} />
       <AuthHost />
@@ -202,9 +201,8 @@ export function ProfileButton() {
   );
 }
 
-/** Whether pages show live backend data or the bundled sample (backend offline). */
 /** Quick language switch in the top bar (the same choice as Profile → Language). */
-export function LanguageMenu() {
+export function LanguageMenu({ small = false }: { small?: boolean }) {
   const t = useT(M);
   const lang = useLang();
   const [open, setOpen] = useState(false);
@@ -221,13 +219,15 @@ export function LanguageMenu() {
   return (
     <div ref={ref} className="relative">
       <button type="button" onClick={() => setOpen(!open)} aria-haspopup="menu" aria-expanded={open} aria-label={t("changeLanguage")} title={t("changeLanguage")}
-        className="flex h-10 items-center gap-1.5 rounded-xl bg-container pl-2.5 pr-2 text-small font-semibold hover:bg-container-high sm:min-w-[7.5rem] sm:pl-3">
-        <Icon name="translate" className="text-[20px] text-primary" />
+        className={`flex items-center rounded-xl bg-container font-semibold hover:bg-container-high ${small
+          ? "h-10 gap-1.5 pl-2.5 pr-2 text-small sm:min-w-[7.5rem] sm:pl-3"
+          : "h-12 gap-2 pl-3 pr-2.5 text-body sm:min-w-[8.75rem] sm:pl-3.5"}`}>
+        <Icon name="translate" className={`${small ? "text-[20px]" : "text-[24px]"} text-primary`} />
         <span lang={current.html} className="flex-1 whitespace-nowrap text-left">{current.label}</span>
-        <Icon name="expand_more" className={`hidden text-[18px] text-outline transition-transform duration-200 sm:inline ${open ? "rotate-180" : ""}`} />
+        <Icon name="expand_more" className={`hidden ${small ? "text-[18px]" : "text-[22px]"} text-outline transition-transform duration-200 sm:inline ${open ? "rotate-180" : ""}`} />
       </button>
       {open && (
-        <div role="menu" aria-label={t("language")} className="anim-pop absolute right-0 top-12 z-10 w-48 overflow-hidden rounded-xl bg-container-lowest p-1 shadow-float">
+        <div role="menu" aria-label={t("language")} className={`anim-pop absolute right-0 ${small ? "top-12" : "top-14"} z-10 w-52 overflow-hidden rounded-xl bg-container-lowest p-1 shadow-float`}>
           {LANGS.map((l) => (
             <button key={l.value} type="button" role="menuitemradio" aria-checked={l.value === lang} lang={l.html}
               onClick={() => { setAppLanguage(l.value); setOpen(false); }}
@@ -238,19 +238,6 @@ export function LanguageMenu() {
           ))}
         </div>
       )}
-    </div>
-  );
-}
-
-function FeedPill() {
-  const t = useT(M);
-  const live = useLiveEvents();
-  const on = live?.source === "backend";
-  return (
-    <div className="flex h-10 items-center gap-2 rounded-xl bg-container-low px-2.5 sm:px-3" title={on ? t("connected") : t("offlineTip")}
-      role="status" aria-label={on ? t("liveData", { time: live?.asOf ?? "" }) : t("offline")}>
-      <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${on ? "bg-primary" : "bg-outline"}`} />
-      <span className="hidden whitespace-nowrap text-caption font-semibold text-on-surface sm:inline">{on ? t("liveData", { time: live?.asOf ?? "" }) : t("offline")}</span>
     </div>
   );
 }
@@ -281,7 +268,7 @@ function Shell({ children }: { children: React.ReactNode }) {
       )}
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-[1100] flex h-[4.5rem] items-center justify-between gap-2 bg-container-lowest/90 px-3 shadow-xs backdrop-blur-xl sm:gap-3 sm:px-4 md:px-6">
+        <header className="sticky top-0 z-[1100] flex h-20 items-center justify-between gap-2 bg-container-lowest/90 px-3 shadow-xs backdrop-blur-xl sm:gap-3 sm:px-4 md:px-6">
           <button onClick={() => setOpen(true)} aria-label={t("openMenu")} className="shrink-0 rounded-lg p-1.5 hover:bg-container-low lg:hidden">
             <Icon name="menu" className="text-[26px]" />
           </button>
@@ -292,13 +279,12 @@ function Shell({ children }: { children: React.ReactNode }) {
             <SearchBox />
           </div>
           <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-            <span className="hidden h-10 items-center gap-1.5 rounded-xl bg-container px-3 xl:flex">
-              <Icon name="location_city" className="text-[20px] text-primary" />
-              <span className="whitespace-nowrap text-small font-semibold">{t("city")}</span>
+            <span className="hidden h-12 items-center gap-2 rounded-xl bg-container px-4 xl:flex">
+              <Icon name="location_city" className="text-[24px] text-primary" />
+              <span className="whitespace-nowrap text-body font-semibold">{t("city")}</span>
             </span>
-            <span className="hidden sm:inline-flex"><LiveClock /></span>
+            <span className="hidden sm:inline-flex"><LiveClock size="lg" /></span>
             <LanguageMenu />
-            <FeedPill />
             <ProfileButton />
           </div>
         </header>

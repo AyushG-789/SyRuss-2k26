@@ -787,7 +787,6 @@ export async function getUpcomingLocalTrains(
       : ["WR_SLOW", "WR_FAST", "CR_SLOW", "CR_FAST", "HARBOUR"];
 
     const trainsList: LocalTrainDeparture[] = [];
-    let counter = 90200;
 
     for (const lid of lineKeys) {
       const lineData = lines[lid];
@@ -805,13 +804,12 @@ export async function getUpcomingLocalTrains(
         const destId = stnSeq[0];
         const destName = stations[destId]?.name ?? "Terminus";
         for (let i = 1; i <= 3; i++) {
-          counter++;
           const offset = headway * i;
           const depMin = (nowMins + offset) % 1440;
           const depStr = `${Math.floor(depMin / 60).toString().padStart(2, "0")}:${(depMin % 60).toString().padStart(2, "0")}`;
           const clk12 = formatClock12h(depStr);
           trainsList.push({
-            train_number: String(counter),
+            train_number: "", // real numbers come only from the live feed
             train_name: `${destName} ${fastSlow}`,
             line_id: lid,
             line_name: lineData.name,
@@ -840,13 +838,12 @@ export async function getUpcomingLocalTrains(
         const destId = stnSeq[stnSeq.length - 1];
         const destName = stations[destId]?.name ?? "Outbound";
         for (let i = 1; i <= 3; i++) {
-          counter++;
           const offset = headway * i + 2;
           const depMin = (nowMins + offset) % 1440;
           const depStr = `${Math.floor(depMin / 60).toString().padStart(2, "0")}:${(depMin % 60).toString().padStart(2, "0")}`;
           const clk12 = formatClock12h(depStr);
           trainsList.push({
-            train_number: String(counter),
+            train_number: "", // real numbers come only from the live feed
             train_name: `${destName} ${fastSlow}`,
             line_id: lid,
             line_name: lineData.name,
@@ -882,7 +879,7 @@ export async function getUpcomingLocalTrains(
       as_of: nowHHMM,
       is_live: false,
       data_source: "timetable",
-      note: "Scheduled timetable (verified Mumbai suburban schedule)",
+      note: "Planned times from how often trains usually run (no live feed)",
       trains: trainsList.slice(0, limit),
     };
   }
@@ -946,7 +943,7 @@ export async function getBusArrivals(
       as_of: nowHHMM,
       buses: buses.slice(0, limit),
       live_feed_status: "unavailable",
-      note: "Arrival times are calculated from verified BEST timetables. Live GPS vehicle tracking is currently unavailable.",
+      note: "Planned times from how often each route usually runs. BEST bus GPS is not connected yet.",
     };
   }
 }

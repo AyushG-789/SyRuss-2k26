@@ -108,7 +108,7 @@ function Header() {
         </nav>
 
         <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-          <LanguageMenu />
+          <LanguageMenu small />
           <button type="button" onClick={() => setAppearance(dark ? "light" : "dark")}
             aria-label={dark ? t("themeToLight") : t("themeToDark")} title={dark ? t("themeToLight") : t("themeToDark")}
             className="grid h-10 w-10 place-items-center rounded-xl bg-container hover:bg-container-high">

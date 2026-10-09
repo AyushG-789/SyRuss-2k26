@@ -6,7 +6,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { getTransparency, type Transparency } from "@/lib/api";
+import { getRailwayStatus, getTransparency, type RailwayServiceStatus, type Transparency } from "@/lib/api";
 import { pct, STATUS_STYLE, TYPE_LABEL } from "@/lib/format";
 import { useT } from "@/lib/i18n";
 import { COMMON } from "@/lib/i18n/common";
@@ -116,6 +116,8 @@ export default function TransparencyView() {
         </section>
       </div>
 
+      <StationsNearbyInfo />
+
       {/* ---- Event log ---- */}
       <section className="flex flex-col gap-3 rounded-2xl bg-container-lowest p-5 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -168,6 +170,50 @@ export default function TransparencyView() {
         <Link href="/compare" className="self-start text-small font-semibold text-primary hover:underline">{tr("seeEval")}</Link>
       </section>
     </main>
+  );
+}
+
+/** How Stations nearby works: where each time comes from and what is live vs planned. */
+function StationsNearbyInfo() {
+  const tr = useT(M);
+  const [rail, setRail] = useState<RailwayServiceStatus | null | "error">(null);
+  useEffect(() => {
+    let alive = true;
+    getRailwayStatus().then((r) => alive && setRail(r)).catch(() => alive && setRail("error"));
+    return () => { alive = false; };
+  }, []);
+  const liveOn = rail !== null && rail !== "error" && rail.status === "connected";
+  type Key = Parameters<typeof tr>[0];
+  const items: { icon: string; title: Key; how: Key; tag: Key; live: boolean }[] = [
+    { icon: "train", title: "st.trainsTitle", how: "st.trainsHow", tag: liveOn ? "st.tagLive" : "st.tagPlanned", live: liveOn },
+    { icon: "subway", title: "st.metroTitle", how: "st.metroHow", tag: "st.tagPlanned", live: false },
+    { icon: "directions_bus", title: "st.busTitle", how: "st.busHow", tag: "st.tagPlanned", live: false },
+    { icon: "search", title: "st.searchTitle", how: "st.searchHow", tag: "st.tagOurs", live: false },
+    { icon: "near_me", title: "st.nearbyTitle", how: "st.nearbyHow", tag: "st.tagOurs", live: false },
+  ];
+  return (
+    <section className="flex flex-col gap-3 rounded-2xl bg-container-lowest p-5 shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="flex items-center gap-2 font-semibold"><Icon name="location_on" className="text-primary" /> {tr("st.title")}</h2>
+        <span role="status" className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-caption font-semibold ${liveOn ? "bg-primary-soft text-primary-ink" : "bg-amber-soft text-amber-ink"}`}>
+          <span className={`h-2 w-2 rounded-full ${liveOn ? "bg-primary" : "bg-amber-ink"}`} />
+          {rail === null ? tr("st.liveUnknown") : liveOn ? tr("st.liveOn") : tr("st.liveOff")}
+        </span>
+      </div>
+      <p className="max-w-3xl text-small text-on-surface-variant">{tr("st.intro")}</p>
+      <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {items.map((it) => (
+          <li key={it.title} className="flex flex-col gap-2 rounded-xl bg-container-low p-3.5">
+            <div className="flex items-center justify-between gap-2">
+              <span className="flex items-center gap-2 font-semibold"><Icon name={it.icon} className="text-primary" /> {tr(it.title)}</span>
+              <span className={`rounded px-1.5 py-0.5 text-micro font-bold uppercase ${it.live ? "bg-primary-soft text-primary-ink" : it.tag === "st.tagPlanned" ? "bg-amber-soft text-amber-ink" : "bg-container-high"}`}>{tr(it.tag)}</span>
+            </div>
+            <p className="text-small text-on-surface-variant">{tr(it.how)}</p>
+          </li>
+        ))}
+      </ul>
+      <Link href="/stations" className="self-start text-small font-semibold text-primary hover:underline">{tr("st.open")}</Link>
+    </section>
   );
 }
 
