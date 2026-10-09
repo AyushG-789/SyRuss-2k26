@@ -11,6 +11,8 @@ are checked here against the same events: blocked options are dropped, delays ar
 """
 from __future__ import annotations
 
+from app.i18n import T, tr
+
 import threading
 import uuid
 from datetime import datetime
@@ -92,18 +94,18 @@ def _signature(legs: list[Leg]) -> tuple:
     return tuple((leg.mode, leg.line_id, leg.from_id, leg.to_id) for leg in legs)
 
 
-def event_title(ev: Event, stations: dict, lines: dict, transfers: dict) -> str:
-    """e.g. 'Dadar foot-overbridge (FOB) closure', 'Metro Line 1 delay at Saki Naka'."""
-    kind = {"lift_out": "lift outage", "crowding": "heavy crowding", "mega_block": "mega block"}.get(ev.type, ev.type)
+def event_title(ev: Event, stations: dict, lines: dict, transfers: dict, lang: str = "en") -> str:
+    """e.g. 'Dadar foot-overbridge (FOB) closure', 'Metro Line 1 delay at Saki Naka' (in `lang`)."""
+    kind = tr(lang, f"kind.{ev.type}") if f"kind.{ev.type}" in T else ev.type.replace("_", " ")
     aff = ev.affected
     vias = [transfers[t].via for t in aff.transfer_ids if t in transfers and transfers[t].via]
     if vias:
-        return f"{vias[0]} {kind}"
+        return tr(lang, "title.plain", where=vias[0], kind=kind)
     line = next((lines[l].name for l in aff.line_ids if l in lines), None)
     stop = next((stations[s].name for s in aff.stop_ids if s in stations), None)
     if line and stop:
-        return f"{line} {kind} at {stop}"
-    return f"{line or stop} {kind}" if (line or stop) else kind
+        return tr(lang, "title.at", line=line, kind=kind, stop=stop)
+    return tr(lang, "title.plain", where=line or stop, kind=kind) if (line or stop) else kind
 
 
 class JourneyStore:
@@ -210,7 +212,8 @@ class JourneyStore:
         old_blocked, old_delay = summarize(hits)
         if not old_blocked and old_delay < DELAY_NOTICE_MIN:
             return False
-        titles = ", ".join(event_title(by_id[i], stations, lines, transfers) for i in new_ids if i in by_id)
+        lang = j.traveller.language
+        titles = ", ".join(event_title(by_id[i], stations, lines, transfers, lang) for i in new_ids if i in by_id)
 
         # Replan from the traveller's position: the start of the first unfinished leg. If they are
         # already riding a train/bus, they stay on it, so the new route starts where it stops.
@@ -250,9 +253,8 @@ class JourneyStore:
         worth_it = best is not None and (old_blocked or _mins(best[0]) - _mins(old_arrive) <= -MIN_GAIN_MIN)
         if not worth_it:
             j.handled_event_ids = sorted({*j.handled_event_ids, *new_ids})
-            j.notice = (f"Confirmed {titles} on your route. No working alternative was found within your limits."
-                        if old_blocked else
-                        f"Confirmed {titles} on your route (about +{old_delay} min). Your route is still the best option.")
+            j.notice = (tr(lang, "replan.no_alt", titles=titles) if old_blocked
+                        else tr(lang, "replan.keep", titles=titles, min=old_delay))
             j.log.append(JourneyLogEntry(at=at, kind="notice", event_ids=new_ids, detail=j.notice))
             return True
 
@@ -264,10 +266,10 @@ class JourneyStore:
         delta = {"min": _mins(arrive) - _mins(j.card.legs[-1].arrive if old_blocked else old_arrive),
                  "inr": new_card.cost_inr - j.card.cost_inr}
         late = j.traveller.arrive_by and arrive > j.traveller.arrive_by
-        message = (f"Confirmed {titles}. "
-                   + ("Your planned route can't be used. " if old_blocked else f"Your route is about {old_delay} min slower. ")
-                   + f"New route from {origin.label}: {route_text(alt.legs)}, arriving {arrive}"
-                   + (f" (after your {j.traveller.arrive_by} target)." if late else "."))
+        message = (tr(lang, "replan.confirmed", titles=titles)
+                   + (tr(lang, "replan.blocked") if old_blocked else tr(lang, "replan.slower", min=old_delay))
+                   + tr(lang, "replan.new", from_=origin.label, route=route_text(alt.legs, lang), at=arrive)
+                   + (tr(lang, "replan.late", by=j.traveller.arrive_by) if late else tr(lang, "replan.end")))
         j.proposal = ReplanProposal(
             proposal_id=f"P_{uuid.uuid4().hex[:8]}",
             created_at=at,

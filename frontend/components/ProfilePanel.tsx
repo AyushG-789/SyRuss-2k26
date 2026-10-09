@@ -10,10 +10,12 @@
 import Link from "next/link";
 import { useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
-import { MODE_LABEL } from "@/lib/format";
+import { MODE_LABEL, PLAN_LABEL } from "@/lib/format";
+import { LANGS, type Lang, useLang, useT } from "@/lib/i18n";
+import { M } from "@/lib/i18n/messages/ProfilePanel";
 import { findPlace, PLACE_OPTIONS } from "@/lib/places";
 import {
-  clearDeviceData, initials, setAppearance, type Language, LANGUAGE_NAMES, type Priority, type Profile, type ProfileSection,
+  type ActivityEntry, clearDeviceData, initials, setAppearance, setAppLanguage, type Priority, type Profile, type ProfileSection,
   signIn, signOut, updateProfile, useProfile,
 } from "@/lib/profile";
 import { loadTrip } from "@/lib/savedTrip";
@@ -21,31 +23,33 @@ import type { Mode } from "@/lib/types";
 import { useLiveEvents } from "@/lib/useLiveEvents";
 import Icon from "./Icon";
 
-const MODE_CHIPS: { label: string; icon: string; modes: Mode[] }[] = [
-  { label: "Metro", icon: "subway", modes: ["metro"] },
-  { label: "Local Train", icon: "train", modes: ["local"] },
-  { label: "Bus", icon: "directions_bus", modes: ["bus"] },
-  { label: "Auto", icon: "electric_rickshaw", modes: ["auto"] },
-  { label: "Cab", icon: "local_taxi", modes: ["taxi", "cab"] },
+type Key = keyof typeof M.en;
+
+const MODE_CHIPS: { id: string; icon: string; modes: Mode[] }[] = [
+  { id: "metro", icon: "subway", modes: ["metro"] },
+  { id: "local", icon: "train", modes: ["local"] },
+  { id: "bus", icon: "directions_bus", modes: ["bus"] },
+  { id: "auto", icon: "electric_rickshaw", modes: ["auto"] },
+  { id: "cab", icon: "local_taxi", modes: ["taxi", "cab"] },
 ];
 
-const PRIORITIES: { value: Priority; label: string }[] = [
-  { value: "fastest", label: "Fastest" },
-  { value: "cheapest", label: "Lowest Fare" },
-  { value: "fewest_transfers", label: "Fewer Transfers" },
+const PRIORITIES: { value: Priority; label: Key }[] = [
+  { value: "fastest", label: "pFastest" },
+  { value: "cheapest", label: "pCheapest" },
+  { value: "fewest_transfers", label: "pTransfers" },
 ];
 
 const THEMES = [
-  { value: "light", label: "Light mode", icon: "light_mode", swatch: { bg: "#f4f2e9", card: "#ffffff", text: "#202923", muted: "#737d73", brand: "#24483a" } },
-  { value: "dark", label: "Dark mode", icon: "dark_mode", swatch: { bg: "#101d19", card: "#1d3028", text: "#f2f0e7", muted: "#a4b2a8", brand: "#d9b982" } },
+  { value: "light", label: "lightMode", icon: "light_mode", swatch: { bg: "#f4f2e9", card: "#ffffff", text: "#202923", muted: "#737d73", brand: "#24483a" } },
+  { value: "dark", label: "darkMode", icon: "dark_mode", swatch: { bg: "#101d19", card: "#1d3028", text: "#f2f0e7", muted: "#a4b2a8", brand: "#d9b982" } },
 ] as const;
 
 const TERRITORIES = ["Mumbai Region (MMR)", "Mumbai City", "Mumbai Suburban", "Thane", "Navi Mumbai"];
 
-const SOS: { href: string; icon: string; title: string; sub: string }[] = [
-  { href: "tel:112", icon: "sos", title: "112", sub: "Emergency · 24x7" },
-  { href: "tel:1091", icon: "woman", title: "1091", sub: "Women helpline" },
-  { href: "tel:1512", icon: "shield", title: "1512", sub: "GRP Railway Police" },
+const SOS: { href: string; icon: string; title: string; sub: Key }[] = [
+  { href: "tel:112", icon: "sos", title: "112", sub: "sos112" },
+  { href: "tel:1091", icon: "woman", title: "1091", sub: "sos1091" },
+  { href: "tel:1512", icon: "shield", title: "1512", sub: "sos1512" },
 ];
 
 const noop = () => () => undefined;
@@ -57,10 +61,12 @@ export default function ProfilePanel(props: { open: boolean; section: ProfileSec
 }
 
 function Panel({ open, section, onClose }: { open: boolean; section: ProfileSection; onClose: () => void }) {
+  const t = useT(M);
   const profile = useProfile();
   const closeRef = useRef<HTMLButtonElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [editing, setEditing] = useState(false);
+  const [signingIn, setSigningIn] = useState(false);
 
   // Escape closes; focus moves into the panel; the page behind doesn't scroll; jump to a section.
   useEffect(() => {
@@ -76,6 +82,11 @@ function Panel({ open, section, onClose }: { open: boolean; section: ProfileSect
     return () => { document.removeEventListener("keydown", onKey); document.body.style.overflow = prev; };
   }, [open, section, onClose]);
 
+  function startSignIn() {
+    setSigningIn(true);
+    scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   function manage() {
     setEditing(true);
     scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
@@ -83,7 +94,7 @@ function Panel({ open, section, onClose }: { open: boolean; section: ProfileSect
 
   return (
     <div className={`fixed inset-0 z-[1300] ${open ? "" : "pointer-events-none"}`} inert={!open}>
-      <button type="button" aria-label="Close profile" tabIndex={-1} onClick={onClose}
+      <button type="button" aria-label={t("close")} tabIndex={-1} onClick={onClose}
         className={`absolute inset-0 bg-scrim transition-opacity duration-200 ${open ? "opacity-100" : "opacity-0"}`} />
       <aside role="dialog" aria-modal="true" aria-labelledby="profile-title"
         className={`absolute inset-y-0 right-0 flex w-full max-w-[460px] flex-col bg-surface shadow-float transition-transform duration-300 ease-out ${open ? "translate-x-0" : "translate-x-full"}`}>
@@ -92,9 +103,9 @@ function Panel({ open, section, onClose }: { open: boolean; section: ProfileSect
         <div className="border-b border-hairline bg-container-lowest px-5 pb-5 pt-4">
           <div className="flex items-center justify-between">
             <h2 id="profile-title" className="eyebrow flex items-center gap-2 !text-small !tracking-[0.08em] text-on-surface">
-              <Icon name="account_circle" className="text-[20px] text-primary" /> Commuter Profile
+              <Icon name="account_circle" className="text-[20px] text-primary" /> {t("title")}
             </h2>
-            <button ref={closeRef} type="button" onClick={onClose} aria-label="Close profile" className="rounded-lg p-1.5 text-on-surface-variant hover:bg-container-low">
+            <button ref={closeRef} type="button" onClick={onClose} aria-label={t("close")} className="rounded-lg p-1.5 text-on-surface-variant hover:bg-container-low">
               <Icon name="close" />
             </button>
           </div>
@@ -107,18 +118,18 @@ function Panel({ open, section, onClose }: { open: boolean; section: ProfileSect
               <div className="flex flex-wrap items-center gap-2">
                 <p className="truncate text-subtitle font-bold">{profile.name}</p>
                 {profile.signedIn
-                  ? <span className="chip bg-primary-soft text-primary-ink"><Icon name="verified" className="text-[14px]" /> Verified Commuter</span>
-                  : <span className="chip bg-container text-on-surface-variant">Guest</span>}
+                  ? <span className="chip bg-primary-soft text-primary-ink"><Icon name="verified" className="text-[14px]" /> {t("verified")}</span>
+                  : <span className="chip bg-container text-on-surface-variant">{t("guest")}</span>}
               </div>
               {profile.email && <p className="truncate text-small text-on-surface-variant">{profile.email}</p>}
               <p className="mt-0.5 flex items-center gap-1 text-caption text-on-surface-variant">
                 <Icon name="calendar_today" className="text-[14px]" />
-                {profile.signedIn ? `Mumbai commuter since ${profile.memberSince}` : "Not signed in · preferences still saved here"}
+                {profile.signedIn ? t("since", { date: profile.memberSince }) : t("notSignedIn")}
               </p>
             </div>
             {profile.signedIn && !editing && (
               <button type="button" onClick={() => setEditing(true)} className="btn-secondary !min-h-9 !px-3">
-                <Icon name="edit" className="text-[16px]" /> Edit
+                <Icon name="edit" className="text-[16px]" /> {t("edit")}
               </button>
             )}
           </div>
@@ -128,7 +139,9 @@ function Panel({ open, section, onClose }: { open: boolean; section: ProfileSect
         <div ref={scrollRef} className="flex-1 space-y-6 overflow-y-auto px-5 py-5">
           {profile.signedIn
             ? <PersonalInfo profile={profile} editing={editing} setEditing={setEditing} />
-            : <GuestCard />}
+            : signingIn
+              ? <PersonalForm profile={profile} signingIn onDone={() => setSigningIn(false)} />
+              : <GuestCard onSignIn={startSignIn} />}
           <Preferences profile={profile} onPlan={onClose} />
           <SavedPlaces profile={profile} onGo={onClose} />
           <Activity profile={profile} onNavigate={onClose} />
@@ -136,12 +149,12 @@ function Panel({ open, section, onClose }: { open: boolean; section: ProfileSect
           <AppSupport profile={profile} onNavigate={onClose} />
           <p className="pb-2 text-center text-caption text-on-surface-variant">
             <Icon name="lock" className="mr-1 align-[-3px] text-[14px]" />
-            Your profile is saved only in this browser — nothing is sent to a server.
+            {t("savedLocal")}
           </p>
         </div>
 
         {/* Footer */}
-        <Footer signedIn={profile.signedIn} onManage={manage} />
+        <Footer signedIn={profile.signedIn} onManage={manage} onSignIn={startSignIn} />
       </aside>
     </div>
   );
@@ -188,19 +201,20 @@ const inputCls = "h-11 w-full rounded-xl border border-hairline bg-container-low
 /* ---------------------------------------------------------------- personal information */
 
 function PersonalInfo({ profile, editing, setEditing }: { profile: Profile; editing: boolean; setEditing: (v: boolean) => void }) {
+  const t = useT(M);
   return (
-    <Section icon="badge" title="Personal Information"
-      action={!editing && <button type="button" onClick={() => setEditing(true)} className="text-small font-semibold text-primary hover:underline">Edit</button>}>
+    <Section icon="badge" title={t("personal")}
+      action={!editing && <button type="button" onClick={() => setEditing(true)} className="text-small font-semibold text-primary hover:underline">{t("edit")}</button>}>
       {editing
         ? <PersonalForm key="form" profile={profile} onDone={() => setEditing(false)} />
         : (
           <dl className="card divide-y divide-hairline-soft px-4">
             {[
-              ["Full Name", profile.name],
-              ["Email", profile.email || "—"],
-              ["Mobile Phone", maskPhone(profile.phone)],
-              ["Languages", profile.languages.map((l) => LANGUAGE_NAMES[l]).join(" & ") || "—"],
-              ["Home Territory", profile.territory],
+              [t("fullName"), profile.name],
+              [t("email"), profile.email || "—"],
+              [t("phone"), maskPhone(profile.phone)],
+              [t("language"), langName(profile.appLanguage)],
+              [t("territory"), territoryName(t, profile.territory)],
             ].map(([k, v]) => (
               <div key={k} className="flex items-center justify-between gap-4 py-3">
                 <dt className="text-small text-on-surface-variant">{k}</dt>
@@ -213,6 +227,16 @@ function PersonalInfo({ profile, editing, setEditing }: { profile: Profile; edit
   );
 }
 
+function langName(l: Lang): string {
+  const x = LANGS.find((o) => o.value === l)!;
+  return x.value === "en" ? x.label : `${x.label} (${x.english})`;
+}
+
+function territoryName(t: (k: Key) => string, territory: string): string {
+  const key = `terr.${territory}` as Key;
+  return key in M.en ? t(key) : territory;
+}
+
 function maskPhone(phone: string): string {
   const digits = phone.replace(/\D/g, "");
   if (digits.length < 10) return phone || "—";
@@ -220,93 +244,113 @@ function maskPhone(phone: string): string {
   return `+91 ${local.slice(0, 5)} •••••`;
 }
 
-function PersonalForm({ profile, onDone }: { profile: Profile; onDone: () => void }) {
+/** Edit personal details — or, with `signingIn`, the sign-in form (empty fields, signs in on save). */
+function PersonalForm({ profile, onDone, signingIn = false }: { profile: Profile; onDone: () => void; signingIn?: boolean }) {
+  const t = useT(M);
   const id = useId();
-  const [name, setName] = useState(profile.name);
-  const [email, setEmail] = useState(profile.email);
-  const [phone, setPhone] = useState(profile.phone);
-  const [languages, setLanguages] = useState<Language[]>(profile.languages);
+  const [name, setName] = useState(signingIn ? "" : profile.name);
+  const [email, setEmail] = useState(signingIn ? "" : profile.email);
+  const [phone, setPhone] = useState(signingIn ? "" : profile.phone);
+  const [language, setLanguage] = useState<Lang>(profile.appLanguage);
   const [territory, setTerritory] = useState(profile.territory);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<Partial<Record<"name" | "email" | "phone", Key>>>({});
+
+  function pickLanguage(l: Lang) {
+    setLanguage(l);
+    if (signingIn) setAppLanguage(l); // show the rest of the sign-in form in the chosen language
+  }
 
   function save(e: React.FormEvent) {
     e.preventDefault();
-    const errs: Record<string, string> = {};
-    if (!name.trim()) errs.name = "Please enter your name.";
-    if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) errs.email = "That email doesn't look right.";
+    const errs: typeof errors = {};
+    if (!name.trim()) errs.name = "errName";
+    if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) errs.email = "errEmail";
     const digits = phone.replace(/\D/g, "");
-    if (phone.trim() && !(digits.length === 10 || (digits.length === 12 && digits.startsWith("91")))) errs.phone = "Use a 10-digit Indian mobile number.";
-    if (!languages.length) errs.languages = "Pick at least one language.";
+    if (phone.trim() && !(digits.length === 10 || (digits.length === 12 && digits.startsWith("91")))) errs.phone = "errPhone";
     setErrors(errs);
     if (Object.keys(errs).length) return;
     const local = digits.slice(-10);
-    updateProfile({
+    const details = {
       name: name.trim().replace(/\s+/g, " "),
       email: email.trim(),
       phone: local ? `+91 ${local.slice(0, 5)} ${local.slice(5)}` : "",
-      languages, territory,
-    });
+      territory,
+      appLanguage: language,
+    };
+    if (signingIn) signIn(details);
+    else updateProfile(details);
+    if (language !== profile.appLanguage) setAppLanguage(language);
     onDone();
   }
 
-  const err = (k: string) => errors[k] && <p id={`${id}-${k}-err`} className="mt-1 text-caption text-error">{errors[k]}</p>;
+  const err = (k: keyof typeof errors) => errors[k] && <p id={`${id}-${k}-err`} className="mt-1 text-caption text-error">{t(errors[k]!)}</p>;
+  const label = "mb-1 block text-caption font-semibold text-on-surface-variant";
 
   return (
     <form onSubmit={save} noValidate className="card space-y-3 p-4">
+      {signingIn && (
+        <div>
+          <p className="text-subtitle font-bold">{t("signInTitle")}</p>
+          <p className="text-small text-on-surface-variant">{t("signInSub")}</p>
+        </div>
+      )}
+      <fieldset>
+        <legend className={label}>{t("language")}</legend>
+        <div role="radiogroup" aria-label={t("language")} className="grid grid-cols-3 gap-2">
+          {LANGS.map((l) => {
+            const on = language === l.value;
+            return (
+              <button key={l.value} type="button" role="radio" aria-checked={on} lang={l.html} onClick={() => pickLanguage(l.value)}
+                className={`flex flex-col items-center rounded-xl px-2 py-2 ${on ? "bg-primary text-on-primary" : "bg-container-lowest text-on-surface ring-1 ring-hairline hover:bg-container-low"}`}>
+                <span className="text-small font-bold">{l.label}</span>
+                <span className={`text-micro ${on ? "opacity-80" : "text-on-surface-variant"}`}>{l.english}</span>
+              </button>
+            );
+          })}
+        </div>
+        <p className="mt-1 text-caption text-on-surface-variant">{t("languageHint")}</p>
+      </fieldset>
       <label className="block">
-        <span className="mb-1 block text-caption font-semibold text-on-surface-variant">Full Name</span>
-        <input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} autoComplete="name"
+        <span className={label}>{t("fullName")}</span>
+        <input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" placeholder={t("namePh")}
           aria-invalid={Boolean(errors.name)} aria-describedby={errors.name ? `${id}-name-err` : undefined} />
         {err("name")}
       </label>
       <label className="block">
-        <span className="mb-1 block text-caption font-semibold text-on-surface-variant">Email</span>
+        <span className={label}>{t("email")} {signingIn && <span className="font-normal">({t("optional")})</span>}</span>
         <input className={inputCls} type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email"
           aria-invalid={Boolean(errors.email)} aria-describedby={errors.email ? `${id}-email-err` : undefined} />
         {err("email")}
       </label>
       <label className="block">
-        <span className="mb-1 block text-caption font-semibold text-on-surface-variant">Mobile Phone</span>
+        <span className={label}>{t("phone")} {signingIn && <span className="font-normal">({t("optional")})</span>}</span>
         <input className={inputCls} type="tel" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+91 98201 23456" autoComplete="tel"
           aria-invalid={Boolean(errors.phone)} aria-describedby={errors.phone ? `${id}-phone-err` : undefined} />
         {err("phone")}
       </label>
-      <fieldset>
-        <legend className="mb-1 text-caption font-semibold text-on-surface-variant">Languages</legend>
-        <div className="flex flex-wrap gap-2">
-          {(Object.keys(LANGUAGE_NAMES) as Language[]).map((l) => {
-            const on = languages.includes(l);
-            return (
-              <button key={l} type="button" aria-pressed={on}
-                onClick={() => setLanguages(on ? languages.filter((x) => x !== l) : [...languages, l])}
-                className={`rounded-full px-3 py-1.5 text-small font-semibold ${on ? "bg-primary text-on-primary" : "bg-container-lowest text-on-surface-variant ring-1 ring-hairline hover:bg-container-low"}`}>
-                {LANGUAGE_NAMES[l]}
-              </button>
-            );
-          })}
-        </div>
-        {err("languages")}
-      </fieldset>
       <label className="block">
-        <span className="mb-1 block text-caption font-semibold text-on-surface-variant">Home Territory</span>
+        <span className={label}>{t("territory")}</span>
         <select className={inputCls} value={territory} onChange={(e) => setTerritory(e.target.value)}>
-          {TERRITORIES.map((t) => <option key={t}>{t}</option>)}
+          {TERRITORIES.map((x) => <option key={x} value={x}>{territoryName(t, x)}</option>)}
         </select>
       </label>
       <div className="flex justify-end gap-2 pt-1">
-        <button type="button" onClick={onDone} className="btn-secondary">Cancel</button>
-        <button type="submit" className="btn-primary"><Icon name="check" className="text-[18px]" /> Save changes</button>
+        <button type="button" onClick={onDone} className="btn-secondary">{t("cancel")}</button>
+        <button type="submit" className="btn-primary">
+          <Icon name={signingIn ? "login" : "check"} className="text-[18px]" /> {signingIn ? t("signIn") : t("saveChanges")}
+        </button>
       </div>
     </form>
   );
 }
 
-function GuestCard() {
+function GuestCard({ onSignIn }: { onSignIn: () => void }) {
+  const t = useT(M);
   return (
-    <div className="card flex items-center gap-3 p-4">
+    <div className="card flex flex-wrap items-center gap-3 p-4">
       <Icon name="person_off" className="text-on-surface-variant" />
-      <p className="flex-1 text-small text-on-surface-variant">You&apos;re browsing as a guest. Sign in to keep your name, contacts and saved places.</p>
-      <button type="button" onClick={signIn} className="btn-primary !min-h-9">Sign in</button>
+      <p className="min-w-0 flex-1 text-small text-on-surface-variant">{t("guestText")}</p>
+      <button type="button" onClick={onSignIn} className="btn-primary !min-h-9">{t("signIn")}</button>
     </div>
   );
 }
@@ -314,6 +358,7 @@ function GuestCard() {
 /* ---------------------------------------------------------------- preferences */
 
 function Preferences({ profile, onPlan }: { profile: Profile; onPlan: () => void }) {
+  const t = useT(M);
   const [saved, setSaved] = useState(false);
   const flash = () => { setSaved(true); window.setTimeout(() => setSaved(false), 1500); };
 
@@ -326,52 +371,52 @@ function Preferences({ profile, onPlan }: { profile: Profile; onPlan: () => void
   }
 
   return (
-    <Section icon="tune" title="Mobility Preferences"
-      action={<span className="chip bg-primary-soft text-primary-ink" aria-live="polite">{saved ? "Saved ✓" : "Personalized"}</span>}>
-      <p className="mb-2 text-small font-semibold">Preferred Modes</p>
+    <Section icon="tune" title={t("prefs")}
+      action={<span className="chip bg-primary-soft text-primary-ink" aria-live="polite">{saved ? t("savedTick") : t("personalized")}</span>}>
+      <p className="mb-2 text-small font-semibold">{t("preferredModes")}</p>
       <div className="flex flex-wrap gap-2">
         {MODE_CHIPS.map((c) => {
           const on = c.modes.every((m) => profile.modes.includes(m));
           const last = on && profile.modes.length === c.modes.length;
           return (
-            <button key={c.label} type="button" aria-pressed={on} onClick={() => toggleMode(c)}
-              title={last ? "Keep at least one vehicle" : undefined}
+            <button key={c.id} type="button" aria-pressed={on} onClick={() => toggleMode(c)}
+              title={last ? t("keepOne") : undefined}
               className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-small font-semibold ${on ? "bg-primary text-on-primary" : "bg-container-lowest text-on-surface-variant ring-1 ring-hairline hover:bg-container-low"}`}>
-              <Icon name={c.icon} className="text-[16px]" /> {c.label}
+              <Icon name={c.icon} className="text-[16px]" /> {c.id === "local" ? t("localTrain") : MODE_LABEL[c.modes[c.modes.length - 1]]}
             </button>
           );
         })}
-        <span className="flex items-center gap-1.5 rounded-lg bg-primary-soft px-3 py-1.5 text-small font-semibold text-primary-ink" title="Walking links every trip, so it's always on">
-          <Icon name="directions_walk" className="text-[16px]" /> Walking · always
+        <span className="flex items-center gap-1.5 rounded-lg bg-primary-soft px-3 py-1.5 text-small font-semibold text-primary-ink" title={t("walkAlwaysTip")}>
+          <Icon name="directions_walk" className="text-[16px]" /> {t("walkAlways")}
         </span>
       </div>
 
-      <p className="mb-2 mt-4 text-small font-semibold">Routing Priority</p>
-      <div role="radiogroup" aria-label="Routing priority" className="grid grid-cols-3 gap-1 rounded-xl bg-container p-1">
+      <p className="mb-2 mt-4 text-small font-semibold">{t("priority")}</p>
+      <div role="radiogroup" aria-label={t("priority")} className="grid grid-cols-3 gap-1 rounded-xl bg-container p-1">
         {PRIORITIES.map((p) => {
           const on = profile.priority === p.value;
           return (
             <button key={p.value} type="button" role="radio" aria-checked={on}
               onClick={() => { updateProfile({ priority: p.value }); flash(); }}
               className={`rounded-lg px-2 py-2 text-small ${on ? "bg-container-lowest font-semibold text-primary shadow-sm" : "text-on-surface-variant hover:text-on-surface"}`}>
-              {p.label}
+              {t(p.label)}
             </button>
           );
         })}
       </div>
 
       <div className="mt-4 space-y-2">
-        <Toggle icon="accessible" label="Step-free routing" sub="Wheelchair, lift & ramp priority"
+        <Toggle icon="accessible" label={t("stepFree")} sub={t("stepFreeSub")}
           checked={profile.stepFree} onChange={(v) => { updateProfile({ stepFree: v }); flash(); }} />
-        <Toggle icon="notifications_active" label="Delay & Disruption SMS"
-          sub={profile.phone ? `Pakka Check-confirmed alerts to ${maskPhone(profile.phone)}` : "Add a mobile number to get SMS"}
+        <Toggle icon="notifications_active" label={t("sms")}
+          sub={profile.phone ? t("smsSub", { phone: maskPhone(profile.phone) }) : t("smsNoPhone")}
           disabled={!profile.phone} checked={profile.smsAlerts && Boolean(profile.phone)}
           onChange={(v) => { updateProfile({ smsAlerts: v }); flash(); }} />
       </div>
       <div className="mt-3 flex items-center justify-between gap-2 rounded-xl bg-primary-soft px-3 py-2">
-        <p className="text-caption text-primary-ink">The Journey Planner starts with these choices.</p>
+        <p className="text-caption text-primary-ink">{t("plannerUses")}</p>
         <Link href="/plan" onClick={onPlan} className="flex items-center gap-1 text-caption font-bold text-primary hover:underline">
-          Plan a trip <Icon name="arrow_forward" className="text-[14px]" />
+          {t("planTrip")} <Icon name="arrow_forward" className="text-[14px]" />
         </Link>
       </div>
     </Section>
@@ -381,6 +426,7 @@ function Preferences({ profile, onPlan }: { profile: Profile; onPlan: () => void
 /* ---------------------------------------------------------------- saved places */
 
 function SavedPlaces({ profile, onGo }: { profile: Profile; onGo: () => void }) {
+  const t = useT(M);
   const listId = useId();
   const [editing, setEditing] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
@@ -388,14 +434,14 @@ function SavedPlaces({ profile, onGo }: { profile: Profile; onGo: () => void }) 
 
   function save(placeId: string) {
     const match = draft.trim() ? findPlace(draft) : undefined;
-    if (draft.trim() && !match) { setError("Pick a station or place from the list."); return; }
+    if (draft.trim() && !match) { setError(t("placeErr")); return; }
     updateProfile((p) => ({ places: p.places.map((x) => (x.id === placeId ? { ...x, place: match?.label ?? "" } : x)) }));
     setEditing(null);
     setError("");
   }
 
   return (
-    <Section id="places" icon="bookmark" title="Saved Places">
+    <Section id="places" icon="bookmark" title={t("places")}>
       <datalist id={listId}>{PLACE_OPTIONS.map((p) => <option key={p.label} value={p.label} />)}</datalist>
       <div className="space-y-2">
         {profile.places.map((p) => (
@@ -403,14 +449,14 @@ function SavedPlaces({ profile, onGo }: { profile: Profile; onGo: () => void }) 
             {editing === p.id ? (
               <form onSubmit={(e) => { e.preventDefault(); save(p.id); }} className="space-y-2">
                 <label className="block">
-                  <span className="mb-1 block text-caption font-semibold text-on-surface-variant">{p.title}</span>
-                  <input autoFocus list={listId} className={inputCls} value={draft} placeholder="Type a station or place"
+                  <span className="mb-1 block text-caption font-semibold text-on-surface-variant">{t(p.id)}</span>
+                  <input autoFocus list={listId} className={inputCls} value={draft} placeholder={t("placePh")}
                     onChange={(e) => { setDraft(e.target.value); setError(""); }} aria-invalid={Boolean(error)} />
                 </label>
                 {error && <p className="text-caption text-error">{error}</p>}
                 <div className="flex justify-end gap-2">
-                  <button type="button" onClick={() => { setEditing(null); setError(""); }} className="btn-secondary !min-h-9">Cancel</button>
-                  <button type="submit" className="btn-primary !min-h-9">Save</button>
+                  <button type="button" onClick={() => { setEditing(null); setError(""); }} className="btn-secondary !min-h-9">{t("cancel")}</button>
+                  <button type="submit" className="btn-primary !min-h-9">{t("save")}</button>
                 </div>
               </form>
             ) : (
@@ -419,14 +465,14 @@ function SavedPlaces({ profile, onGo }: { profile: Profile; onGo: () => void }) 
                   <Icon name={p.id === "home" ? "home" : "work"} className="text-on-surface-variant" />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-small font-semibold">{p.title}</span>
-                  <span className="block truncate text-caption text-on-surface-variant">{p.place || "Not set"}</span>
+                  <span className="block text-small font-semibold">{t(p.id)}</span>
+                  <span className="block truncate text-caption text-on-surface-variant">{p.place || t("notSet")}</span>
                 </span>
-                <button type="button" onClick={() => { setEditing(p.id); setDraft(p.place); }} aria-label={`Edit ${p.title}`}
+                <button type="button" onClick={() => { setEditing(p.id); setDraft(p.place); }} aria-label={t("editPlace", { place: t(p.id) })}
                   className="rounded-lg p-2 text-on-surface-variant hover:bg-container-low"><Icon name="edit" className="text-[18px]" /></button>
                 {p.place && (
                   <Link href={`/plan?to=${encodeURIComponent(p.place)}`} onClick={onGo} className="btn-ghost !min-h-9 !px-3">
-                    Go <Icon name="arrow_forward" className="text-[16px]" />
+                    {t("go")} <Icon name="arrow_forward" className="text-[16px]" />
                   </Link>
                 )}
               </div>
@@ -441,6 +487,8 @@ function SavedPlaces({ profile, onGo }: { profile: Profile; onGo: () => void }) 
 /* ---------------------------------------------------------------- activity */
 
 function Activity({ profile, onNavigate }: { profile: Profile; onNavigate: () => void }) {
+  const t = useT(M);
+  const lang = useLang();
   const live = useLiveEvents();
   const [ledger, setLedger] = useState(false);
   const verified = useMemo(() => {
@@ -450,17 +498,17 @@ function Activity({ profile, onNavigate }: { profile: Profile; onNavigate: () =>
   const placesSet = profile.places.filter((p) => p.place).length;
 
   const tiles: { n: number; label: string; href?: string; onClick?: () => void; extra?: string }[] = [
-    { n: profile.stats.planned, label: "Journeys Planned", onClick: () => setLedger(true) },
-    { n: placesSet, label: "Saved Places", onClick: () => document.querySelector('[data-section="places"]')?.scrollIntoView({ behavior: "smooth" }) },
-    { n: profile.stats.started, label: "Trips Tracked", href: "/track" },
-    { n: profile.stats.reportIds.length, label: "Reported Issues", href: "/report", extra: profile.stats.reportIds.length ? `${verified} Verified` : undefined },
+    { n: profile.stats.planned, label: t("planned"), onClick: () => setLedger(true) },
+    { n: placesSet, label: t("savedPlaces"), onClick: () => document.querySelector('[data-section="places"]')?.scrollIntoView({ behavior: "smooth" }) },
+    { n: profile.stats.started, label: t("tracked"), href: "/track" },
+    { n: profile.stats.reportIds.length, label: t("reported"), href: "/report", extra: profile.stats.reportIds.length ? t("verifiedN", { n: verified }) : undefined },
   ];
 
   return (
-    <Section id="activity" icon="monitoring" title="Mobility Activity"
+    <Section id="activity" icon="monitoring" title={t("activity")}
       action={
         <button type="button" onClick={() => setLedger(!ledger)} aria-expanded={ledger} className="flex items-center text-small font-semibold text-primary hover:underline">
-          {ledger ? "Hide ledger" : "Full Ledger"} <Icon name={ledger ? "expand_less" : "chevron_right"} className="text-[18px]" />
+          {ledger ? t("hideLedger") : t("fullLedger")} <Icon name={ledger ? "expand_less" : "chevron_right"} className="text-[18px]" />
         </button>
       }>
       <div className="grid grid-cols-2 gap-2">
@@ -485,7 +533,7 @@ function Activity({ profile, onNavigate }: { profile: Profile; onNavigate: () =>
         <div className="card mt-2 p-2">
           {profile.activity.length === 0 ? (
             <p className="p-3 text-small text-on-surface-variant">
-              Nothing yet. Plan a route, start a trip or send a report and it will show up here.
+              {t("ledgerEmpty")}
             </p>
           ) : (
             <>
@@ -496,8 +544,8 @@ function Activity({ profile, onNavigate }: { profile: Profile; onNavigate: () =>
                       <Icon name={a.kind === "planned" ? "alt_route" : a.kind === "started" ? "fmd_good" : "campaign"}
                         className={a.kind === "reported" ? "text-tertiary" : "text-primary"} />
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-small font-semibold">{a.text}</span>
-                        <span className="block text-caption text-on-surface-variant">{timeAgo(a.at)}</span>
+                        <span className="block truncate text-small font-semibold">{activityText(t, a)}</span>
+                        <span className="block text-caption text-on-surface-variant">{timeAgo(a.at, lang)}</span>
                       </span>
                       <Icon name="chevron_right" className="text-[18px] text-outline" />
                     </Link>
@@ -505,7 +553,7 @@ function Activity({ profile, onNavigate }: { profile: Profile; onNavigate: () =>
                 ))}
               </ul>
               <button type="button" onClick={() => updateProfile({ activity: [] })} className="btn-ghost mt-1 w-full !min-h-9 text-on-surface-variant">
-                Clear history
+                {t("clearHistory")}
               </button>
             </>
           )}
@@ -515,50 +563,60 @@ function Activity({ profile, onNavigate }: { profile: Profile; onNavigate: () =>
   );
 }
 
-function timeAgo(iso: string): string {
+function activityText(t: (k: Key, v?: Record<string, string | number>) => string, a: ActivityEntry): string {
+  if (a.kind === "reported" && a.what) return t("actReported", { what: a.what });
+  if (a.from === undefined) return a.text; // entry saved before languages existed
+  const to = a.to || t("dayTrip");
+  if (a.kind === "planned") return t("actPlanned", { from: a.from, to });
+  const route = a.route && a.route in PLAN_LABEL ? PLAN_LABEL[a.route as keyof typeof PLAN_LABEL] : (a.route ?? "");
+  return t("actStarted", { from: a.from, to, route });
+}
+
+function timeAgo(iso: string, lang: Lang): string {
   const d = new Date(iso);
-  return d.toLocaleString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  return d.toLocaleString(LANGS.find((l) => l.value === lang)!.html, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 }
 
 /* ---------------------------------------------------------------- safety */
 
 function Safety() {
-  const [status, setStatus] = useState<string | null>(null);
+  const t = useT(M);
+  const [status, setStatus] = useState<Key | null>(null);
 
   async function shareTrip() {
     const trip = loadTrip();
-    if (!trip) { setStatus("No trip in progress — start one from Route Results first."); return; }
-    const to = trip.destination?.label ?? trip.traveller.destination?.label ?? "my destination";
-    const legs = trip.card.legs.filter((l) => l.mode !== "walk").map((l) => MODE_LABEL[l.mode]).join(" → ") || "walking";
+    if (!trip) { setStatus("noTrip"); return; }
+    const to = trip.destination?.label ?? trip.traveller.destination?.label ?? t("myDestination");
+    const legs = trip.card.legs.filter((l) => l.mode !== "walk").map((l) => MODE_LABEL[l.mode]).join(" → ") || t("walking");
     const eta = trip.card.legs.at(-1)?.arrive ?? "";
-    const text = `I'm travelling ${trip.traveller.origin.label} → ${to} by ${legs}${eta ? `, arriving about ${eta}` : ""}. (TravelBuddy)`;
+    const text = t("shareText", { from: trip.traveller.origin.label, to, legs, eta: eta ? t("shareEta", { time: eta }) : "" });
     const url = `${window.location.origin}/track`;
     try {
-      if (navigator.share) { await navigator.share({ title: "My live trip", text, url }); setStatus("Shared."); return; }
+      if (navigator.share) { await navigator.share({ title: t("shareTitle"), text, url }); setStatus("shared"); return; }
       await navigator.clipboard.writeText(`${text} ${url}`);
-      setStatus("Trip details copied — paste them to someone you trust.");
+      setStatus("copied");
     } catch (e) {
       if (e instanceof DOMException && e.name === "AbortError") return;
-      setStatus("Couldn't share from this browser.");
+      setStatus("shareFail");
     }
   }
 
   return (
-    <Section icon="sos" title="Emergency & Women Safety">
+    <Section icon="sos" title={t("safety")}>
       <div className="grid grid-cols-3 gap-2">
         {SOS.map((s, i) => (
           <a key={s.href} href={s.href}
             className={`card card-interactive flex flex-col items-center gap-1 px-2 py-3 text-center ${i === 0 ? "!bg-error-container" : ""}`}>
             <Icon name={s.icon} className={i === 0 ? "text-error" : "text-primary"} />
             <span className={`text-subtitle font-bold ${i === 0 ? "text-on-error-container" : ""}`}>{s.title}</span>
-            <span className="text-micro text-on-surface-variant">{s.sub}</span>
+            <span className="text-micro text-on-surface-variant">{t(s.sub)}</span>
           </a>
         ))}
       </div>
       <button type="button" onClick={shareTrip} className="btn-secondary mt-2 w-full">
-        <Icon name="share_location" className="text-[18px] text-primary" /> Share Live Trip &amp; Safety Beacon
+        <Icon name="share_location" className="text-[18px] text-primary" /> {t("shareTrip")}
       </button>
-      {status && <p className="mt-2 text-caption text-on-surface-variant" role="status">{status}</p>}
+      {status && <p className="mt-2 text-caption text-on-surface-variant" role="status">{t(status)}</p>}
     </Section>
   );
 }
@@ -566,40 +624,63 @@ function Safety() {
 /* ---------------------------------------------------------------- app & support */
 
 function AppSupport({ profile, onNavigate }: { profile: Profile; onNavigate: () => void }) {
+  const t = useT(M);
   const [privacy, setPrivacy] = useState(false);
+  const [languageOpen, setLanguageOpen] = useState(false);
   const [appearanceOpen, setAppearanceOpen] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
   const [cleared, setCleared] = useState(false);
   const row = "flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-container-low";
 
   return (
-    <Section icon="settings" title="App & Support">
+    <Section icon="settings" title={t("app")}>
       <div className="card divide-y divide-hairline-soft overflow-hidden">
+        <button type="button" onClick={() => setLanguageOpen(!languageOpen)} aria-expanded={languageOpen} className={row}>
+          <Icon name="translate" className="text-on-surface-variant" />
+          <span className="flex-1 text-small font-semibold">{t("appLanguage")}</span>
+          <span className="text-caption text-on-surface-variant">{LANGS.find((l) => l.value === profile.appLanguage)!.label}</span>
+          <Icon name={languageOpen ? "expand_less" : "chevron_right"} className="text-outline" />
+        </button>
+        {languageOpen && (
+          <div role="radiogroup" aria-label={t("appLanguage")} className="grid grid-cols-3 gap-2 bg-container-low/60 p-3">
+            {LANGS.map((l) => {
+              const on = profile.appLanguage === l.value;
+              return (
+                <button key={l.value} type="button" role="radio" aria-checked={on} lang={l.html} onClick={() => setAppLanguage(l.value)}
+                  className={`flex flex-col items-center gap-0.5 rounded-xl bg-container-lowest px-2 py-3 ring-2 ${on ? "ring-primary" : "ring-transparent shadow-sm hover:ring-hairline"}`}>
+                  <span className="text-subtitle font-bold">{l.label}</span>
+                  <span className="text-micro text-on-surface-variant">{l.english}</span>
+                  {on && <Icon name="check_circle" fill className="text-[18px] text-primary" />}
+                </button>
+              );
+            })}
+          </div>
+        )}
         <button type="button" onClick={() => setAppearanceOpen(!appearanceOpen)} aria-expanded={appearanceOpen} className={row}>
           <Icon name="palette" className="text-on-surface-variant" />
-          <span className="flex-1 text-small font-semibold">Appearance</span>
-          <span className="text-caption text-on-surface-variant">{profile.appearance === "dark" ? "Dark" : "Light"}</span>
+          <span className="flex-1 text-small font-semibold">{t("appearance")}</span>
+          <span className="text-caption text-on-surface-variant">{profile.appearance === "dark" ? t("dark") : t("light")}</span>
           <Icon name={appearanceOpen ? "expand_less" : "chevron_right"} className="text-outline" />
         </button>
         {appearanceOpen && (
-          <div role="radiogroup" aria-label="Appearance" className="grid grid-cols-2 gap-2 bg-container-low/60 p-3">
-            {THEMES.map((t) => {
-              const on = profile.appearance === t.value;
+          <div role="radiogroup" aria-label={t("appearance")} className="grid grid-cols-2 gap-2 bg-container-low/60 p-3">
+            {THEMES.map((th) => {
+              const on = profile.appearance === th.value;
               return (
-                <button key={t.value} type="button" role="radio" aria-checked={on} onClick={() => setAppearance(t.value)}
+                <button key={th.value} type="button" role="radio" aria-checked={on} onClick={() => setAppearance(th.value)}
                   className={`flex flex-col gap-2 rounded-xl bg-container-lowest p-2 text-left ring-2 ${on ? "ring-primary" : "ring-transparent shadow-sm hover:ring-hairline"}`}>
                   {/* mini preview of the theme */}
-                  <span className="flex h-16 gap-1.5 overflow-hidden rounded-lg p-1.5" style={{ background: t.swatch.bg }} aria-hidden>
-                    <span className="w-1/3 rounded-md" style={{ background: t.swatch.card }} />
-                    <span className="flex flex-1 flex-col gap-1 rounded-md p-1.5" style={{ background: t.swatch.card }}>
-                      <span className="h-1.5 w-3/4 rounded-full" style={{ background: t.swatch.text }} />
-                      <span className="h-1.5 w-1/2 rounded-full" style={{ background: t.swatch.muted }} />
-                      <span className="mt-auto h-3 w-1/2 rounded" style={{ background: t.swatch.brand }} />
+                  <span className="flex h-16 gap-1.5 overflow-hidden rounded-lg p-1.5" style={{ background: th.swatch.bg }} aria-hidden>
+                    <span className="w-1/3 rounded-md" style={{ background: th.swatch.card }} />
+                    <span className="flex flex-1 flex-col gap-1 rounded-md p-1.5" style={{ background: th.swatch.card }}>
+                      <span className="h-1.5 w-3/4 rounded-full" style={{ background: th.swatch.text }} />
+                      <span className="h-1.5 w-1/2 rounded-full" style={{ background: th.swatch.muted }} />
+                      <span className="mt-auto h-3 w-1/2 rounded" style={{ background: th.swatch.brand }} />
                     </span>
                   </span>
                   <span className="flex items-center gap-1.5 px-1 text-small font-semibold">
-                    <Icon name={t.icon} className={`text-[18px] ${on ? "text-primary" : "text-on-surface-variant"}`} />
-                    {t.label}
+                    <Icon name={th.icon} className={`text-[18px] ${on ? "text-primary" : "text-on-surface-variant"}`} />
+                    {t(th.label)}
                     {on && <Icon name="check_circle" fill className="ml-auto text-[18px] text-primary" />}
                   </span>
                 </button>
@@ -610,44 +691,44 @@ function AppSupport({ profile, onNavigate }: { profile: Profile; onNavigate: () 
 
         <button type="button" onClick={() => setPrivacy(!privacy)} aria-expanded={privacy} className={row}>
           <Icon name="lock" className="text-on-surface-variant" />
-          <span className="flex-1 text-small font-semibold">Privacy &amp; Data</span>
+          <span className="flex-1 text-small font-semibold">{t("privacy")}</span>
           <Icon name={privacy ? "expand_less" : "chevron_right"} className="text-outline" />
         </button>
         {privacy && (
           <div className="space-y-2 bg-container-low/60 p-3">
-            <Toggle icon="history" label="Remember my trip history" sub="Keeps the activity ledger on this device"
+            <Toggle icon="history" label={t("remember")} sub={t("rememberSub")}
               checked={profile.privacy.rememberTrips}
               onChange={(v) => updateProfile((p) => ({ privacy: { ...p.privacy, rememberTrips: v } }))} />
             <p className="px-1 text-caption text-on-surface-variant">
-              Reports are anonymous: Pakka Check only sees a random reporter id, never your name or number.
+              {t("anonymous")}
             </p>
             {confirmClear ? (
               <div className="flex flex-wrap items-center gap-2 rounded-xl bg-error-container p-3">
-                <p className="flex-1 text-caption text-on-error-container">Erase profile, saved trip and reporter id from this browser?</p>
-                <button type="button" onClick={() => setConfirmClear(false)} className="btn-secondary !min-h-9">Keep</button>
+                <p className="flex-1 text-caption text-on-error-container">{t("eraseQ")}</p>
+                <button type="button" onClick={() => setConfirmClear(false)} className="btn-secondary !min-h-9">{t("keep")}</button>
                 <button type="button" onClick={() => { clearDeviceData(); setConfirmClear(false); setCleared(true); }}
-                  className="btn-primary !min-h-9 !bg-error">Erase</button>
+                  className="btn-primary !min-h-9 !bg-error">{t("erase")}</button>
               </div>
             ) : (
               <button type="button" onClick={() => { setConfirmClear(true); setCleared(false); }} className="btn-secondary w-full !text-error">
-                <Icon name="delete" className="text-[18px]" /> Clear my data on this device
+                <Icon name="delete" className="text-[18px]" /> {t("clearData")}
               </button>
             )}
-            {cleared && <p className="text-caption text-primary" role="status">Done — this browser now holds only the default profile.</p>}
+            {cleared && <p className="text-caption text-primary" role="status">{t("cleared")}</p>}
           </div>
         )}
 
         <a href="tel:139" className={row}>
           <Icon name="support_agent" className="text-on-surface-variant" />
           <span className="flex-1">
-            <span className="block text-small font-semibold">Railway Helpline (139)</span>
-            <span className="block text-caption text-on-surface-variant">Train enquiry, complaints, security</span>
+            <span className="block text-small font-semibold">{t("helpline")}</span>
+            <span className="block text-caption text-on-surface-variant">{t("helplineSub")}</span>
           </span>
           <Icon name="call" className="text-outline" />
         </a>
         <Link href="/transparency" onClick={onNavigate} className={row}>
           <Icon name="gavel" className="text-on-surface-variant" />
-          <span className="flex-1 text-small font-semibold">How Pakka Check decides (Transparency)</span>
+          <span className="flex-1 text-small font-semibold">{t("transparency")}</span>
           <Icon name="chevron_right" className="text-outline" />
         </Link>
       </div>
@@ -657,28 +738,29 @@ function AppSupport({ profile, onNavigate }: { profile: Profile; onNavigate: () 
 
 /* ---------------------------------------------------------------- footer */
 
-function Footer({ signedIn, onManage }: { signedIn: boolean; onManage: () => void }) {
+function Footer({ signedIn, onManage, onSignIn }: { signedIn: boolean; onManage: () => void; onSignIn: () => void }) {
+  const t = useT(M);
   const [confirm, setConfirm] = useState(false);
   return (
     <div className="border-t border-hairline bg-container-lowest px-5 py-3 shadow-sheet">
       {confirm ? (
         <div className="flex flex-wrap items-center gap-2">
-          <p className="flex-1 text-small">Sign out? Your preferences stay; personal details are removed.</p>
-          <button type="button" onClick={() => setConfirm(false)} className="btn-secondary">Cancel</button>
-          <button type="button" onClick={() => { signOut(); setConfirm(false); }} className="btn-primary !bg-error">Sign Out</button>
+          <p className="flex-1 text-small">{t("signOutQ")}</p>
+          <button type="button" onClick={() => setConfirm(false)} className="btn-secondary">{t("cancel")}</button>
+          <button type="button" onClick={() => { signOut(); setConfirm(false); }} className="btn-primary !bg-error">{t("signOut")}</button>
         </div>
       ) : signedIn ? (
         <div className="grid grid-cols-[1fr_auto] gap-2">
           <button type="button" onClick={onManage} className="btn-secondary">
-            <Icon name="manage_accounts" className="text-[18px]" /> Manage Account
+            <Icon name="manage_accounts" className="text-[18px]" /> {t("manage")}
           </button>
           <button type="button" onClick={() => setConfirm(true)} className="btn-secondary !text-error">
-            <Icon name="logout" className="text-[18px]" /> Sign Out
+            <Icon name="logout" className="text-[18px]" /> {t("signOut")}
           </button>
         </div>
       ) : (
-        <button type="button" onClick={signIn} className="btn-primary w-full">
-          <Icon name="login" className="text-[18px]" /> Sign in
+        <button type="button" onClick={onSignIn} className="btn-primary w-full">
+          <Icon name="login" className="text-[18px]" /> {t("signIn")}
         </button>
       )}
     </div>

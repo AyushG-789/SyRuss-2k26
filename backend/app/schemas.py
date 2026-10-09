@@ -142,7 +142,8 @@ class RouteCard(BaseModel):
 
 class RejectedOption(BaseModel):
     summary: str
-    reason: str
+    reason: str                 # English, stable wording (the app reads it to offer fixes)
+    message: str | None = None  # the same reason in the traveller's language, for display
 
 
 class PlanRequest(BaseModel):

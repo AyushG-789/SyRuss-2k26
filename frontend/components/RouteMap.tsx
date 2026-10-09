@@ -9,6 +9,8 @@ import { CircleMarker, Marker, Polyline, Popup, TileLayer, Tooltip, useMap } fro
 import { lines, stations } from "@/lib/api";
 import { evidenceSummary, eventPosition, eventTitle, legColor, pct, STATUS_STYLE } from "@/lib/format";
 import { legPath, type LatLon } from "@/lib/geo";
+import { useT } from "@/lib/i18n";
+import { M } from "@/lib/i18n/messages/RouteMap";
 import { useProfile } from "@/lib/profile";
 import { MAP_COLORS } from "@/lib/theme";
 import type { DisruptionEvent, Place, RouteCard } from "@/lib/types";
@@ -104,6 +106,7 @@ export default function RouteMap({
   onStopClick?: (index: number) => void;
 }) {
   const c = MAP_COLORS[useProfile().appearance];
+  const t = useT(M);
   const paths = useMemo(
     () => (card ? card.legs.map((leg) => ({ leg, path: legPath(leg, origin, destination) })) : []),
     [card, origin, destination],
@@ -155,7 +158,7 @@ export default function RouteMap({
             }}
           >
             <Tooltip sticky>
-              {leg.depart}–{leg.arrive} · {leg.duration_min} min{leg.cost_inr ? ` · ₹${leg.cost_inr}` : ""}
+              {leg.depart}–{leg.arrive} · {t("legMin", { n: leg.duration_min })}{leg.cost_inr ? ` · ₹${leg.cost_inr}` : ""}
             </Tooltip>
           </Polyline>
         ) : null,
@@ -178,7 +181,7 @@ export default function RouteMap({
               {style.label} · {pct(ev.confidence)} · {evidenceSummary(ev)}
               <br />
               <span style={{ opacity: 0.7 }}>
-                First seen {ev.first_seen}, last {ev.last_seen}
+                {t("seen", { first: ev.first_seen, last: ev.last_seen })}
               </span>
             </Popup>
           </CircleMarker>
@@ -192,24 +195,24 @@ export default function RouteMap({
         <Marker key={`${p.badge}-${p.lat}-${p.lon}`} position={[p.lat, p.lon]} icon={stopIcon(p.badge, !!p.active, p.badge === "S", c)}
           zIndexOffset={p.active ? 1000 : 0} eventHandlers={onStopClick ? { click: () => onStopClick(i) } : undefined}>
           <Tooltip direction="top" offset={[0, -14]}>
-            <b>{p.badge === "S" ? "Start" : `${p.badge}.`} {p.label}</b>{p.sub ? <><br />{p.sub}</> : null}
+            <b>{p.badge === "S" ? t("start") : `${p.badge}.`} {p.label}</b>{p.sub ? <><br />{p.sub}</> : null}
           </Tooltip>
         </Marker>
       ))}
 
       {origin && stops.length === 0 && (
         <CircleMarker center={[origin.lat, origin.lon]} radius={8} pathOptions={{ color: c.brand, fillColor: c.ring, fillOpacity: 1, weight: 3 }}>
-          <Tooltip>Start: {origin.label}</Tooltip>
+          <Tooltip>{t("startAt", { label: origin.label })}</Tooltip>
         </CircleMarker>
       )}
       {destination && stops.length === 0 && (
         <CircleMarker center={[destination.lat, destination.lon]} radius={8} pathOptions={{ color: c.accent, fillColor: c.accentFill, fillOpacity: 1, weight: 3 }}>
-          <Tooltip>End: {destination.label}</Tooltip>
+          <Tooltip>{t("endAt", { label: destination.label })}</Tooltip>
         </CircleMarker>
       )}
       {here && (
         <CircleMarker center={here} radius={9} pathOptions={{ color: c.ring, fillColor: c.brand, fillOpacity: 1, weight: 4 }}>
-          <Tooltip permanent direction="top">You are here</Tooltip>
+          <Tooltip permanent direction="top">{t("here")}</Tooltip>
         </CircleMarker>
       )}
     </MapContainer>

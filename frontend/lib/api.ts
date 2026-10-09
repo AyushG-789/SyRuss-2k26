@@ -5,6 +5,7 @@ import eventsMock from "@/mocks/events.json";
 import linesMock from "@/mocks/lines.json";
 import stationsMock from "@/mocks/stations.json";
 import travellersMock from "@/mocks/travellers.json";
+import { activeLang } from "./i18n";
 import type {
   DisruptionEvent,
   LineInfo,
@@ -36,6 +37,11 @@ const mockPlans: Record<string, () => Promise<{ default: unknown }>> = {
   TR5: () => import("@/mocks/plan_TR5.json"),
 };
 
+/** Trips go to the backend in the app language, so route reasons and replan alerts come back in it. */
+function inAppLanguage(traveller: Traveller): Traveller {
+  return { ...traveller, language: activeLang() };
+}
+
 async function post<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
     method: "POST",
@@ -58,7 +64,7 @@ export class RoutingNotConnected extends Error {
 }
 
 export function planRequest(traveller: Traveller) {
-  return { traveller, mode: "aware" as const };
+  return { traveller: inAppLanguage(traveller), mode: "aware" as const };
 }
 
 /** Plan with Pakka Check's live events (aware). The 5 demo travellers fall back to their saved
@@ -74,7 +80,7 @@ export async function getPlan(traveller: Traveller): Promise<PlanResponse & { sa
 }
 
 /** What a schedule-only app would show for the same trip (reports ignored) — for comparison. */
-export const getBaselinePlan = (traveller: Traveller) => post<PlanResponse>("/plan", { traveller, mode: "baseline" });
+export const getBaselinePlan = (traveller: Traveller) => post<PlanResponse>("/plan", { traveller: inAppLanguage(traveller), mode: "baseline" });
 
 export async function getEvents(): Promise<DisruptionEvent[]> {
   return (await getLiveEvents()).events;
@@ -276,6 +282,7 @@ export const sendChat = (
   post<ChatReply>("/chat", {
     messages,
     journey_id: journeyId ?? null,
+    language: activeLang(), // reply in the app language (Devanagari for हिंदी / मराठी)
   });
 
 // ---- Saved journeys + replan (B9, SPEC.md §8) -----------------------------------------------
@@ -324,7 +331,7 @@ export interface Journey {
   }[];
 }
 
-export const saveJourney = (traveller: Traveller, card: RouteCard) => post<Journey>("/journeys", { traveller, card });
+export const saveJourney = (traveller: Traveller, card: RouteCard) => post<Journey>("/journeys", { traveller: inAppLanguage(traveller), card });
 export const getJourney = (id: string) => fetchJson<Journey>(`/journeys/${id}`, 3000);
 export const decideReplan = (id: string, accept: boolean) =>
   post<Journey>(`/journeys/${id}/replan/${accept ? "accept" : "reject"}`, {});
@@ -393,7 +400,7 @@ export interface ItineraryPlan {
   stops?: ItineraryStopPlan[]; dropped?: { poi_id: string; name: string; reason: string; must_visit?: boolean }[];
   total_travel_min?: number; total_cost_inr?: number; ends_at?: string; warnings?: string[]; as_of?: string;
 }
-export const planItinerary = (traveller: Traveller) => post<ItineraryPlan>("/itinerary", { traveller });
+export const planItinerary = (traveller: Traveller) => post<ItineraryPlan>("/itinerary", { traveller: inAppLanguage(traveller) });
 
 // ---- Voice (SPEC.md §7, POST /voice/stt & POST /voice/tts) ----------------------------------
 export interface VoiceSTTResponse {

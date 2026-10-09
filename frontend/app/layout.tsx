@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist_Mono, Plus_Jakarta_Sans } from "next/font/google";
+import { Geist_Mono, Noto_Sans_Devanagari, Plus_Jakarta_Sans } from "next/font/google";
 import AppShell from "@/components/AppShell";
 import { THEME_BOOT_SCRIPT } from "@/lib/theme";
 import "./globals.css";
@@ -7,6 +7,13 @@ import "./globals.css";
 const jakarta = Plus_Jakarta_Sans({
   variable: "--font-jakarta",
   subsets: ["latin"],
+});
+
+// हिंदी / मराठी text (Plus Jakarta Sans has no Devanagari letters)
+const devanagari = Noto_Sans_Devanagari({
+  variable: "--font-devanagari",
+  subsets: ["devanagari"],
+  weight: ["400", "500", "600", "700"],
 });
 
 const geistMono = Geist_Mono({
@@ -32,8 +39,8 @@ export default function RootLayout({
 }) {
   return (
     <html
-      lang="en"
-      className={`${jakarta.variable} ${geistMono.variable} h-full antialiased`}
+      lang="en-IN"
+      className={`${jakarta.variable} ${devanagari.variable} ${geistMono.variable} h-full antialiased`}
       data-theme="light"
       suppressHydrationWarning
     >

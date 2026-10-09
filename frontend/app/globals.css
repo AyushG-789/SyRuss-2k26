@@ -199,7 +199,7 @@
   --color-bad-soft: var(--bad-soft);
   --color-grey: var(--grey);
 
-  --font-sans: var(--font-jakarta);
+  --font-sans: var(--font-jakarta), var(--font-devanagari), system-ui, sans-serif;
   --font-mono: var(--font-geist-mono);
   --shadow-card: var(--shadow-1);
   --shadow-sheet: var(--shadow-sheet-up);

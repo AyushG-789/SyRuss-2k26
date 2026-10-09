@@ -14,6 +14,8 @@ walk/road legs (0.2 otherwise) · crowding 0.2.
 """
 from __future__ import annotations
 
+from app.i18n import tr
+
 from datetime import datetime
 
 import networkx as nx
@@ -121,9 +123,9 @@ class Effects:
         return out, round(reliability, 3), round(risk_delay, 1), None
 
 
-def _title(ev: Event, stations, lines, transfers) -> str:
+def _title(ev: Event, stations, lines, transfers, lang: str = "en") -> str:
     from app.replan.monitor import event_title  # local: monitor imports routing
-    return event_title(ev, stations, lines, transfers)
+    return event_title(ev, stations, lines, transfers, lang)
 
 
 def plan_aware(traveller: Traveller, departure_time: str | None = None,
@@ -133,15 +135,16 @@ def plan_aware(traveller: Traveller, departure_time: str | None = None,
     fx = Effects(traveller, evs)
     plan = plan_baseline(traveller, departure_time, effects=fx)
     notes = list(plan.notes)
+    lang = traveller.language
     # Say what was avoided: confirmed blocking problems the schedule-only plan would have used.
     if any(fx._blocks(e) for e in fx.confirmed):
         base = plan_baseline(traveller, departure_time)
         for ev in fx.confirmed:
             if fx._blocks(ev) and any(touches(l, ev, fx.lines, fx.transfers) for c in base.cards for l in c.legs):
-                notes.append(f"Avoided: {_title(ev, fx.stations, fx.lines, fx.transfers)} "
-                             f"(confirmed {round(ev.confidence * 100)}%) — the schedule-only plan used it")
+                notes.append(tr(lang, "note.avoided", title=_title(ev, fx.stations, fx.lines, fx.transfers, lang),
+                                pct=round(ev.confidence * 100)))
     for ev in fx.events:
         if any(ev.event_id in l.event_ids for c in plan.cards for l in c.legs):
-            kind = "included" if ev.status == "confirmed" else "possible, counted as risk"
-            notes.append(f"{_title(ev, fx.stations, fx.lines, fx.transfers)}: {kind} ({round(ev.confidence * 100)}%)")
+            notes.append(tr(lang, "note.included" if ev.status == "confirmed" else "note.risk",
+                            title=_title(ev, fx.stations, fx.lines, fx.transfers, lang), pct=round(ev.confidence * 100)))
     return plan.model_copy(update={"notes": notes})

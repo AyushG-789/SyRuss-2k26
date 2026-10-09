@@ -116,7 +116,10 @@ export interface RouteCard {
 
 export interface RejectedOption {
   summary: string;
+  /** English, stable wording — RouteResults reads it to suggest fixes. */
   reason: string;
+  /** The same reason in the traveller's language, for display. */
+  message?: string | null;
 }
 
 export interface PlanResponse {

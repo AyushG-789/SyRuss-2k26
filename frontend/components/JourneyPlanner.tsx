@@ -15,6 +15,9 @@ import { getProfile, openProfile, useProfile } from "@/lib/profile";
 import { activeEvents } from "@/lib/network";
 import { useLiveEvents } from "@/lib/useLiveEvents";
 import { findPlace, PLACE_OPTIONS } from "@/lib/places";
+import { useT } from "@/lib/i18n";
+import { COMMON } from "@/lib/i18n/common";
+import { M } from "@/lib/i18n/messages/JourneyPlanner";
 import { EMPTY_FORM, type FormState, NOW, travellerFromForm, validateForm } from "@/lib/tripForm";
 import { tripHref } from "@/lib/tripUrl";
 import type { Mode, PlanResponse, RouteCard } from "@/lib/types";
@@ -23,19 +26,20 @@ import MapView from "./MapView";
 
 type Departure = "now" | "at" | "by";
 
-const MODALITIES: { id: string; label: string; icon: string; modes: Mode[] }[] = [
-  { id: "overall", label: "Overall", icon: "all_inclusive", modes: ["local", "metro", "bus", "auto", "taxi", "cab"] },
-  { id: "metro", label: "Metro", icon: "subway", modes: ["metro"] },
-  { id: "local", label: "Local", icon: "train", modes: ["local"] },
-  { id: "bus", label: "Bus", icon: "directions_bus", modes: ["bus"] },
-  { id: "vehicles", label: "Vehicles", icon: "directions_car", modes: ["auto", "taxi", "cab"] },
-  { id: "walk", label: "Walking", icon: "directions_walk", modes: [] },
+// Labels are translation keys (M = this screen's messages, C = COMMON), looked up in render.
+const MODALITIES: { id: string; label: { M: keyof typeof M.en } | { C: keyof typeof COMMON.en }; icon: string; modes: Mode[] }[] = [
+  { id: "overall", label: { M: "mod.overall" }, icon: "all_inclusive", modes: ["local", "metro", "bus", "auto", "taxi", "cab"] },
+  { id: "metro", label: { C: "mode.metro" }, icon: "subway", modes: ["metro"] },
+  { id: "local", label: { C: "mode.local" }, icon: "train", modes: ["local"] },
+  { id: "bus", label: { C: "mode.bus" }, icon: "directions_bus", modes: ["bus"] },
+  { id: "vehicles", label: { M: "mod.vehicles" }, icon: "directions_car", modes: ["auto", "taxi", "cab"] },
+  { id: "walk", label: { M: "mod.walk" }, icon: "directions_walk", modes: [] },
 ];
 
 const STRATEGIES = [
-  { value: "fastest", label: "Fastest Duration", hint: "Optimized rapid line switches" },
-  { value: "fewest_transfers", label: "Fewest Transfers", hint: "Direct single-boarding focus" },
-  { value: "cheapest", label: "Cheapest", hint: "Budget rail & regular buses" },
+  { value: "fastest", label: "s.fastest", hint: "s.fastestHint" },
+  { value: "fewest_transfers", label: "s.fewest", hint: "s.fewestHint" },
+  { value: "cheapest", label: "s.cheapest", hint: "s.cheapestHint" },
 ] as const;
 
 /** Text from the URL, replaced by the known place it matches (so it shows as recognised). */
@@ -61,6 +65,8 @@ export default function JourneyPlanner() {
   const [errors, setErrors] = useState<string[]>([]);
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) => setForm((f) => ({ ...f, [key]: value }));
   const profile = useProfile();
+  const t = useT(M);
+  const tc = useT(COMMON);
 
   // Start from the commuter's saved preferences (profile panel). Applied after mount, because the
   // profile lives in this browser and the first render must match the server's.
@@ -69,7 +75,7 @@ export default function JourneyPlanner() {
     Promise.resolve().then(() => {
       if (cancelled) return;
       const p = getProfile();
-      setForm((f) => ({ ...f, priority: p.priority, stepFree: p.stepFree, modes: p.modes.length ? [...p.modes] : f.modes }));
+      setForm((f) => ({ ...f, priority: p.priority, stepFree: p.stepFree, language: p.appLanguage, modes: p.modes.length ? [...p.modes] : f.modes }));
     });
     return () => { cancelled = true; };
   }, []);
@@ -110,20 +116,20 @@ export default function JourneyPlanner() {
       <section className="flex flex-col gap-2 rounded-2xl bg-container-low/70 px-5 py-3">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <span className="flex items-center gap-1 text-base font-medium uppercase tracking-wide text-primary">
-            <Icon name="alt_route" /> TravelBuddy Journey Engine
+            <Icon name="alt_route" /> {t("engine")}
           </span>
           <span className="hidden text-outline md:inline">•</span>
-          <span className="text-sm text-on-surface-variant">Local · Metro · BEST · Auto/Taxi — every route checked against Pakka Check before you see it</span>
+          <span className="text-sm text-on-surface-variant">{t("engineSub")}</span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <span className="rounded-lg bg-secondary-container px-2 py-0.5 text-sm text-on-secondary-container">
             {live?.source === "backend"
-              ? `Live at ${live.asOf}: ${problems.filter((e) => e.status === "confirmed").length} confirmed · ${problems.filter((e) => e.status === "possible").length} possible problems`
-              : "Server offline — sample data"}
+              ? t("liveStatus", { time: live.asOf ?? "", confirmed: problems.filter((e) => e.status === "confirmed").length, possible: problems.filter((e) => e.status === "possible").length })
+              : t("offline")}
           </span>
           <button type="button" onClick={() => { setForm((f) => ({ ...f, from: defaults.from, to: defaults.to })); setErrors([]); }}
             className="flex items-center gap-1 rounded-lg bg-container-lowest px-2 py-0.5 text-sm hover:bg-container">
-            <Icon name="history" className="text-[18px]" /> Restore Last Search
+            <Icon name="history" className="text-[18px]" /> {t("restore")}
           </button>
         </div>
       </section>
@@ -136,13 +142,13 @@ export default function JourneyPlanner() {
 
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-micro font-bold uppercase tracking-[0.12em] text-primary">Transit Matrix</p>
-                <h1 className="text-2xl font-semibold">Plan Your Commute</h1>
+                <p className="text-micro font-bold uppercase tracking-[0.12em] text-primary">{t("eyebrow")}</p>
+                <h1 className="text-2xl font-semibold">{t("title")}</h1>
               </div>
               <div className="flex gap-2">
-                <button type="button" onClick={() => setForm((f) => ({ ...f, from: f.to, to: f.from }))} aria-label="Swap departure and destination"
+                <button type="button" onClick={() => setForm((f) => ({ ...f, from: f.to, to: f.from }))} aria-label={t("swap")}
                   className="grid h-11 w-11 place-items-center rounded-xl bg-container-low hover:bg-container"><Icon name="swap_vert" /></button>
-                <button type="button" onClick={() => { setForm({ ...EMPTY_FORM, priority: "fastest" }); setVia(null); setErrors([]); }} aria-label="Reset"
+                <button type="button" onClick={() => { setForm({ ...EMPTY_FORM, priority: "fastest" }); setVia(null); setErrors([]); }} aria-label={t("reset")}
                   className="grid h-11 w-11 place-items-center rounded-xl bg-container-low hover:bg-container"><Icon name="refresh" /></button>
               </div>
             </div>
@@ -150,50 +156,50 @@ export default function JourneyPlanner() {
             {/* Departure / via / destination */}
             <div className="flex flex-col gap-2">
               <div className="flex items-center justify-between text-small">
-                <span className="font-semibold text-slate">Point of Departure</span>
-                <button type="button" onClick={() => set("from", "Andheri station")} title="No GPS in the prototype — uses Andheri as your location"
+                <span className="font-semibold text-slate">{t("departurePoint")}</span>
+                <button type="button" onClick={() => set("from", "Andheri station")} title={t("myLocationTitle")}
                   className="flex items-center gap-1 font-semibold text-primary">
-                  <Icon name="my_location" className="text-[16px]" /> My location (demo)
+                  <Icon name="my_location" className="text-[16px]" /> {t("myLocation")}
                 </button>
               </div>
               <PlaceInput listId={listId} value={form.from} onChange={(v) => set("from", v)} dot="bg-primary"
-                placeholder="Enter starting station, address, or landmark" label="Point of departure" />
+                placeholder={t("fromPlaceholder")} label={t("fromLabel")} />
 
               <div className="flex items-center justify-between py-1 text-small">
                 {via === null ? (
                   <button type="button" onClick={() => setVia("")} className="flex items-center gap-1.5 text-base text-primary">
-                    <Icon name="add_circle" className="text-[20px]" /> Add Layover / Via Stop
+                    <Icon name="add_circle" className="text-[20px]" /> {t("addVia")}
                   </button>
                 ) : (
                   <div className="flex w-full items-center gap-2">
-                    <input list={listId} value={via} onChange={(e) => setVia(e.target.value)} aria-label="Via stop"
-                      placeholder="Via intermediate stop (e.g., Dadar Junction)"
+                    <input list={listId} value={via} onChange={(e) => setVia(e.target.value)} aria-label={t("viaLabel")}
+                      placeholder={t("viaPlaceholder")}
                       className="min-w-0 flex-1 rounded-lg border border-dashed border-outline-variant bg-container-lowest px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
-                    <button type="button" onClick={() => setVia(null)} aria-label="Remove via stop" className="text-outline hover:text-on-surface"><Icon name="close" /></button>
+                    <button type="button" onClick={() => setVia(null)} aria-label={t("removeVia")} className="text-outline hover:text-on-surface"><Icon name="close" /></button>
                   </div>
                 )}
-                {via === null && <span className="text-on-surface-variant">Direct Corridor Routing</span>}
+                {via === null && <span className="text-on-surface-variant">{t("direct")}</span>}
               </div>
 
               <div className="flex items-center justify-between text-small">
-                <span className="font-semibold text-slate">Final Destination</span>
-                <span className="text-on-surface-variant">Zone 1 Suburban / Metro</span>
+                <span className="font-semibold text-slate">{t("finalDest")}</span>
+                <span className="text-on-surface-variant">{t("zone")}</span>
               </div>
               <PlaceInput listId={listId} value={form.to} onChange={(v) => set("to", v)} pin
-                placeholder="Enter terminus station or destination address" label="Final destination" />
+                placeholder={t("toPlaceholder")} label={t("toLabel")} />
             </div>
 
             {/* Shortcuts */}
             <div className="flex flex-col gap-2">
-              <span className="text-small text-on-surface-variant">Quick-Access Shortcuts</span>
+              <span className="text-small text-on-surface-variant">{t("shortcuts")}</span>
               <div className="grid grid-cols-2 gap-2">
                 {profile.places.map((p) => (
                   <button key={p.id} type="button" onClick={() => (p.place ? set("to", snap(p.place) ?? p.place) : openProfile("places"))}
                     className="flex min-w-0 items-center gap-3 rounded-xl border border-hairline bg-container-low/50 px-4 py-3 text-left transition hover:border-primary">
                     <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-container"><Icon name={p.id === "home" ? "home" : "work"} className="text-on-surface-variant" /></span>
                     <span className="flex min-w-0 flex-col">
-                      <span className="font-semibold">{p.title}</span>
-                      <span className="truncate text-small text-on-surface-variant">{p.place || "Add in your profile"}</span>
+                      <span className="font-semibold">{p.id === "home" && p.title === "Home" ? t("home") : p.id === "work" && p.title === "Work" ? t("work") : p.title}</span>
+                      <span className="truncate text-small text-on-surface-variant">{p.place || t("addInProfile")}</span>
                     </span>
                   </button>
                 ))}
@@ -211,14 +217,14 @@ export default function JourneyPlanner() {
             {/* Departure scheduling */}
             <div className="flex flex-col gap-2">
               <div className="flex items-center justify-between text-small">
-                <span className="font-semibold text-slate">Departure Scheduling</span>
-                <span className="font-semibold text-primary">Peak Commute Hours</span>
+                <span className="font-semibold text-slate">{t("scheduling")}</span>
+                <span className="font-semibold text-primary">{t("peak")}</span>
               </div>
-              <div className="grid grid-cols-3 rounded-xl bg-container-low p-1" role="radiogroup" aria-label="Departure">
-                {([["now", "Depart Now"], ["at", "Depart At..."], ["by", "Arrive By..."]] as const).map(([d, l]) => (
+              <div className="grid grid-cols-3 rounded-xl bg-container-low p-1" role="radiogroup" aria-label={t("departureGroup")}>
+                {([["now", "departNow"], ["at", "departAt"], ["by", "arriveBy"]] as const).map(([d, l]) => (
                   <button key={d} type="button" role="radio" aria-checked={departure === d} onClick={() => chooseDeparture(d)}
                     className={`flex items-center justify-center gap-1 rounded-lg py-2 text-body ${departure === d ? "bg-container-lowest text-primary shadow-sm" : "text-on-surface-variant"}`}>
-                    {departure === d && <span className="h-1.5 w-1.5 rounded-full bg-primary" />} {l}
+                    {departure === d && <span className="h-1.5 w-1.5 rounded-full bg-primary" />} {t(l)}
                   </button>
                 ))}
               </div>
@@ -226,14 +232,14 @@ export default function JourneyPlanner() {
                 <label className="flex min-w-0 flex-1 items-center gap-2 rounded-xl bg-container-low px-3 py-2.5">
                   <Icon name="schedule" className="text-outline" />
                   {editTime ? (
-                    <input type="time" value={form.time} onChange={(e) => set("time", e.target.value)} aria-label="Time"
+                    <input type="time" value={form.time} onChange={(e) => set("time", e.target.value)} aria-label={t("time")}
                       className="bg-transparent text-body tabular-nums focus:outline-none" />
                   ) : (
-                    <span className="truncate text-body">{departure === "now" ? "Now (current demo time)" : `Today, ${form.time}`}</span>
+                    <span className="truncate text-body">{departure === "now" ? t("nowDemo") : t("todayAt", { time: form.time })}</span>
                   )}
                 </label>
                 <button type="button" onClick={() => setEditTime((v) => !v)} className="rounded-xl bg-container-low px-4 text-body hover:bg-container">
-                  {editTime ? "Done" : "Change"}
+                  {editTime ? t("done") : t("change")}
                 </button>
               </div>
             </div>
@@ -241,18 +247,18 @@ export default function JourneyPlanner() {
             {/* Modalities */}
             <div className="flex flex-col gap-2">
               <div className="flex items-center justify-between text-small">
-                <span className="font-semibold text-slate">Supported Modalities</span>
-                <span className="text-on-surface-variant">Tap to include/exclude</span>
+                <span className="font-semibold text-slate">{t("modalities")}</span>
+                <span className="text-on-surface-variant">{t("tapToggle")}</span>
               </div>
               <div className="grid grid-cols-6 gap-1.5">
                 {MODALITIES.map((m) => {
                   const on = modalityOn(m);
                   const primary = m.id === "overall" && on;
                   return (
-                    <button key={m.id} type="button" onClick={() => toggleModality(m)} aria-pressed={on} title={m.id === "walk" ? "Walking is always included" : undefined}
+                    <button key={m.id} type="button" onClick={() => toggleModality(m)} aria-pressed={on} title={m.id === "walk" ? t("walkAlways") : undefined}
                       className={`flex flex-col items-center gap-1 rounded-xl px-1 py-2.5 text-micro font-semibold transition ${
                         primary ? "bg-primary text-on-primary" : on ? "bg-primary-soft text-primary-ink" : "bg-container-low text-on-surface-variant hover:bg-container"}`}>
-                      <Icon name={m.icon} className="text-[22px]" /> {m.label}
+                      <Icon name={m.icon} className="text-[22px]" /> {"M" in m.label ? t(m.label.M) : tc(m.label.C)}
                     </button>
                   );
                 })}
@@ -261,7 +267,7 @@ export default function JourneyPlanner() {
 
             {/* Priority */}
             <div className="flex flex-col gap-2">
-              <span className="text-small font-semibold text-slate">Priority Strategy</span>
+              <span className="text-small font-semibold text-slate">{t("priority")}</span>
               <div className="grid grid-cols-3 gap-2">
                 {STRATEGIES.map((s) => {
                   const on = form.priority === s.value;
@@ -270,34 +276,34 @@ export default function JourneyPlanner() {
                       className={`flex flex-col items-start gap-1 rounded-xl p-3 text-left transition ${on ? "bg-primary-soft ring-1 ring-primary" : "bg-container-low hover:bg-container"}`}>
                       <span className="flex items-start gap-1.5">
                         <Icon name={on ? "radio_button_checked" : "radio_button_unchecked"} className={`text-[20px] ${on ? "text-primary" : "text-outline"}`} />
-                        <span className="text-body font-semibold leading-tight">{s.label}</span>
+                        <span className="text-body font-semibold leading-tight">{t(s.label)}</span>
                       </span>
-                      <span className="pl-6 text-caption leading-snug text-on-surface-variant">{s.hint}</span>
+                      <span className="pl-6 text-caption leading-snug text-on-surface-variant">{t(s.hint)}</span>
                     </button>
                   );
                 })}
               </div>
               <label className="flex cursor-pointer items-center justify-between rounded-xl bg-container-low px-3 py-3 text-body">
-                <span className="flex items-center gap-2"><Icon name="accessible" className="text-primary" /> Step-free / Accessible routes only</span>
+                <span className="flex items-center gap-2"><Icon name="accessible" className="text-primary" /> {t("stepFree")}</span>
                 <input type="checkbox" checked={form.stepFree} onChange={(e) => set("stepFree", e.target.checked)} className="h-5 w-5 accent-[var(--primary)]" />
               </label>
             </div>
 
             {/* Trip limits (PS: budget, walking, changes, deadline, luggage, crowds, language) */}
             <div className="flex flex-col gap-2">
-              <span className="text-small font-semibold text-slate">Trip Limits</span>
+              <span className="text-small font-semibold text-slate">{t("limits")}</span>
               <div className="grid grid-cols-3 gap-2">
-                <NumberBox label="Budget ₹" value={form.budget} onChange={(v) => set("budget", v)} placeholder="any" />
-                <NumberBox label="Max walk (min)" value={form.maxWalk} onChange={(v) => set("maxWalk", v)} placeholder="15" />
-                <NumberBox label="Max changes" value={form.maxTransfers} onChange={(v) => set("maxTransfers", v)} placeholder="2" />
+                <NumberBox label={t("budget")} value={form.budget} onChange={(v) => set("budget", v)} placeholder={t("any")} />
+                <NumberBox label={t("maxWalk")} value={form.maxWalk} onChange={(v) => set("maxWalk", v)} placeholder="15" />
+                <NumberBox label={t("maxChanges")} value={form.maxTransfers} onChange={(v) => set("maxTransfers", v)} placeholder="2" />
               </div>
               {departure === "by" && (
-                <Toggle icon="flag" label="Hard deadline — never suggest a route that arrives late" checked={form.hardDeadline} onChange={(v) => set("hardDeadline", v)} />
+                <Toggle icon="flag" label={t("hardDeadline")} checked={form.hardDeadline} onChange={(v) => set("hardDeadline", v)} />
               )}
-              <Toggle icon="luggage" label="Heavy luggage (slower walking, prefers lifts)" checked={form.heavyLuggage} onChange={(v) => set("heavyLuggage", v)} />
-              <Toggle icon="groups" label="Avoid crowded trains" checked={form.avoidCrowds} onChange={(v) => set("avoidCrowds", v)} />
+              <Toggle icon="luggage" label={t("luggage")} checked={form.heavyLuggage} onChange={(v) => set("heavyLuggage", v)} />
+              <Toggle icon="groups" label={t("crowds")} checked={form.avoidCrowds} onChange={(v) => set("avoidCrowds", v)} />
               <label className="flex items-center justify-between rounded-xl bg-container-low px-3 py-2.5 text-body">
-                <span className="flex items-center gap-2"><Icon name="translate" className="text-primary" /> Language for explanations</span>
+                <span className="flex items-center gap-2"><Icon name="translate" className="text-primary" /> {t("language")}</span>
                 <select value={form.language} onChange={(e) => set("language", e.target.value as FormState["language"])}
                   className="rounded-lg bg-container-lowest px-2 py-1 text-small focus:outline-none">
                   <option value="en">English</option><option value="hi">हिंदी</option><option value="mr">मराठी</option>
@@ -311,17 +317,17 @@ export default function JourneyPlanner() {
               </ul>
             )}
             <button type="submit" className="flex h-14 items-center justify-center gap-2 rounded-xl bg-primary text-base font-semibold text-on-primary shadow-sm transition hover:bg-primary-container active:scale-[0.98]">
-              <Icon name="travel_explore" /> Find Optimal Transit Routes <Icon name="arrow_forward" />
+              <Icon name="travel_explore" /> {t("find")} <Icon name="arrow_forward" />
             </button>
           </form>
 
           {/* Live advisories (Pakka Check) */}
           <section className="flex flex-col gap-3 rounded-2xl bg-container-lowest p-5 shadow-sm">
             <div className="flex items-center justify-between">
-              <h2 className="flex items-center gap-2 text-base font-semibold"><Icon name="campaign" className="text-tertiary" /> Live Transit Advisories</h2>
-              <span className="rounded-full bg-tertiary-fixed px-2.5 py-0.5 text-small font-semibold text-tertiary">ACTIVE ({problems.length})</span>
+              <h2 className="flex items-center gap-2 text-base font-semibold"><Icon name="campaign" className="text-tertiary" /> {t("advisories")}</h2>
+              <span className="rounded-full bg-tertiary-fixed px-2.5 py-0.5 text-small font-semibold text-tertiary">{t("active", { n: problems.length })}</span>
             </div>
-            {problems.length === 0 && <p className="text-small text-on-surface-variant">No confirmed or possible problems right now.</p>}
+            {problems.length === 0 && <p className="text-small text-on-surface-variant">{t("noProblems")}</p>}
             {problems.slice(0, 4).map((e) => (
               <Link key={e.event_id} href={`/events/${e.event_id}`} className="flex gap-3 rounded-xl bg-container-low p-3 hover:bg-container">
                 <Icon name={e.status === "confirmed" ? "error" : "info"} className={e.status === "confirmed" ? "text-error" : "text-tertiary"} />
@@ -332,8 +338,8 @@ export default function JourneyPlanner() {
               </Link>
             ))}
             <div className="flex items-center justify-between text-small">
-              <span className="text-on-surface-variant">Source: Pakka Check (commuters + news + official)</span>
-              <Link href="/report" className="font-semibold text-primary">View All Alerts</Link>
+              <span className="text-on-surface-variant">{t("source")}</span>
+              <Link href="/report" className="font-semibold text-primary">{t("viewAll")}</Link>
             </div>
           </section>
         </div>
@@ -345,11 +351,11 @@ export default function JourneyPlanner() {
               <div className="flex items-center gap-3">
                 <span className="grid h-10 w-10 place-items-center rounded-lg bg-primary-fixed text-on-primary-fixed"><Icon name="map" /></span>
                 <div>
-                  <h2 className="text-subtitle font-semibold">Regional Multimodal Canvas</h2>
-                  <p className="text-small text-on-surface-variant">Scale: 1:25,000 MMR Corridors</p>
+                  <h2 className="text-subtitle font-semibold">{t("canvas")}</h2>
+                  <p className="text-small text-on-surface-variant">{t("scale")}</p>
                 </div>
               </div>
-              <p className="text-small text-on-surface-variant">Rail &amp; metro lines in their colours, your start and end, and live problems (red = confirmed, amber = possible).</p>
+              <p className="text-small text-on-surface-variant">{t("mapNote")}</p>
             </div>
 
             <div className="relative h-[560px] bg-container-low">
@@ -358,12 +364,12 @@ export default function JourneyPlanner() {
 
             <div className="flex flex-col gap-3 bg-container-low/50 p-5">
               <div className="flex items-center justify-between">
-                <span className="text-small font-semibold uppercase tracking-wider text-on-surface-variant">Top Recommended Route Options</span>
-                {preview.cards.length > 0 && <span className="text-small text-on-surface-variant">Live preview · press Find to see all</span>}
+                <span className="text-small font-semibold uppercase tracking-wider text-on-surface-variant">{t("topRoutes")}</span>
+                {preview.cards.length > 0 && <span className="text-small text-on-surface-variant">{t("livePreview")}</span>}
               </div>
-              {preview.state === "idle" && <p className="text-small text-on-surface-variant">Pick a start and destination from the list to preview routes.</p>}
-              {preview.state === "loading" && <p className="text-small text-on-surface-variant">Checking routes…</p>}
-              {preview.state === "error" && <p className="text-small text-on-surface-variant">Can&apos;t reach the TravelBuddy server for a preview.</p>}
+              {preview.state === "idle" && <p className="text-small text-on-surface-variant">{t("previewIdle")}</p>}
+              {preview.state === "loading" && <p className="text-small text-on-surface-variant">{t("previewLoading")}</p>}
+              {preview.state === "error" && <p className="text-small text-on-surface-variant">{t("previewError")}</p>}
               {preview.cards.slice(0, 2).map((c) => <PreviewCard key={c.plan_id} card={c} />)}
             </div>
           </section>
@@ -373,17 +379,17 @@ export default function JourneyPlanner() {
             <Link href="/itinerary" className="flex items-center gap-4 rounded-2xl bg-container-lowest p-4 shadow-sm hover:shadow-md">
               <div className="grid h-20 w-20 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-tertiary-container to-tertiary text-on-primary"><Icon name="event_note" className="text-[36px]" /></div>
               <div className="min-w-0">
-                <p className="text-caption font-bold uppercase tracking-wide text-on-surface-variant">Several stops?</p>
-                <p className="text-subtitle font-bold">Day Itinerary</p>
-                <p className="line-clamp-2 text-small text-on-surface-variant">Best order for up to 5 places, inside opening hours.</p>
+                <p className="text-caption font-bold uppercase tracking-wide text-on-surface-variant">{t("severalStops")}</p>
+                <p className="text-subtitle font-bold">{t("dayItinerary")}</p>
+                <p className="line-clamp-2 text-small text-on-surface-variant">{t("dayDesc")}</p>
               </div>
             </Link>
             <Link href="/compare" className="flex items-center gap-4 rounded-2xl bg-container-lowest p-4 shadow-sm hover:shadow-md">
               <div className="grid h-20 w-20 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-primary to-primary-container text-on-primary"><Icon name="compare_arrows" className="text-[36px]" /></div>
               <div className="min-w-0">
-                <p className="text-caption font-bold uppercase tracking-wide text-on-surface-variant">Why TravelBuddy?</p>
-                <p className="text-subtitle font-bold">Normal app vs us</p>
-                <p className="line-clamp-2 text-small text-on-surface-variant">The same evening, travelled twice, scored on what really happened.</p>
+                <p className="text-caption font-bold uppercase tracking-wide text-on-surface-variant">{t("why")}</p>
+                <p className="text-subtitle font-bold">{t("compare")}</p>
+                <p className="line-clamp-2 text-small text-on-surface-variant">{t("compareDesc")}</p>
               </div>
             </Link>
           </div>
@@ -414,6 +420,8 @@ function usePreview(form: FormState): { state: "idle" | "loading" | "error" | "r
 }
 
 function PreviewCard({ card }: { card: RouteCard }) {
+  const t = useT(M);
+  const tc = useT(COMMON);
   const parts: string[] = [];
   for (const l of card.legs) {
     const n = l.line_id ? lineShortName(l.line_id) : MODE_LABEL[l.mode];
@@ -424,20 +432,20 @@ function PreviewCard({ card }: { card: RouteCard }) {
     <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-4 rounded-2xl bg-container-lowest p-4 shadow-sm">
       <span className={`flex h-14 w-14 flex-col items-center justify-center rounded-xl ${card.recommended ? "bg-primary text-on-primary" : "bg-container-high text-on-surface"}`}>
         <span className="text-xl font-bold leading-none">{card.duration_min}</span>
-        <span className="text-micro font-semibold">MIN</span>
+        <span className="text-micro font-semibold">{t("minUpper")}</span>
       </span>
       <div className="min-w-0">
         <span className="flex flex-wrap items-center gap-1.5">
           <span className={`rounded-md px-2 py-0.5 text-small font-semibold ${card.recommended ? "bg-primary-fixed text-on-primary-fixed" : "bg-secondary-container text-on-secondary-container"}`}>
-            {PLAN_LABEL[card.label]}{card.recommended ? " · recommended" : ""}
+            {PLAN_LABEL[card.label]}{card.recommended ? ` · ${t("recommended")}` : ""}
           </span>
           <span className={`rounded-md px-2 py-0.5 text-caption font-bold ${card.reliability_colour === "green" ? "bg-primary-soft text-primary-ink" : card.reliability_colour === "yellow" ? "bg-amber-soft text-amber-ink" : "bg-error-container text-on-error-container"}`}>
-            {pct(card.reliability)} reliable
+            {t("reliable", { pct: pct(card.reliability) })}
           </span>
-          {risky && <span className="text-caption font-bold text-error">⚠ live problem</span>}
+          {risky && <span className="text-caption font-bold text-error">⚠ {t("liveProblem")}</span>}
         </span>
-        <p className="mt-1 truncate text-subtitle font-semibold">{parts.join(" → ") || "Walk"} <span className="font-medium text-primary">· ₹{card.cost_inr}</span></p>
-        <p className="text-small text-on-surface-variant">{card.legs[0].depart} → {card.legs[card.legs.length - 1].arrive} · {card.transfers} change{card.transfers === 1 ? "" : "s"} · {card.walk_min} min walk</p>
+        <p className="mt-1 truncate text-subtitle font-semibold">{parts.join(" → ") || tc("mode.walk")} <span className="font-medium text-primary">· ₹{card.cost_inr}</span></p>
+        <p className="text-small text-on-surface-variant">{card.legs[0].depart} → {card.legs[card.legs.length - 1].arrive} · {t(card.transfers === 1 ? "change1" : "changes", { n: card.transfers })} · {t("walkMin", { n: card.walk_min })}</p>
       </div>
     </div>
   );
@@ -465,6 +473,7 @@ function Toggle({ icon, label, checked, onChange }: { icon: string; label: strin
 function PlaceInput({ listId, value, onChange, placeholder, label, dot, pin = false }: {
   listId: string; value: string; onChange: (v: string) => void; placeholder: string; label: string; dot?: string; pin?: boolean;
 }) {
+  const t = useT(M);
   const known = value === "" || Boolean(findPlace(value));
   return (
     <div className="flex flex-col gap-1">
@@ -477,12 +486,12 @@ function PlaceInput({ listId, value, onChange, placeholder, label, dot, pin = fa
         <input list={listId} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} aria-label={label} autoComplete="off"
           className="min-w-0 flex-1 bg-transparent text-subtitle placeholder:text-outline focus:outline-none" />
         {value && (
-          <button type="button" onClick={() => onChange("")} aria-label={`Clear ${label}`} className="text-outline hover:text-on-surface">
+          <button type="button" onClick={() => onChange("")} aria-label={t("clear", { label })} className="text-outline hover:text-on-surface">
             <Icon name="close" />
           </button>
         )}
       </div>
-      {!known && <span className="text-caption text-error">Not in the covered area — pick a suggestion from the list</span>}
+      {!known && <span className="text-caption text-error">{t("notCovered")}</span>}
     </div>
   );
 }

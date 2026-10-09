@@ -1,5 +1,6 @@
 """Scoring and card generation for route candidates. SPEC.md §5.5."""
 from __future__ import annotations
+from app.i18n import tr
 
 from typing import Any
 from pydantic import BaseModel
@@ -91,6 +92,7 @@ def calculate_metrics_and_scores(
 def build_route_cards(
     candidates: list[ScoredCandidate],
     priority: Priority = "balanced",
+    language: str = "en",
 ) -> list[RouteCard]:
     """Select up to 3 distinct route cards (Fastest, Optimal, Cheapest) and score them."""
     if not candidates:
@@ -140,7 +142,8 @@ def build_route_cards(
         rel_colour = "green" if cand.reliability >= 0.90 else "yellow" if cand.reliability >= 0.70 else "red"
         rel_pct = round(cand.reliability * 100)
 
-        reason = f"{label.capitalize()}: {cand.duration_min} min, ₹{cand.cost_inr}, {cand.transfers} transfers, reliability {rel_pct}%."
+        reason = tr(language, "card.reason", label=tr(language, f"label.{label}"), min=cand.duration_min,
+                    cost=cand.cost_inr, transfers=cand.transfers, rel=rel_pct)
         facts: dict[str, Any] = {
             "duration_min": cand.duration_min,
             "cost_inr": cand.cost_inr,

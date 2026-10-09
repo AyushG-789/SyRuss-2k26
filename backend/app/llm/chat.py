@@ -197,9 +197,9 @@ def detect(message: str) -> tuple[str, dict] | None:
     return None
 
 
-def _fallback(message: str) -> tuple[str, list[tuple[str, dict]]]:
+def _fallback(message: str, lang: str | None = None) -> tuple[str, list[tuple[str, dict]]]:
     """No Gemini: answer the recognised questions straight from live data, in the asker's language."""
-    lang = indic.language(message)
+    lang = lang or indic.language(message)
     hit = detect(message)
     if hit:
         name, args = hit
@@ -209,9 +209,19 @@ def _fallback(message: str) -> tuple[str, list[tuple[str, dict]]]:
 
 
 # ---- Main entry ---------------------------------------------------------------------------------
-def chat(messages: list[dict], journey_id: str | None = None) -> dict:
-    """messages: [{role: 'user'|'assistant', text}], newest last. Returns the reply + UI extras."""
+_REPLY_IN = {"hi": "Hindi", "mr": "Marathi"}
+
+
+def chat(messages: list[dict], journey_id: str | None = None, app_language: str | None = None) -> dict:
+    """messages: [{role: 'user'|'assistant', text}], newest last. Returns the reply + UI extras.
+    app_language: the language the app is shown in ('hi' / 'mr' → reply in it, in Devanagari)."""
     last = next((m["text"] for m in reversed(messages) if m.get("role") == "user"), "")
+    pinned = app_language if app_language in _REPLY_IN else None
+    reply_lang = pinned or indic.language(last)
+    if pinned and messages and messages[-1].get("role") == "user":
+        # Tell Gemini which language to answer in (the asker may mix English words into Hindi/Marathi).
+        hint = f"\n\n(Reply in {_REPLY_IN[pinned]}, in Devanagari script. Keep station and line names as they are.)"
+        messages = [*messages[:-1], {**messages[-1], "text": messages[-1]["text"] + hint}]
     calls: list[tuple[str, dict]] = []
     source = "gemini"
     note = None
@@ -238,14 +248,14 @@ def chat(messages: list[dict], journey_id: str | None = None) -> dict:
             calls += more
             allowed |= allowed_numbers(*[_public(r) for _, r in more])
             if reply2 is None or unsupported(reply2, allowed):
-                reply, source, note = _template(calls, indic.language(last)), "template", f"number check failed: {bad}"
+                reply, source, note = _template(calls, reply_lang), "template", f"number check failed: {bad}"
             else:
                 reply = reply2
     except _SlowAfterTools as slow:
         calls = slow.calls
-        reply, source, note = _template(calls, indic.language(last)), "template", "Gemini too slow; answered from live data"
+        reply, source, note = _template(calls, reply_lang), "template", "Gemini too slow; answered from live data"
     except gemini.GeminiError as exc:
-        reply, calls = _fallback(last)
+        reply, calls = _fallback(last, pinned)
         source, note = "fallback", str(exc)
 
     trip = next((r for name, r in reversed(calls) if name == "plan_trip" and r.get("ok")), None)
