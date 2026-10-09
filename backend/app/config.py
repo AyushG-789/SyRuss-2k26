@@ -5,7 +5,24 @@ from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
+
+def _find_repo_root() -> Path:
+    """Find the repository root locally and in Vercel deployments."""
+    candidates = [
+        Path(__file__).resolve().parents[2],
+        Path(__file__).resolve().parents[1],
+        Path.cwd(),
+    ]
+    for candidate in candidates:
+        if (candidate / "data" / "network" / "lines.yaml").is_file():
+            return candidate
+    # Preserve the existing default so a missing data directory
+    # produces a clear file-not-found error.
+    return Path(__file__).resolve().parents[2]
+
+
+REPO_ROOT = _find_repo_root()
+
 
 
 class Settings(BaseSettings):
