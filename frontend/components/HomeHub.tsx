@@ -110,7 +110,7 @@ function FrequentTrips() {
         </div>
         <span className="text-small text-on-surface-variant">{t("frequentHint")}</span>
       </div>
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <div className="anim-stagger grid grid-cols-1 gap-4 md:grid-cols-3">
         {frequentTrips.map((trip) => (
           <Link key={trip.id} href={quickTripHref(trip.from, trip.to)}
             className="group flex flex-col justify-between rounded-xl bg-container-lowest p-4 shadow-sm transition-all hover:shadow-md">
@@ -168,7 +168,7 @@ function TransportModes() {
           {t("liveReports")} <Icon name="open_in_new" className="text-[16px]" />
         </Link>
       </div>
-      <div className="grid grid-cols-2 gap-2 md:grid-cols-5">
+      <div className="anim-stagger grid grid-cols-2 gap-2 md:grid-cols-5">
         {modes.map((m) => {
           const inner = (
             <>
@@ -315,7 +315,7 @@ function DemoTravellers() {
         </div>
         <Link href="/compare" className="text-xs font-semibold text-primary hover:underline">{t("compare")}</Link>
       </div>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="anim-stagger grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
         {travellers.map((tr) => {
           const text = storyText(lang, tr.traveller_id, { name: tr.name, story: tr.story });
           return (

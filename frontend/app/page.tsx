@@ -1,5 +1,6 @@
-import HomeHub from "@/components/HomeHub";
+import Landing from "@/components/Landing";
 
-export default function Home() {
-  return <HomeHub />;
+// The first screen people see. "Get started" leads into the app (/home).
+export default function Page() {
+  return <Landing />;
 }

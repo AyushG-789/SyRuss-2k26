@@ -22,7 +22,9 @@ import { EMPTY_FORM, type FormState, NOW, travellerFromForm, validateForm } from
 import { tripHref } from "@/lib/tripUrl";
 import type { Mode, PlanResponse, RouteCard } from "@/lib/types";
 import Icon from "./Icon";
+import Loader from "./Loader";
 import MapView from "./MapView";
+import { DEFAULT_LAYERS, LAYER_COLORS, type NetworkLayer } from "@/lib/mapLayers";
 
 type Departure = "now" | "at" | "by";
 
@@ -60,6 +62,7 @@ export default function JourneyPlanner() {
     modes: ["local", "metro", "bus", "auto", "taxi", "cab"],
   }));
   const [via, setVia] = useState<string | null>(null);
+  const [layers, setLayers] = useState<Record<NetworkLayer, boolean>>(DEFAULT_LAYERS);
   const [departure, setDeparture] = useState<Departure>("now");
   const [editTime, setEditTime] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
@@ -134,25 +137,26 @@ export default function JourneyPlanner() {
         </div>
       </section>
 
-      <div className="grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-[minmax(0,27rem)_minmax(0,1fr)]">
-        {/* ================================================================ left column */}
-        <div className="flex flex-col gap-5">
-          <form onSubmit={submit} noValidate className="flex flex-col gap-5 rounded-2xl bg-container-lowest p-5 shadow-sm">
-            <datalist id={listId}>{PLACE_OPTIONS.map((p) => <option key={p.label} value={p.label} />)}</datalist>
+      {/* ---- Trip form: three columns on a wide (landscape) screen, one column on a phone ---- */}
+      <form onSubmit={submit} noValidate className="flex flex-col gap-5 rounded-2xl bg-container-lowest p-5 shadow-sm lg:p-6">
+        <datalist id={listId}>{PLACE_OPTIONS.map((p) => <option key={p.label} value={p.label} />)}</datalist>
+        <div className="flex items-start justify-between">
+          <div>
+            <p className="text-micro font-bold uppercase tracking-[0.12em] text-primary">{t("eyebrow")}</p>
+            <h1 className="text-2xl font-semibold">{t("title")}</h1>
+          </div>
+          <div className="flex gap-2">
+            <button type="button" onClick={() => setForm((f) => ({ ...f, from: f.to, to: f.from }))} aria-label={t("swap")}
+              className="grid h-11 w-11 place-items-center rounded-xl bg-container-low hover:bg-container"><Icon name="swap_vert" /></button>
+            <button type="button" onClick={() => { setForm({ ...EMPTY_FORM, priority: "fastest" }); setVia(null); setErrors([]); }} aria-label={t("reset")}
+              className="grid h-11 w-11 place-items-center rounded-xl bg-container-low hover:bg-container"><Icon name="refresh" /></button>
+          </div>
+        </div>
 
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-micro font-bold uppercase tracking-[0.12em] text-primary">{t("eyebrow")}</p>
-                <h1 className="text-2xl font-semibold">{t("title")}</h1>
-              </div>
-              <div className="flex gap-2">
-                <button type="button" onClick={() => setForm((f) => ({ ...f, from: f.to, to: f.from }))} aria-label={t("swap")}
-                  className="grid h-11 w-11 place-items-center rounded-xl bg-container-low hover:bg-container"><Icon name="swap_vert" /></button>
-                <button type="button" onClick={() => { setForm({ ...EMPTY_FORM, priority: "fastest" }); setVia(null); setErrors([]); }} aria-label={t("reset")}
-                  className="grid h-11 w-11 place-items-center rounded-xl bg-container-low hover:bg-container"><Icon name="refresh" /></button>
-              </div>
-            </div>
 
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3 xl:gap-8">
+          {/* 1 · Where */}
+          <div className="flex flex-col gap-5">
             {/* Departure / via / destination */}
             <div className="flex flex-col gap-2">
               <div className="flex items-center justify-between text-small">
@@ -189,6 +193,7 @@ export default function JourneyPlanner() {
                 placeholder={t("toPlaceholder")} label={t("toLabel")} />
             </div>
 
+
             {/* Shortcuts */}
             <div className="flex flex-col gap-2">
               <span className="text-small text-on-surface-variant">{t("shortcuts")}</span>
@@ -214,6 +219,11 @@ export default function JourneyPlanner() {
               </div>
             </div>
 
+
+          </div>
+
+          {/* 2 · When and how */}
+          <div className="flex flex-col gap-5 md:border-l md:border-hairline-soft md:pl-6 xl:pl-8">
             {/* Departure scheduling */}
             <div className="flex flex-col gap-2">
               <div className="flex items-center justify-between text-small">
@@ -244,41 +254,43 @@ export default function JourneyPlanner() {
               </div>
             </div>
 
+
             {/* Modalities */}
             <div className="flex flex-col gap-2">
               <div className="flex items-center justify-between text-small">
                 <span className="font-semibold text-slate">{t("modalities")}</span>
                 <span className="text-on-surface-variant">{t("tapToggle")}</span>
               </div>
-              <div className="grid grid-cols-6 gap-1.5">
+              <div className="grid grid-cols-3 gap-2">
                 {MODALITIES.map((m) => {
                   const on = modalityOn(m);
                   const primary = m.id === "overall" && on;
                   return (
                     <button key={m.id} type="button" onClick={() => toggleModality(m)} aria-pressed={on} title={m.id === "walk" ? t("walkAlways") : undefined}
-                      className={`flex flex-col items-center gap-1 rounded-xl px-1 py-2.5 text-micro font-semibold transition ${
+                      className={`flex items-center justify-center gap-1.5 rounded-xl px-2 py-2.5 text-small font-semibold transition ${
                         primary ? "bg-primary text-on-primary" : on ? "bg-primary-soft text-primary-ink" : "bg-container-low text-on-surface-variant hover:bg-container"}`}>
-                      <Icon name={m.icon} className="text-[22px]" /> {"M" in m.label ? t(m.label.M) : tc(m.label.C)}
+                      <Icon name={m.icon} className="text-[20px]" /> {"M" in m.label ? t(m.label.M) : tc(m.label.C)}
                     </button>
                   );
                 })}
               </div>
             </div>
 
+
             {/* Priority */}
             <div className="flex flex-col gap-2">
               <span className="text-small font-semibold text-slate">{t("priority")}</span>
-              <div className="grid grid-cols-3 gap-2">
+              <div role="radiogroup" aria-label={t("priority")} className="flex flex-col gap-2">
                 {STRATEGIES.map((s) => {
                   const on = form.priority === s.value;
                   return (
                     <button key={s.value} type="button" role="radio" aria-checked={on} onClick={() => set("priority", s.value)}
-                      className={`flex flex-col items-start gap-1 rounded-xl p-3 text-left transition ${on ? "bg-primary-soft ring-1 ring-primary" : "bg-container-low hover:bg-container"}`}>
-                      <span className="flex items-start gap-1.5">
-                        <Icon name={on ? "radio_button_checked" : "radio_button_unchecked"} className={`text-[20px] ${on ? "text-primary" : "text-outline"}`} />
-                        <span className="text-body font-semibold leading-tight">{t(s.label)}</span>
+                      className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-left transition ${on ? "bg-primary-soft ring-1 ring-primary" : "bg-container-low hover:bg-container"}`}>
+                      <Icon name={on ? "radio_button_checked" : "radio_button_unchecked"} className={`shrink-0 text-[20px] ${on ? "text-primary" : "text-outline"}`} />
+                      <span className="min-w-0">
+                        <span className="block text-body font-semibold leading-tight">{t(s.label)}</span>
+                        <span className="block text-caption leading-snug text-on-surface-variant">{t(s.hint)}</span>
                       </span>
-                      <span className="pl-6 text-caption leading-snug text-on-surface-variant">{t(s.hint)}</span>
                     </button>
                   );
                 })}
@@ -289,6 +301,11 @@ export default function JourneyPlanner() {
               </label>
             </div>
 
+
+          </div>
+
+          {/* 3 · Limits + search */}
+          <div className="flex flex-col gap-5 md:col-span-2 xl:col-span-1 xl:border-l xl:border-hairline-soft xl:pl-8">
             {/* Trip limits (PS: budget, walking, changes, deadline, luggage, crowds, language) */}
             <div className="flex flex-col gap-2">
               <span className="text-small font-semibold text-slate">{t("limits")}</span>
@@ -311,89 +328,107 @@ export default function JourneyPlanner() {
               </label>
             </div>
 
-            {errors.length > 0 && (
-              <ul role="alert" className="rounded-xl bg-error-container p-3 text-sm text-on-error-container">
-                {errors.map((e) => <li key={e}>{e}</li>)}
-              </ul>
-            )}
-            <button type="submit" className="flex h-14 items-center justify-center gap-2 rounded-xl bg-primary text-base font-semibold text-on-primary shadow-sm transition hover:bg-primary-container active:scale-[0.98]">
-              <Icon name="travel_explore" /> {t("find")} <Icon name="arrow_forward" />
-            </button>
-          </form>
 
-          {/* Live advisories (Pakka Check) */}
-          <section className="flex flex-col gap-3 rounded-2xl bg-container-lowest p-5 shadow-sm">
-            <div className="flex items-center justify-between">
-              <h2 className="flex items-center gap-2 text-base font-semibold"><Icon name="campaign" className="text-tertiary" /> {t("advisories")}</h2>
-              <span className="rounded-full bg-tertiary-fixed px-2.5 py-0.5 text-small font-semibold text-tertiary">{t("active", { n: problems.length })}</span>
-            </div>
-            {problems.length === 0 && <p className="text-small text-on-surface-variant">{t("noProblems")}</p>}
-            {problems.slice(0, 4).map((e) => (
-              <Link key={e.event_id} href={`/events/${e.event_id}`} className="flex gap-3 rounded-xl bg-container-low p-3 hover:bg-container">
-                <Icon name={e.status === "confirmed" ? "error" : "info"} className={e.status === "confirmed" ? "text-error" : "text-tertiary"} />
-                <div className="min-w-0">
-                  <p className="text-body font-medium">{eventTitle(e)}</p>
-                  <p className="text-small text-on-surface-variant">{STATUS_STYLE[e.status].label} {pct(e.confidence)} · {evidenceSummary(e)}</p>
-                </div>
-              </Link>
-            ))}
-            <div className="flex items-center justify-between text-small">
-              <span className="text-on-surface-variant">{t("source")}</span>
-              <Link href="/report" className="font-semibold text-primary">{t("viewAll")}</Link>
-            </div>
-          </section>
-        </div>
+            <div className="mt-auto flex flex-col gap-3">
+              {errors.length > 0 && (
+                <ul role="alert" className="rounded-xl bg-error-container p-3 text-sm text-on-error-container">
+                  {errors.map((e) => <li key={e}>{e}</li>)}
+                </ul>
+              )}
+              <button type="submit" className="flex h-14 items-center justify-center gap-2 rounded-xl bg-primary text-base font-semibold text-on-primary shadow-sm transition hover:bg-primary-container active:scale-[0.98]">
+                <Icon name="travel_explore" /> {t("find")} <Icon name="arrow_forward" />
+              </button>
 
-        {/* ================================================================ right column */}
-        <div className="flex flex-col gap-5">
-          <section className="overflow-hidden rounded-2xl bg-container-lowest shadow-sm">
-            <div className="flex flex-col gap-3 p-5">
-              <div className="flex items-center gap-3">
-                <span className="grid h-10 w-10 place-items-center rounded-lg bg-primary-fixed text-on-primary-fixed"><Icon name="map" /></span>
-                <div>
-                  <h2 className="text-subtitle font-semibold">{t("canvas")}</h2>
-                  <p className="text-small text-on-surface-variant">{t("scale")}</p>
-                </div>
-              </div>
-              <p className="text-small text-on-surface-variant">{t("mapNote")}</p>
             </div>
-
-            <div className="relative h-[560px] bg-container-low">
-              <MapView showNetwork origin={origin} destination={destination} events={problems} card={preview.cards[0] ?? null} />
-            </div>
-
-            <div className="flex flex-col gap-3 bg-container-low/50 p-5">
-              <div className="flex items-center justify-between">
-                <span className="text-small font-semibold uppercase tracking-wider text-on-surface-variant">{t("topRoutes")}</span>
-                {preview.cards.length > 0 && <span className="text-small text-on-surface-variant">{t("livePreview")}</span>}
-              </div>
-              {preview.state === "idle" && <p className="text-small text-on-surface-variant">{t("previewIdle")}</p>}
-              {preview.state === "loading" && <p className="text-small text-on-surface-variant">{t("previewLoading")}</p>}
-              {preview.state === "error" && <p className="text-small text-on-surface-variant">{t("previewError")}</p>}
-              {preview.cards.slice(0, 2).map((c) => <PreviewCard key={c.plan_id} card={c} />)}
-            </div>
-          </section>
-
-          {/* More ways to plan */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Link href="/itinerary" className="flex items-center gap-4 rounded-2xl bg-container-lowest p-4 shadow-sm hover:shadow-md">
-              <div className="grid h-20 w-20 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-tertiary-container to-tertiary text-on-primary"><Icon name="event_note" className="text-[36px]" /></div>
-              <div className="min-w-0">
-                <p className="text-caption font-bold uppercase tracking-wide text-on-surface-variant">{t("severalStops")}</p>
-                <p className="text-subtitle font-bold">{t("dayItinerary")}</p>
-                <p className="line-clamp-2 text-small text-on-surface-variant">{t("dayDesc")}</p>
-              </div>
-            </Link>
-            <Link href="/compare" className="flex items-center gap-4 rounded-2xl bg-container-lowest p-4 shadow-sm hover:shadow-md">
-              <div className="grid h-20 w-20 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-primary to-primary-container text-on-primary"><Icon name="compare_arrows" className="text-[36px]" /></div>
-              <div className="min-w-0">
-                <p className="text-caption font-bold uppercase tracking-wide text-on-surface-variant">{t("why")}</p>
-                <p className="text-subtitle font-bold">{t("compare")}</p>
-                <p className="line-clamp-2 text-small text-on-surface-variant">{t("compareDesc")}</p>
-              </div>
-            </Link>
           </div>
         </div>
+      </form>
+
+      {/* ---- What the planner sees right now: top routes + live alerts ---- */}
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)]">
+        <section className="flex flex-col gap-3 rounded-2xl bg-container-lowest p-5 shadow-sm">
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <span className="text-small font-semibold uppercase tracking-wider text-on-surface-variant">{t("topRoutes")}</span>
+              {preview.cards.length > 0 && <span className="text-small text-on-surface-variant">{t("livePreview")}</span>}
+            </div>
+            {preview.state === "idle" && <p className="text-small text-on-surface-variant">{t("previewIdle")}</p>}
+            {preview.state === "loading" && <Loader className="text-small" label={t("previewLoading")} />}
+            {preview.state === "error" && <p className="text-small text-on-surface-variant">{t("previewError")}</p>}
+            {preview.cards.length > 0 && (
+              <div className="anim-stagger flex flex-col gap-3">
+                {preview.cards.slice(0, 2).map((c) => <PreviewCard key={c.plan_id} card={c} />)}
+              </div>
+            )}
+          </div>
+
+        </section>
+        {/* Live advisories (Pakka Check) */}
+        <section className="flex flex-col gap-3 rounded-2xl bg-container-lowest p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <h2 className="flex items-center gap-2 text-base font-semibold"><Icon name="campaign" className="text-tertiary" /> {t("advisories")}</h2>
+            <span className="rounded-full bg-tertiary-fixed px-2.5 py-0.5 text-small font-semibold text-tertiary">{t("active", { n: problems.length })}</span>
+          </div>
+          {problems.length === 0 && <p className="text-small text-on-surface-variant">{t("noProblems")}</p>}
+          {problems.slice(0, 4).map((e) => (
+            <Link key={e.event_id} href={`/events/${e.event_id}`} className="flex gap-3 rounded-xl bg-container-low p-3 hover:bg-container">
+              <Icon name={e.status === "confirmed" ? "error" : "info"} className={e.status === "confirmed" ? "text-error" : "text-tertiary"} />
+              <div className="min-w-0">
+                <p className="text-body font-medium">{eventTitle(e)}</p>
+                <p className="text-small text-on-surface-variant">{STATUS_STYLE[e.status].label} {pct(e.confidence)} · {evidenceSummary(e)}</p>
+              </div>
+            </Link>
+          ))}
+          <div className="flex items-center justify-between text-small">
+            <span className="text-on-surface-variant">{t("source")}</span>
+            <Link href="/report" className="font-semibold text-primary">{t("viewAll")}</Link>
+          </div>
+        </section>
+
+      </div>
+
+      {/* ---- Live map (bottom), with buttons to show each part of the network ---- */}
+      <section className="overflow-hidden rounded-2xl bg-container-lowest shadow-sm">
+        <div className="flex flex-col gap-3 p-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-3">
+              <span className="grid h-10 w-10 place-items-center rounded-lg bg-primary-fixed text-on-primary-fixed"><Icon name="map" /></span>
+              <div>
+                <h2 className="text-subtitle font-semibold">{t("canvas")}</h2>
+                <p className="text-small text-on-surface-variant">{t("scale")}</p>
+              </div>
+            </div>
+            <p className="text-small text-on-surface-variant">{t("mapNote")}</p>
+          </div>
+
+
+          <MapLayers layers={layers} onToggle={(k) => setLayers((l) => ({ ...l, [k]: !l[k] }))} />
+        </div>
+        <div className="relative h-[460px] lg:h-[560px] bg-container-low">
+          <MapView layers={layers} origin={origin} destination={destination} events={problems} card={preview.cards[0] ?? null} />
+        </div>
+
+
+      </section>
+
+      {/* More ways to plan */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Link href="/itinerary" className="flex items-center gap-4 rounded-2xl bg-container-lowest p-4 shadow-sm hover:shadow-md">
+          <div className="grid h-20 w-20 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-tertiary-container to-tertiary text-on-primary"><Icon name="event_note" className="text-[36px]" /></div>
+          <div className="min-w-0">
+            <p className="text-caption font-bold uppercase tracking-wide text-on-surface-variant">{t("severalStops")}</p>
+            <p className="text-subtitle font-bold">{t("dayItinerary")}</p>
+            <p className="line-clamp-2 text-small text-on-surface-variant">{t("dayDesc")}</p>
+          </div>
+        </Link>
+        <Link href="/compare" className="flex items-center gap-4 rounded-2xl bg-container-lowest p-4 shadow-sm hover:shadow-md">
+          <div className="grid h-20 w-20 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-primary to-primary-container text-on-primary"><Icon name="compare_arrows" className="text-[36px]" /></div>
+          <div className="min-w-0">
+            <p className="text-caption font-bold uppercase tracking-wide text-on-surface-variant">{t("why")}</p>
+            <p className="text-subtitle font-bold">{t("compare")}</p>
+            <p className="line-clamp-2 text-small text-on-surface-variant">{t("compareDesc")}</p>
+          </div>
+        </Link>
       </div>
     </main>
   );
@@ -467,6 +502,44 @@ function Toggle({ icon, label, checked, onChange }: { icon: string; label: strin
       <span className="flex items-center gap-2"><Icon name={icon} className="text-primary" /> {label}</span>
       <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="h-5 w-5 accent-[var(--primary)]" />
     </label>
+  );
+}
+
+const LAYER_BUTTONS: { id: NetworkLayer; icon: string; label: "layerMetro" | "layerLocal" | "layerRoad" | "layerWalk" }[] = [
+  { id: "metro", icon: "subway", label: "layerMetro" },
+  { id: "local", icon: "train", label: "layerLocal" },
+  { id: "bus", icon: "directions_bus", label: "layerRoad" },
+  { id: "walk", icon: "directions_walk", label: "layerWalk" },
+];
+
+/** Buttons that show / hide each part of the network on the map, in the lines' own colours. */
+function MapLayers({ layers, onToggle }: { layers: Record<NetworkLayer, boolean>; onToggle: (k: NetworkLayer) => void }) {
+  const t = useT(M);
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-caption font-semibold text-on-surface-variant">{t("layersTitle")}</span>
+      <div role="group" aria-label={t("layersTitle")} className="flex flex-wrap gap-2">
+        {LAYER_BUTTONS.map((b) => {
+          const on = layers[b.id];
+          const colors = LAYER_COLORS[b.id];
+          return (
+            <button key={b.id} type="button" aria-pressed={on} onClick={() => onToggle(b.id)}
+              className={`flex h-10 items-center gap-2 rounded-xl px-3 text-small font-semibold transition ${on ? "bg-container-lowest text-on-surface shadow-sm ring-2 ring-primary" : "bg-container-low text-on-surface-variant ring-1 ring-hairline hover:bg-container"}`}>
+              <span className="grid h-7 w-7 place-items-center rounded-lg text-white" style={{ background: on ? colors[0] : "var(--outline)" }}>
+                <Icon name={b.icon} className="text-[18px]" />
+              </span>
+              {t(b.label)}
+              <span className="flex gap-0.5" aria-hidden>
+                {colors.slice(0, 5).map((c) => (b.id === "walk" || b.id === "bus"
+                  ? <span key={c} className="w-4 border-t-2 border-dashed" style={{ borderColor: c, opacity: on ? 1 : 0.4 }} />
+                  : <span key={c} className="h-1.5 w-3 rounded-full" style={{ background: c, opacity: on ? 1 : 0.4 }} />))}
+              </span>
+              <Icon name={on ? "visibility" : "visibility_off"} className="text-[16px] opacity-70" />
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 

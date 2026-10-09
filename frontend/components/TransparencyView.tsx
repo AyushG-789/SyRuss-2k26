@@ -12,6 +12,7 @@ import { useT } from "@/lib/i18n";
 import { COMMON } from "@/lib/i18n/common";
 import { M } from "@/lib/i18n/messages/TransparencyView";
 import Icon from "./Icon";
+import Loader from "./Loader";
 
 const ROUTE_KEYS = ["baseline", "aware", "replan"] as const;
 type RouteKey = (typeof ROUTE_KEYS)[number];
@@ -35,7 +36,7 @@ export default function TransparencyView() {
   }, []);
 
   if (error && !t) return <main className="px-6 py-10 text-sm text-on-surface-variant">{tr("offline")}</main>;
-  if (!t) return <main className="px-6 py-10 text-sm text-on-surface-variant">{tc("loading")}</main>;
+  if (!t) return <main className="px-6 py-10 text-sm"><Loader label={tc("loading")} /></main>;
 
   const p = t.policy as Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
   const thresholds = p.thresholds ?? { confirmed: p.confirmed_at, possible: p.possible_at };
@@ -58,7 +59,7 @@ export default function TransparencyView() {
           <div key={s.id} className="flex flex-col gap-2 rounded-2xl bg-container-lowest p-4 shadow-sm">
             <div className="flex items-center justify-between">
               <span className="flex items-center gap-2 font-semibold"><Icon name={SOURCE_ICON[s.id] ?? "info"} className="text-primary" /> {s.name}</span>
-              <span className="rounded-md bg-primary-fixed px-2 py-0.5 font-mono text-caption font-bold text-on-primary-fixed">× {s.weight}</span>
+              <span className="rounded-md bg-primary-fixed px-2 py-0.5 font-mono text-caption font-bold text-on-primary-fixed">{tr("sourceWeight", { w: s.weight })}</span>
             </div>
             <p className="text-small text-on-surface-variant">{s.how}</p>
             <p className="mt-auto flex flex-wrap items-center gap-1 text-caption">
@@ -75,9 +76,9 @@ export default function TransparencyView() {
           <h2 className="flex items-center gap-2 font-semibold"><Icon name="rule" className="text-primary" /> {tr("rules")}</h2>
           <p className="rounded-xl bg-container-low p-3 font-mono text-caption">{t.formula}</p>
           <div className="grid grid-cols-3 gap-2 text-center">
-            <Threshold label={tc("status.ignored")} value={`< ${Math.round((thresholds.possible ?? 0.4) * 100)}%`} cls="bg-container-high" />
+            <Threshold label={tc("status.ignored")} value={tr("under", { n: Math.round((thresholds.possible ?? 0.4) * 100) })} cls="bg-container-high" />
             <Threshold label={tc("status.possible")} value={`${Math.round((thresholds.possible ?? 0.4) * 100)}–${Math.round((thresholds.confirmed ?? 0.7) * 100) - 1}%`} cls="bg-tertiary-fixed text-tertiary" />
-            <Threshold label={tc("status.confirmed")} value={`≥ ${Math.round((thresholds.confirmed ?? 0.7) * 100)}%`} cls="bg-error-container text-on-error-container" />
+            <Threshold label={tc("status.confirmed")} value={tr("orMore", { n: Math.round((thresholds.confirmed ?? 0.7) * 100) })} cls="bg-error-container text-on-error-container" />
           </div>
           <h3 className="mt-1 text-small font-bold uppercase tracking-wider text-on-surface-variant">{tr("antiGaming")}</h3>
           <ul className="flex flex-col gap-1 text-small">

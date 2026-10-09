@@ -12,6 +12,7 @@ import { useT } from "@/lib/i18n";
 import { COMMON } from "@/lib/i18n/common";
 import { M } from "@/lib/i18n/messages/EventDetail";
 import Icon from "./Icon";
+import Loader from "./Loader";
 import MapView from "./MapView";
 
 const SOURCE: Record<string, { icon: string; label: "src.official" | "src.news" | "src.crowd" | "src.weather"; cls: string }> = {
@@ -43,7 +44,7 @@ export default function EventDetail({ id }: { id: string }) {
 
   if (error === "not_found") return <Empty text={t("notFound")} />;
   if (error === "offline") return <Empty text={t("offline")} />;
-  if (!detail) return <main className="px-6 py-10 text-sm text-on-surface-variant">{tc("loading")}</main>;
+  if (!detail) return <main className="px-6 py-10 text-sm"><Loader label={tc("loading")} /></main>;
 
   const { event: ev, breakdown: b } = detail;
   const style = STATUS_STYLE[ev.status];
@@ -114,10 +115,10 @@ export default function EventDetail({ id }: { id: string }) {
         <div className="flex flex-col gap-4 lg:col-span-5">
           <section className="flex flex-col gap-2 rounded-2xl bg-container-lowest p-5 shadow-sm">
             <h2 className="flex items-center gap-2 font-semibold"><Icon name="calculate" className="text-primary" /> {t("howWorked", { pct: confPct })}</h2>
-            <Row label={t("support")} value={pct(b.support)} hint="1 − Π(1 − weight × freshness)" />
+            <Row label={t("support")} value={pct(b.support)} hint={t("supportHint")} />
             <Row label={t("freshness")} value={pct(b.decay)} hint={t("freshnessHint")} />
             <Row label={t("contradiction")} value={pct(b.contradiction)} hint={t("contradictionHint")} />
-            <Row label={t("confidence")} value={`${confPct}%`} hint="support × (1 − contradiction)" strong />
+            <Row label={t("confidence")} value={`${confPct}%`} hint={t("confidenceHint")} strong />
             <div className="mt-2 flex h-3 w-full overflow-hidden rounded-full bg-container-high" aria-label={t("thresholds")}>
               <span className="h-full bg-container-highest" style={{ width: "40%" }} title={t("ignoredBelow")} />
               <span className="h-full bg-tertiary-fixed" style={{ width: "30%" }} title={t("possibleRange")} />

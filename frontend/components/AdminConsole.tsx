@@ -19,10 +19,10 @@ import { M } from "@/lib/i18n/messages/AdminConsole";
 
 const POLL_MS = 1000;
 const SPEEDS = [
-  { value: 30, label: "30×" },
+  { value: 30, label: "speed30" },
   { value: 60, label: "speed60" },
-  { value: 120, label: "120×" },
-];
+  { value: 120, label: "speed120" },
+] as const;
 
 const toMin = (hhmm: string) => {
   const [h, m] = hhmm.split(":").map(Number);
@@ -138,7 +138,7 @@ export default function AdminConsole() {
               className="rounded-xl border border-line bg-surface px-3 py-2 text-sm"
             >
               {SPEEDS.map((s) => (
-                <option key={s.value} value={s.value}>{s.label === "speed60" ? tr("speed60") : s.label}</option>
+                <option key={s.value} value={s.value}>{tr(s.label)}</option>
               ))}
             </select>
             <button disabled={busy} onClick={() => act(() => updateClock({ advance_min: 5 }))}

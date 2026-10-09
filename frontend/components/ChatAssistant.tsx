@@ -368,7 +368,7 @@ export default function ChatAssistant() {
         <section
           role="dialog"
           aria-label={t("dialog")}
-          className="fixed inset-x-0 bottom-0 z-[1150] flex h-[85dvh] flex-col overflow-hidden rounded-t-2xl bg-container-lowest shadow-float sm:inset-x-auto sm:bottom-5 sm:right-5 sm:h-[min(640px,calc(100dvh-6rem))] sm:w-[400px] sm:rounded-2xl"
+          className="anim-dialog fixed inset-x-0 bottom-0 z-[1150] flex h-[85dvh] flex-col overflow-hidden rounded-t-2xl bg-container-lowest shadow-float sm:inset-x-auto sm:bottom-5 sm:right-5 sm:h-[min(640px,calc(100dvh-6rem))] sm:w-[400px] sm:rounded-2xl"
         >
           <header className="flex items-center justify-between gap-2 bg-primary px-4 py-3 text-on-primary">
             <div className="flex items-center gap-2">
@@ -658,7 +658,7 @@ function OptionCard({ option: o }: { option: ChatOption }) {
           }`}
         >
           {o.blocked_by_confirmed_problem ? t("blocked") : ""}
-          {problem.title} · {isStatusKey(problem.status) ? tc(`status.${problem.status}`) : problem.status} {problem.trust_pct}%
+          {problem.title} · {t("statusPct", { status: isStatusKey(problem.status) ? tc(`status.${problem.status}`) : problem.status, pct: problem.trust_pct })}
         </p>
       )}
     </div>
@@ -675,7 +675,7 @@ function ProblemRow({ p }: { p: ChatProblem }) {
         <span className="block truncate text-micro text-on-surface-variant">{p.sources}</span>
       </span>
       <span className={`shrink-0 rounded-md px-2 py-0.5 text-micro font-bold ${STATUS_STYLE[p.status] ?? ""}`}>
-        {p.status === "coordinated" ? t("fakeBurst") : isStatusKey(p.status) ? tc(`status.${p.status}`) : p.status} {p.trust_pct}%
+        {t("statusPct", { status: p.status === "coordinated" ? t("fakeBurst") : isStatusKey(p.status) ? tc(`status.${p.status}`) : p.status, pct: p.trust_pct })}
       </span>
     </li>
   );
