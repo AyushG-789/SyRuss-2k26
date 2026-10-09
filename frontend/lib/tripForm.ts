@@ -84,7 +84,8 @@ export function formFromTraveller(t: Traveller): FormState {
     maxWalk: t.max_walk_min ? String(t.max_walk_min) : "",
     maxTransfers: t.max_transfers != null ? String(t.max_transfers) : "",
     priority: t.priority,
-    modes: t.modes_allowed.filter((m) => m !== "walk"),
+    // Walking is always allowed; a walking-only trip keeps "walk" so the planner shows Walk picked.
+    modes: t.modes_allowed.some((m) => m !== "walk") ? t.modes_allowed.filter((m) => m !== "walk") : ["walk"],
     stepFree: t.step_free,
     heavyLuggage: t.heavy_luggage,
     avoidCrowds: t.avoid_crowds,
@@ -124,7 +125,7 @@ export function travellerFromForm(f: FormState): Traveller {
     max_walk_min: num(f.maxWalk),
     max_transfers: num(f.maxTransfers),
     priority: f.priority,
-    modes_allowed: ["walk", ...f.modes],
+    modes_allowed: ["walk", ...f.modes.filter((m) => m !== "walk")],
     step_free: f.stepFree,
     heavy_luggage: f.heavyLuggage,
     avoid_crowds: f.avoidCrowds,
