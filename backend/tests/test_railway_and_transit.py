@@ -108,7 +108,7 @@ def test_bus_arrivals_estimates():
     data = res.json()
     assert data["stop_id"] == "andheri_bus"
     assert data["live_feed_status"] == "unavailable"
-    assert "Live GPS" in data["note"] and "unavailable" in data["note"]
+    assert "GPS is not connected" in data["note"]
     assert len(data["buses"]) > 0
 
     bus = data["buses"][0]
@@ -166,3 +166,14 @@ def test_transit_lines_metadata():
     assert "bus" in data["lines"]
     assert len(data["lines"]["local"]) >= 5
     assert len(data["lines"]["metro"]) >= 2
+
+
+def test_planned_trains_have_no_made_up_numbers(monkeypatch):
+    # Without the live feed, trains are planned from frequency — they must not carry invented numbers.
+    monkeypatch.setattr("app.api.transit.settings.railradar_api_key", "")
+    monkeypatch.setattr("app.api.transit.settings.rapidapi_key", "")
+    res = client.get("/transit/trains/upcoming?station_id=andheri_wr")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["is_live"] is False and data["trains"]
+    assert all(t["train_number"] == "" for t in data["trains"])

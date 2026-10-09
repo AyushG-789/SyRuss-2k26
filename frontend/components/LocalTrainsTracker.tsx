@@ -124,7 +124,7 @@ export default function LocalTrainsTracker({
       .catch((err: unknown) => {
         if (!alive) return;
         console.warn("Error fetching local trains:", err);
-        setErrorMsg("Failed to connect to local trains service. Displaying verified timetable fallback.");
+        setErrorMsg("Failed to connect to local trains service. Showing planned times instead.");
       })
       .finally(() => {
         if (alive) setLoading(false);
@@ -329,9 +329,9 @@ export default function LocalTrainsTracker({
             ) : (
               <span className="flex items-center gap-1.5 font-medium text-on-surface">
                 <Icon name="event_note" className="text-[16px] text-primary" />
-                <span>Verified Suburban Timetable</span>
+                <span>Planned times</span>
                 <span className="text-[11px] text-on-surface-variant">
-                  (Live RailRadar feed unconfigured/offline · Real scheduled departure model)
+                  (no live feed right now · based on how often trains usually run · train numbers show only with live data)
                 </span>
               </span>
             )}
@@ -420,7 +420,7 @@ export default function LocalTrainsTracker({
                         To {train.destination}
                       </h3>
                       <p className="text-xs text-on-surface-variant font-medium mt-0.5">
-                        {train.train_name} · #{train.train_number}
+                        {train.train_name}{train.train_number ? ` · #${train.train_number}` : ""}
                       </p>
                     </div>
                   </div>

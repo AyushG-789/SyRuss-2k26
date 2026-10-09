@@ -203,7 +203,7 @@ export default function BusTracker({
             <div>
               <span className="font-bold">Scheduled Arrival Estimates · Live GPS Unavailable</span>
               <p className="text-[11px] opacity-90 mt-0.5">
-                Arrivals are calculated strictly from verified BEST headway schedules. Public real-time vehicle GPS feeds are currently not provided by the operator.
+                Planned times from how often each route usually runs. BEST bus GPS is not connected yet, so these are a guide, not live.
               </p>
             </div>
           </div>
@@ -227,7 +227,7 @@ export default function BusTracker({
         {loading ? (
           <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-outline-variant bg-container-lowest p-12 text-on-surface-variant shadow-sm">
             <span className="h-7 w-7 animate-spin rounded-full border-2 border-tertiary border-t-transparent" />
-            <p className="text-xs font-medium">Calculating verified timetable arrivals...</p>
+            <p className="text-xs font-medium">Working out the next buses...</p>
           </div>
         ) : !data?.buses || data.buses.length === 0 ? (
           <div className="rounded-2xl border border-outline-variant bg-container-lowest p-12 text-center text-on-surface-variant shadow-sm">

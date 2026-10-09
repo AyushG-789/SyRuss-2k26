@@ -37,22 +37,25 @@ interface LiveClockProps {
   className?: string;
   showIcon?: boolean;
   showZone?: boolean;
+  /** "lg": the bigger chip in the top bar. */
+  size?: "sm" | "lg";
 }
 
-export default function LiveClock({ className = "", showIcon = true, showZone = true }: LiveClockProps) {
+export default function LiveClock({ className = "", showIcon = true, showZone = true, size = "sm" }: LiveClockProps) {
   const time = useKolkataClock();
+  const lg = size === "lg";
 
   return (
     <div
-      className={`inline-flex items-center gap-1.5 rounded-lg bg-container px-2.5 py-1 text-xs font-semibold tabular-nums ${className}`}
+      className={`inline-flex items-center bg-container font-semibold tabular-nums ${lg ? "h-12 gap-2 rounded-xl px-4 text-body" : "gap-1.5 rounded-lg px-2.5 py-1 text-xs"} ${className}`}
       title="Live Mumbai Transit Time (Asia/Kolkata)"
       aria-label="Current Mumbai Transit System Time"
     >
-      {showIcon && <Icon name="schedule" className="text-[16px] text-primary" />}
-      <span className="font-mono text-xs text-on-surface">
+      {showIcon && <Icon name="schedule" className={`${lg ? "text-[24px]" : "text-[16px]"} text-primary`} />}
+      <span className={`font-mono text-on-surface ${lg ? "text-body" : "text-xs"}`}>
         {time ?? "--:--:--"}
       </span>
-      {showZone && <span className="text-micro font-bold text-on-surface-variant">IST</span>}
+      {showZone && <span className={`font-bold text-on-surface-variant ${lg ? "text-caption" : "text-micro"}`}>IST</span>}
     </div>
   );
 }
