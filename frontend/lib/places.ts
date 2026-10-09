@@ -8,7 +8,9 @@ import type { Place } from "./types";
 export interface PlaceOption extends Place {
   kind: "place" | "station";
   /** For stations: which network it is on (shown as an icon in the place picker). */
-  mode?: "local" | "metro";
+  mode?: "local" | "metro" | "bus";
+  /** Other names / station codes people search with (e.g. "DDR" for Dadar). */
+  aliases?: string[];
 }
 
 const pois = poisMock.pois as unknown as Record<string, { name: string; lat: number; lon: number }>;
@@ -16,8 +18,16 @@ const pois = poisMock.pois as unknown as Record<string, { name: string; lat: num
 export const PLACE_OPTIONS: PlaceOption[] = [
   ...Object.entries(pois).map(([id, p]) => ({ label: p.name, lat: p.lat, lon: p.lon, poi_id: id, kind: "place" as const })),
   ...Object.entries(stations)
-    .filter(([, s]) => s.mode !== "bus")
-    .map(([, s]) => ({ label: `${s.name} station`, lat: s.lat, lon: s.lon, poi_id: null, kind: "station" as const, mode: s.mode as "local" | "metro" })),
+    .map(([, s]) => ({
+      // "bus stop" keeps a stop apart from the place of the same name (Crawford Market, Juhu Beach…).
+      label: s.mode !== "bus" ? `${s.name} station` : /\bbus\b/i.test(s.name) ? s.name : `${s.name} bus stop`,
+      lat: s.lat,
+      lon: s.lon,
+      poi_id: null,
+      kind: "station" as const,
+      mode: s.mode as "local" | "metro" | "bus",
+      aliases: s.aliases,
+    })),
 ].sort((a, b) => a.label.localeCompare(b.label));
 
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
@@ -36,8 +46,10 @@ export function findPlace(label: string): PlaceOption | undefined {
   const shortest = (list: PlaceOption[]) => [...list].sort((a, b) => a.label.length - b.label.length)[0];
   const tiers: ((p: PlaceOption) => boolean)[] = [
     (p) => norm(p.label) === q,
+    (p) => (p.aliases ?? []).some((a) => norm(a) === q),
     (p) => core(p) === q,
     (p) => core(p).startsWith(`${q} `),
+    (p) => (p.aliases ?? []).some((a) => norm(a).startsWith(`${q} `) || norm(a).startsWith(q)),
     (p) => q.startsWith(`${core(p)} `),
   ];
   for (const tier of tiers) {
