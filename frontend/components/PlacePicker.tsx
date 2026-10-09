@@ -16,11 +16,12 @@ const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 const KIND = {
   metro: { icon: "subway", cls: "bg-secondary-container text-on-secondary-container", label: "kindMetro" },
   local: { icon: "train", cls: "bg-tertiary-fixed text-tertiary", label: "kindLocal" },
+  bus: { icon: "directions_bus", cls: "bg-error-container text-on-error-container", label: "kindBus" },
   place: { icon: "location_on", cls: "bg-primary-soft text-primary-ink", label: "kindPlace" },
 } as const;
 
 function kindOf(p: PlaceOption): keyof typeof KIND {
-  return p.kind === "place" ? "place" : p.mode === "metro" ? "metro" : "local";
+  return p.kind === "place" ? "place" : p.mode === "metro" ? "metro" : p.mode === "bus" ? "bus" : "local";
 }
 
 /** The part of the name that matches what was typed, in bold. */

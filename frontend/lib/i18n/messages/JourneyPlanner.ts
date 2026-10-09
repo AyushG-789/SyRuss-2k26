@@ -3,6 +3,7 @@ import { defineMessages } from "../../i18n";
 
 export const M = defineMessages({
   en: {
+    kindBus: "BEST bus stop",
     noChange: "None",
     noMatch: "No place found. Try a station name.",
     keysHint: "↑ ↓ to move · Enter to pick",
@@ -109,6 +110,7 @@ export const M = defineMessages({
     notCovered: "We don't cover this place — pick one from the list",
   },
   hi: {
+    kindBus: "BEST बस स्टॉप",
     noChange: "कोई नहीं",
     noMatch: "कोई जगह नहीं मिली। स्टेशन का नाम लिखकर देखें।",
     keysHint: "↑ ↓ से चुनें · Enter दबाएँ",
@@ -215,6 +217,7 @@ export const M = defineMessages({
     notCovered: "यह जगह हमारे पास नहीं है — लिस्ट से चुनें",
   },
   mr: {
+    kindBus: "BEST बस थांबा",
     noChange: "एकही नाही",
     noMatch: "ठिकाण सापडले नाही. स्टेशनचे नाव लिहून पाहा.",
     keysHint: "↑ ↓ ने निवडा · Enter दाबा",

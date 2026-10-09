@@ -21,14 +21,15 @@ def dump(name: str, payload: dict) -> None:
 
 
 def main() -> None:
-    stations = yaml.safe_load((DATA / "network/stations.yaml").read_text())["stations"]
-    network = yaml.safe_load((DATA / "network/lines.yaml").read_text())
-    travellers = json.loads((DATA / "travellers.json").read_text())["travellers"]
-    pois = json.loads((DATA / "pois.json").read_text())["pois"]
+    stations = yaml.safe_load((DATA / "network/stations.yaml").read_text(encoding="utf-8"))["stations"]
+    network = yaml.safe_load((DATA / "network/lines.yaml").read_text(encoding="utf-8"))
+    travellers = json.loads((DATA / "travellers.json").read_text(encoding="utf-8"))["travellers"]
+    pois = json.loads((DATA / "pois.json").read_text(encoding="utf-8"))["pois"]
 
     dump("stations.json", {"stations": {
         s["id"]: {"name": s["name"], "mode": s["mode"], "lat": s["lat"], "lon": s["lon"],
-                  "step_free": s.get("step_free", False)}
+                  "step_free": s.get("step_free", False),
+                  "aliases": s.get("aliases", [])}
         for s in stations}})
     dump("lines.json", {"lines": {
         line["id"]: {"name": line["name"], "mode": line["mode"], "color": line.get("color", "#888888"),

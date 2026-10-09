@@ -14,6 +14,7 @@ import { LiveEventsProvider, useLiveEvents } from "@/lib/useLiveEvents";
 import ChatAssistant from "./ChatAssistant";
 import Icon from "./Icon";
 import AuthHost from "./AuthDialog";
+import LiveClock from "./LiveClock";
 import ProfilePanel from "./ProfilePanel";
 
 type NavKey = Extract<keyof typeof M.en, `nav.${string}`>;
@@ -22,6 +23,7 @@ type NavItem = { href: string; label: NavKey; icon: string; match: (p: string) =
 const NAV: NavItem[] = [
   { href: "/home", label: "nav./", icon: "hub", match: (p) => p === "/home" },
   { href: "/plan", label: "nav./plan", icon: "alt_route", match: (p) => p === "/plan" },
+  { href: "/trains", label: "nav./trains", icon: "train", match: (p) => p.startsWith("/trains") },
   { href: "/routes/TR3", label: "nav./routes/TR3", icon: "directions_subway", match: (p) => p.startsWith("/routes") },
   { href: "/track", label: "nav./track", icon: "fmd_good", match: (p) => p.startsWith("/track") },
   { href: "/report", label: "nav./report", icon: "campaign", match: (p) => p.startsWith("/report") },
@@ -294,6 +296,7 @@ function Shell({ children }: { children: React.ReactNode }) {
               <Icon name="location_city" className="text-[20px] text-primary" />
               <span className="whitespace-nowrap text-small font-semibold">{t("city")}</span>
             </span>
+            <span className="hidden sm:inline-flex"><LiveClock /></span>
             <LanguageMenu />
             <FeedPill />
             <ProfileButton />

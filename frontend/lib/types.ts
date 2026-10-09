@@ -137,6 +137,21 @@ export interface StationInfo {
   lat: number;
   lon: number;
   step_free: boolean;
+  aliases?: string[];
+  code?: string;
+}
+
+export interface StationSearchResult {
+  id: string;
+  name: string;
+  mode: "local" | "metro" | "bus" | "auto" | "ferry";
+  lat: number;
+  lon: number;
+  step_free?: boolean;
+  aliases?: string[];
+  lines?: string[];
+  distance_km?: number;
+  distance_m?: number;
 }
 
 export interface LineInfo {

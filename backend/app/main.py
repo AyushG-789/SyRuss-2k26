@@ -9,7 +9,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-from .api import admin, chat, events, insights, journeys, plan, reports, voice
+from .api import admin, chat, events, insights, journeys, plan, railway, reports, stations, transit, voice
 from .clock import HEADER, clock, fmt_hhmm, request_clock, reset_request_clock
 from .config import settings
 from .data_loader import load_seed
@@ -54,7 +54,10 @@ app.include_router(events.router)
 app.include_router(insights.router)
 app.include_router(journeys.router)
 app.include_router(plan.router)
+app.include_router(railway.router)
 app.include_router(reports.router)
+app.include_router(stations.router)
+app.include_router(transit.router)
 app.include_router(voice.router)
 
 
