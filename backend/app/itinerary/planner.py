@@ -9,6 +9,8 @@
 """
 from __future__ import annotations
 
+from app.i18n import T, tr
+
 from datetime import date
 from functools import lru_cache
 from itertools import combinations, permutations
@@ -94,12 +96,13 @@ def _nearby_problems(a: Place, b: Place, depart: str) -> list[dict]:
 
 def plan_itinerary(traveller: Traveller, on: date | None = None) -> dict:
     it = traveller.itinerary
+    lang = traveller.language
     if not it or not it.stops:
-        return {"feasible": False, "error": "No stops in the itinerary."}
+        return {"feasible": False, "error": tr(lang, "it.no_stops")}
     pois = load_seed().pois
     unknown = [s.poi_id for s in it.stops if s.poi_id not in pois]
     if unknown:
-        return {"feasible": False, "error": f"Unknown places: {', '.join(unknown)}"}
+        return {"feasible": False, "error": tr(lang, "it.unknown", ids=", ".join(unknown))}
     weekday = DAYS[(on or date.fromisoformat(settings.demo_date)).weekday()]
     day_start, day_end = _m(it.day_start), _m(it.day_end)
     search_key = traveller.model_copy(update={"itinerary": None}).model_dump_json()
@@ -176,39 +179,42 @@ def plan_itinerary(traveller: Traveller, on: date | None = None) -> dict:
         """Plain reason a stop was left out."""
         poi, s = pois[pid], stops[pid]
         name = poi["name"]
+        day = lambda d: tr(lang, f"day.{d.lower()}")  # noqa: E731
         if pid in closed:
-            days = ", ".join(d.title() for d in poi.get("closed_on", [])) or weekday.title()
-            return f"{name} is closed today ({weekday.title()}) — it's closed on {days}."
+            days = ", ".join(day(d) for d in poi.get("closed_on", [])) or day(weekday)
+            return tr(lang, "why.closed", name=name, today=day(weekday), days=days)
         opens, closes = _hours(poi, weekday)
         visit = s.visit_min or poi.get("visit_min", 30)
         est = _estimate(search_key, as_tuple(start_place), as_tuple(_place(pid, poi)), _t(day_start))
         if est is None:
-            return f"There's no route to {name} with the transport you allowed."
+            return tr(lang, "why.no_route", name=name)
         earliest = day_start + est[0]
-        hours_txt = "open 24 h" if closes - opens >= 1440 else f"open {_t(opens)}–{_t(closes)}"
-        if s.fixed_time and _m(s.fixed_time) < day_start:
-            return f"You wanted to be at {name} at {s.fixed_time}, before your day starts at {it.day_start}."
-        if s.fixed_time and earliest > _m(s.fixed_time):
-            return f"You wanted to be at {name} at {s.fixed_time}, but the earliest you can get there is {_t(earliest)}."
-        if s.fixed_time and _m(s.fixed_time) >= day_end:
-            return f"You wanted to be at {name} at {s.fixed_time}, after your day ends at {it.day_end}."
-        if s.fixed_time and _m(s.fixed_time) + visit > day_end:
-            return (f"{name} is fixed at {s.fixed_time} for {visit} min, which runs to {_t(_m(s.fixed_time) + visit)} — "
-                    f"after your day ends at {it.day_end}.")
+        hours_txt = (tr(lang, "hours.24") if closes - opens >= 1440
+                     else tr(lang, "hours.range", opens=_t(opens), closes=_t(closes)))
+        fixed = s.fixed_time
+        if fixed and _m(fixed) < day_start:
+            return tr(lang, "why.before_start", name=name, fixed=fixed, start=it.day_start)
+        if fixed and earliest > _m(fixed):
+            return tr(lang, "why.too_late", name=name, fixed=fixed, earliest=_t(earliest))
+        if fixed and _m(fixed) >= day_end:
+            return tr(lang, "why.after_end", name=name, fixed=fixed, end=it.day_end)
+        if fixed and _m(fixed) + visit > day_end:
+            return tr(lang, "why.fixed_overrun", name=name, fixed=fixed, visit=visit,
+                      until=_t(_m(fixed) + visit), end=it.day_end)
         if max(earliest, opens) + visit > closes:
-            return (f"{name} closes at {_t(closes)}. A {visit}-min visit means arriving by {_t(closes - visit)}, "
-                    f"but the earliest you can get there is {_t(earliest)}.")
+            return tr(lang, "why.closes", name=name, closes=_t(closes), visit=visit,
+                      by=_t(closes - visit), earliest=_t(earliest))
         if max(earliest, opens) + visit > day_end:
-            return f"A {visit}-min visit to {name} wouldn't finish before your day ends at {it.day_end}."
+            return tr(lang, "why.day_end", name=name, visit=visit, end=it.day_end)
         if traveller.max_budget_inr is not None and est[1] > traveller.max_budget_inr:
-            return f"Getting to {name} costs about ₹{est[1]}, more than your ₹{traveller.max_budget_inr} budget."
+            return tr(lang, "why.budget", name=name, cost=est[1], max=traveller.max_budget_inr)
         others = [pois[k]["name"] for k in kept]
-        with_txt = f" together with {', '.join(others[:3])}" if others else ""
-        return (f"{name} fits on its own, but not{with_txt} between {it.day_start} and {it.day_end} "
-                f"({hours_txt}, about {visit} min there). A longer day or fewer stops would make room.")
+        with_txt = tr(lang, "why.together", names=", ".join(others[:3])) if others else ""
+        return tr(lang, "why.no_room", name=name, with_=with_txt, start=it.day_start, end=it.day_end,
+                  hours=hours_txt, visit=visit)
 
     if best is None:
-        return {"feasible": False, "error": "None of these places can be visited in this time window.",
+        return {"feasible": False, "error": tr(lang, "it.none_fit"),
                 "dropped": [{"poi_id": pid, "name": pois[pid]["name"], "must_visit": stops[pid].must_visit,
                              "reason": why_not(pid, ())} for pid in stops],
                 "closed_today": closed}
@@ -222,7 +228,7 @@ def plan_itinerary(traveller: Traveller, on: date | None = None) -> dict:
         dest = _place(pid, poi)
         card = _hop(traveller, here, dest, _t(now), aware=True)
         if card is None:
-            return {"feasible": False, "error": f"No route to {poi['name']}."}
+            return {"feasible": False, "error": tr(lang, "it.no_route_to", name=poi["name"])}
         arrive = _m(card.legs[-1].arrive)
         start = max(arrive, hours[0])
         if s.fixed_time:
@@ -232,19 +238,21 @@ def plan_itinerary(traveller: Traveller, on: date | None = None) -> dict:
         slack = min(hours[1] - leave, day_end - leave, (_m(s.fixed_time) - arrive) if s.fixed_time else 10_000)
         problems = sorted({i for l in card.legs for i in l.event_ids})
         if problems:
-            warnings.append(f"Route to {poi['name']}: live problems {', '.join(problems)} (reliability {round(card.reliability * 100)}%)")
+            warnings.append(tr(lang, "warn.problems", name=poi["name"], ids=", ".join(problems),
+                               rel=round(card.reliability * 100)))
         nearby = _nearby_problems(here, dest, card.legs[0].depart)
         for n in nearby:
-            kind = n["type"].replace("_", " ")
-            warnings.append(f"Route to {poi['name']}: {n['status']} {kind} reported near {n['near']} "
-                            f"({round(n['confidence'] * 100)}%) — allow extra time; plan kept.")
+            kind = tr(lang, f"kind.{n['type']}") if f"kind.{n['type']}" in T else n["type"].replace("_", " ")
+            status = tr(lang, f"status.{n['status']}") if f"status.{n['status']}" in T else n["status"]
+            warnings.append(tr(lang, "warn.nearby", name=poi["name"], status=status, kind=kind, near=n["near"],
+                               pct=round(n["confidence"] * 100)))
         out.append({
             "poi_id": pid, "name": poi["name"], "must_visit": s.must_visit, "fixed_time": s.fixed_time,
             "opens": _t(hours[0]) if hours[1] - hours[0] < 1440 else None,
             "closes": _t(hours[1]) if hours[1] - hours[0] < 1440 else None,
             "arrive": _t(arrive), "visit_start": _t(start), "leave": _t(leave), "wait_min": start - arrive,
             "visit_min": visit, "slack_min": min(slack, 999), "tight": slack < TIGHT_SLACK_MIN,
-            "leg": {"route": route_text(card.legs), "depart": card.legs[0].depart, "arrive": card.legs[-1].arrive,
+            "leg": {"route": route_text(card.legs, lang), "depart": card.legs[0].depart, "arrive": card.legs[-1].arrive,
                     "duration_min": card.duration_min, "cost_inr": card.cost_inr, "reliability": card.reliability,
                     "event_ids": problems, "nearby": nearby, "card": card.model_dump()},
         })

@@ -8,6 +8,9 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { getPlan, resetDemo, updateClock } from "@/lib/api";
 import { startTrip } from "@/lib/savedTrip";
+import { translate, useLang, useT } from "@/lib/i18n";
+import { COMMON } from "@/lib/i18n/common";
+import { M, storyText } from "@/lib/i18n/messages/StoryPanel";
 import type { Traveller } from "@/lib/types";
 import Icon from "./Icon";
 
@@ -18,11 +21,19 @@ export default function StoryPanel({ traveller, onReplan, resultsHref }: {
   resultsHref?: string;
 }) {
   const router = useRouter();
+  const t = useT(M);
+  const tc = useT(COMMON);
+  const lang = useLang();
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const d = traveller.demo;
   if (!d) return null;
+  const text = storyText(lang, traveller.traveller_id, {
+    name: traveller.name, story: traveller.story, hook: traveller.demo_hook, watch: d.watch,
+  });
+  const cardKey = `plan.${d.card}` as keyof typeof COMMON.en;
+  const cardLabel = d.card && cardKey in COMMON.en ? tc(cardKey).toLowerCase() : d.card ?? "";
 
   async function play() {
     setBusy(true);
@@ -43,35 +54,35 @@ export default function StoryPanel({ traveller, onReplan, resultsHref }: {
       onReplan?.();
       setDone(true);
     } catch {
-      setError("Couldn't reach the TravelBuddy server — start the backend on port 8000.");
+      setError(translate(M, "error"));
     } finally {
       setBusy(false);
     }
   }
 
-  const label = d.kind === "track" ? `Play story: start the ${d.card} option at ${d.clock}` : `Show the moment (${d.moment})`;
+  const label = d.kind === "track" ? t("playTrack", { card: cardLabel, clock: d.clock }) : t("showMoment", { time: d.moment });
   return (
     <section className="flex flex-col gap-3 rounded-2xl border-2 border-primary/30 bg-primary-fixed/20 p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="flex items-center gap-1 text-caption font-bold uppercase tracking-wider text-primary">
-          <Icon name="theater_comedy" className="text-[16px]" /> Demo story · {traveller.traveller_id} {traveller.name}
+          <Icon name="theater_comedy" className="text-[16px]" /> {t("badge", { id: traveller.traveller_id, name: text.name ?? traveller.name })}
         </span>
         <span className="rounded-full bg-container-lowest px-2 py-0.5 text-micro font-bold text-on-surface-variant">
-          {d.kind === "track" ? `trip story · moment at ${d.moment}` : d.kind === "plan" ? "planning story" : "day-plan story"}
+          {d.kind === "track" ? t("kindTrack", { time: d.moment }) : d.kind === "plan" ? t("kindPlan") : t("kindItinerary")}
         </span>
       </div>
-      {traveller.story && <p className="text-sm">{traveller.story}</p>}
-      {traveller.demo_hook && <p className="text-small text-on-surface-variant"><b>What happens:</b> {traveller.demo_hook}</p>}
+      {text.story && <p className="text-sm">{text.story}</p>}
+      {text.hook && <p className="text-small text-on-surface-variant"><b>{t("whatHappens")}</b> {text.hook}</p>}
       <div className="flex flex-wrap items-center gap-2">
         <button type="button" onClick={play} disabled={busy}
           className="flex items-center gap-1 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary hover:bg-primary-container disabled:opacity-50">
-          <Icon name="play_circle" className="text-[20px]" /> {busy ? "Setting up…" : label}
+          <Icon name="play_circle" className="text-[20px]" /> {busy ? t("settingUp") : label}
         </button>
         <span className="flex items-center gap-1 text-caption text-on-surface-variant">
-          <Icon name="visibility" className="text-[16px]" /> {d.watch}
+          <Icon name="visibility" className="text-[16px]" /> {text.watch}
         </span>
       </div>
-      {done && <p className="text-caption font-semibold text-primary">Demo clock set to {d.moment} — the page now shows the moment.</p>}
+      {done && <p className="text-caption font-semibold text-primary">{t("done", { time: d.moment })}</p>}
       {error && <p className="text-caption text-error">{error}</p>}
     </section>
   );

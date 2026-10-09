@@ -15,6 +15,9 @@ import {
   sendChat,
   sendVoiceSTT,
 } from "@/lib/api";
+import { type Lang, useLang, useT } from "@/lib/i18n";
+import { COMMON } from "@/lib/i18n/common";
+import { M } from "@/lib/i18n/messages/ChatAssistant";
 import { tripHref } from "@/lib/tripUrl";
 import Icon from "./Icon";
 
@@ -22,18 +25,18 @@ type Entry =
   | { role: "user"; text: string }
   | { role: "assistant"; text: string; reply?: ChatReply; error?: boolean };
 
-const SUGGESTIONS = [
-  "Is Metro 1 running?",
-  "Thane to Wankhede by 18:30, under ₹150",
-  "Dadar pe kya problem hai?",
-  "मला अंधेरीहून BKC ला जायचे आहे",
-];
+const SUGGESTIONS = ["sugg1", "sugg2", "sugg3", "sugg4"] as const;
 
-const PLAN_LABEL: Record<ChatOption["label"], string> = {
-  fastest: "Fastest",
-  optimal: "Optimal",
-  cheapest: "Cheapest",
-};
+const STATUS_KEYS = ["confirmed", "possible", "coordinated", "ignored", "expired"] as const;
+type StatusKey = (typeof STATUS_KEYS)[number];
+const isStatusKey = (s: string): s is StatusKey => (STATUS_KEYS as readonly string[]).includes(s);
+
+/** Speech language for a reply: Devanagari text is read in the app language (Marathi stays Marathi),
+ *  falling back to Hindi when the app itself is in English. */
+function speechLang(text: string, appLang: Lang): { code: Lang; bcp: string } {
+  if (!/[\u0900-\u097F]/.test(text)) return { code: "en", bcp: "en-IN" };
+  return appLang === "mr" ? { code: "mr", bcp: "mr-IN" } : { code: "hi", bcp: "hi-IN" };
+}
 
 const STATUS_STYLE: Record<string, string> = {
   confirmed: "bg-error-container text-on-error-container",
@@ -88,6 +91,8 @@ export default function ChatAssistant() {
   const [recording, setRecording] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
   const [playingIdx, setPlayingIdx] = useState<number | null>(null);
+  const t = useT(M);
+  const lang = useLang();
 
   const scroller = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLTextAreaElement>(null);
@@ -165,7 +170,7 @@ export default function ChatAssistant() {
         {
           role: "assistant",
           error: true,
-          text: "I can't reach the TravelBuddy server. Is the backend running on port 8000?",
+          text: t("offline"),
         },
       ]);
     } finally {
@@ -231,7 +236,7 @@ export default function ChatAssistant() {
       }
     } catch (err) {
       console.error("[Voice:STT] Failed to access microphone:", err);
-      alert("Microphone permission was denied or is unavailable. Please allow microphone access in your browser settings.");
+      alert(t("micDenied"));
     }
   }
 
@@ -317,7 +322,7 @@ export default function ChatAssistant() {
     setPlayingIdx(idx);
 
     try {
-      const tts = await getVoiceTTS(speakText);
+      const tts = await getVoiceTTS(speakText, speechLang(speakText, lang).code);
       if (tts.audio_base64 && !tts.fallback_to_browser) {
         const player = new Audio(`data:${tts.mime};base64,${tts.audio_base64}`);
         audioPlayer.current = player;
@@ -337,9 +342,8 @@ export default function ChatAssistant() {
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
       window.speechSynthesis.cancel();
       const utter = new SpeechSynthesisUtterance(speakText);
-      // Auto-detect Devanagari script for Hindi/Marathi
-      const isDevanagari = /[\u0900-\u097F]/.test(speakText);
-      utter.lang = isDevanagari ? "hi-IN" : "en-IN";
+      // Auto-detect Devanagari script for Hindi/Marathi (Marathi when the app is in Marathi)
+      utter.lang = speechLang(speakText, lang).bcp;
       utter.onend = () => setPlayingIdx(null);
       utter.onerror = () => setPlayingIdx(null);
       window.speechSynthesis.speak(utter);
@@ -356,14 +360,14 @@ export default function ChatAssistant() {
           onClick={() => setOpen(true)}
           className="fixed bottom-5 right-5 z-[1150] flex items-center gap-2 rounded-full bg-primary py-3 pl-4 pr-5 text-sm font-semibold text-on-primary shadow-float transition-transform hover:scale-105 active:scale-95"
         >
-          <Icon name="forum" className="text-[20px]" /> Ask TravelBuddy
+          <Icon name="forum" className="text-[20px]" /> {t("ask")}
         </button>
       )}
 
       {open && (
         <section
           role="dialog"
-          aria-label="TravelBuddy assistant"
+          aria-label={t("dialog")}
           className="fixed inset-x-0 bottom-0 z-[1150] flex h-[85dvh] flex-col overflow-hidden rounded-t-2xl bg-container-lowest shadow-float sm:inset-x-auto sm:bottom-5 sm:right-5 sm:h-[min(640px,calc(100dvh-6rem))] sm:w-[400px] sm:rounded-2xl"
         >
           <header className="flex items-center justify-between gap-2 bg-primary px-4 py-3 text-on-primary">
@@ -372,8 +376,8 @@ export default function ChatAssistant() {
                 <Icon name="forum" className="text-[18px]" />
               </span>
               <div className="leading-tight">
-                <p className="text-sm font-semibold">Ask TravelBuddy</p>
-                <p className="text-micro opacity-80">Voice & Routes · English, हिंदी, मराठी</p>
+                <p className="text-sm font-semibold">{t("ask")}</p>
+                <p className="text-micro opacity-80">{t("subtitle")}</p>
               </div>
             </div>
             <div className="flex items-center gap-1">
@@ -384,7 +388,7 @@ export default function ChatAssistant() {
                     stopAudio();
                     setEntries([]);
                   }}
-                  aria-label="Clear chat"
+                  aria-label={t("clear")}
                   className="rounded-lg p-1.5 hover:bg-on-primary/15"
                 >
                   <Icon name="restart_alt" className="text-[20px]" />
@@ -396,7 +400,7 @@ export default function ChatAssistant() {
                   stopAudio();
                   setOpen(false);
                 }}
-                aria-label="Close assistant"
+                aria-label={t("closeAssistant")}
                 className="rounded-lg p-1.5 hover:bg-on-primary/15"
               >
                 <Icon name="close" className="text-[20px]" />
@@ -408,12 +412,12 @@ export default function ChatAssistant() {
             {entries.length === 0 && (
               <div className="flex flex-col gap-3">
                 <div className="rounded-xl bg-container-lowest p-3 text-sm shadow-card">
-                  Hi! Ask me to plan a trip, or whether a line or station has a problem right now.
-                  Tap the 🎤 <strong>mic</strong> to speak or type below.
+                  {t("hello1")}{" "}
+                  {t("hello2")} <strong>{t("mic")}</strong> {t("hello3")}
                 </div>
-                <p className="px-1 eyebrow text-outline">Try</p>
+                <p className="px-1 eyebrow text-outline">{t("try")}</p>
                 <div className="flex flex-wrap gap-2">
-                  {SUGGESTIONS.map((s) => (
+                  {SUGGESTIONS.map((k) => t(k)).map((s) => (
                     <button
                       key={s}
                       type="button"
@@ -453,14 +457,14 @@ export default function ChatAssistant() {
           {recording && (
             <div className="flex items-center justify-between border-t border-hairline-soft bg-error/10 px-3 py-1.5 text-xs font-semibold text-error">
               <span className="flex items-center gap-1.5 animate-pulse">
-                <span className="h-2 w-2 rounded-full bg-error" /> Listening... Speak now (“Thane se Dadar...”)
+                <span className="h-2 w-2 rounded-full bg-error" /> {t("listening")}
               </span>
               <button
                 type="button"
                 onClick={toggleRecording}
                 className="underline hover:opacity-80"
               >
-                Done
+                {t("done")}
               </button>
             </div>
           )}
@@ -468,7 +472,7 @@ export default function ChatAssistant() {
           {transcribing && (
             <div className="flex items-center gap-1.5 border-t border-hairline-soft bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary">
               <Icon name="graphic_eq" className="text-[16px] animate-pulse" />
-              <span>Transcribing with Gemini...</span>
+              <span>{t("transcribing")}</span>
             </div>
           )}
 
@@ -491,8 +495,8 @@ export default function ChatAssistant() {
               }}
               rows={1}
               maxLength={500}
-              placeholder="Speak or type: “Thane to Wankhede, under ₹150”"
-              aria-label="Message"
+              placeholder={t("placeholder")}
+              aria-label={t("message")}
               className="max-h-28 min-h-10 flex-1 resize-none rounded-xl bg-container px-3 py-2.5 text-sm placeholder:text-outline focus:outline-none focus:ring-2 focus:ring-primary"
             />
 
@@ -501,8 +505,8 @@ export default function ChatAssistant() {
               type="button"
               onClick={toggleRecording}
               disabled={busy || transcribing}
-              aria-label={recording ? "Stop listening" : "Speak with voice"}
-              title={recording ? "Tap to finish speaking" : "Tap to speak (English, हिंदी, मराठी)"}
+              aria-label={recording ? t("stopListening") : t("speakVoice")}
+              title={recording ? t("tapFinish") : t("tapSpeak")}
               className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl transition-all ${
                 recording
                   ? "bg-error text-on-error animate-pulse scale-105 shadow-md"
@@ -516,7 +520,7 @@ export default function ChatAssistant() {
             <button
               type="submit"
               disabled={busy || !text.trim() || recording}
-              aria-label="Send"
+              aria-label={t("send")}
               className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary text-on-primary transition-opacity disabled:opacity-40"
             >
               <Icon name="send" className="text-[20px]" />
@@ -528,11 +532,12 @@ export default function ChatAssistant() {
   );
 }
 
-const STEPS = ["Understanding your question…", "Checking routes and live Pakka Check data…", "Writing the answer…"];
+const STEPS = ["step1", "step2", "step3"] as const;
 
 /** Typing dots + what the assistant is doing, so a slow answer doesn't look frozen. */
 function Thinking() {
   const [step, setStep] = useState(0);
+  const t = useT(M);
   useEffect(() => {
     const id = setInterval(() => setStep((s) => Math.min(s + 1, STEPS.length - 1)), 2500);
     return () => clearInterval(id);
@@ -544,7 +549,7 @@ function Thinking() {
           <span key={d} className="h-1.5 w-1.5 animate-bounce rounded-full bg-outline" style={{ animationDelay: `${d}ms` }} />
         ))}
       </span>
-      <span className="text-caption text-on-surface-variant">{STEPS[step]}</span>
+      <span className="text-caption text-on-surface-variant">{t(STEPS[step])}</span>
     </div>
   );
 }
@@ -561,6 +566,7 @@ function AssistantBubble({
   onClose: () => void;
 }) {
   const r = entry.reply;
+  const t = useT(M);
   return (
     <div className="flex max-w-[92%] flex-col gap-2 self-start">
       <div
@@ -576,7 +582,7 @@ function AssistantBubble({
             <button
               type="button"
               onClick={onToggleSpeak}
-              aria-label={isPlaying ? "Stop speech" : "Listen aloud"}
+              aria-label={isPlaying ? t("stopSpeech") : t("listenAloud")}
               className={`flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-semibold transition-colors ${
                 isPlaying
                   ? "bg-primary text-on-primary animate-pulse"
@@ -584,7 +590,7 @@ function AssistantBubble({
               }`}
             >
               <Icon name={isPlaying ? "volume_off" : "volume_up"} className="text-[15px]" />
-              <span>{isPlaying ? "Stop" : "Listen"}</span>
+              <span>{isPlaying ? t("stop") : t("listen")}</span>
             </button>
           </div>
         )}
@@ -600,7 +606,7 @@ function AssistantBubble({
             onClick={onClose}
             className="flex items-center justify-center gap-1 rounded-xl bg-primary px-3 py-2 text-small font-semibold text-on-primary hover:bg-primary-container"
           >
-            Open full route details <Icon name="arrow_forward" className="text-[16px]" />
+            {t("openDetails")} <Icon name="arrow_forward" className="text-[16px]" />
           </Link>
         </div>
       )}
@@ -616,8 +622,8 @@ function AssistantBubble({
       {r && r.source !== "gemini" && (
         <p className="flex items-center gap-1 px-1 text-micro text-outline">
           <Icon name="info" className="text-[14px]" />
-          {r.source === "fallback" ? "AI is busy or offline, so this is a basic answer from live data."
-                : r.note?.includes("slow") ? "AI was slow, so this is a quick answer from live data." : "Answer simplified so every number matches live data."}
+          {r.source === "fallback" ? t("fallback")
+                : r.note?.includes("slow") ? t("slow") : t("simplified")}
         </p>
       )}
     </div>
@@ -626,22 +632,24 @@ function AssistantBubble({
 
 function OptionCard({ option: o }: { option: ChatOption }) {
   const problem = o.live_problems[0];
+  const t = useT(M);
+  const tc = useT(COMMON);
   return (
     <div
       className={`rounded-xl bg-container-lowest p-2.5 shadow-card ${o.recommended ? "ring-2 ring-primary" : ""}`}
     >
       <div className="flex items-center justify-between gap-2">
         <span className="text-micro font-bold uppercase tracking-wide text-primary">
-          {PLAN_LABEL[o.label]}
-          {o.recommended ? " · recommended" : ""}
+          {tc(`plan.${o.label}`)}
+          {o.recommended ? ` · ${t("recommended")}` : ""}
         </span>
         <span className="text-small font-semibold">
-          {o.duration_min} min · ₹{o.cost_inr}
+          {o.duration_min} {tc("min")} · ₹{o.cost_inr}
         </span>
       </div>
       <p className="mt-0.5 text-small font-medium">{o.route}</p>
       <p className="text-caption text-on-surface-variant">
-        {o.depart} → {o.arrive} · {o.changes} change{o.changes === 1 ? "" : "s"} · {o.walk_min} min walk
+        {o.depart} → {o.arrive} · {t(o.changes === 1 ? "change" : "changes", { n: o.changes })} · {t("walk", { min: o.walk_min })}
       </p>
       {problem && (
         <p
@@ -649,8 +657,8 @@ function OptionCard({ option: o }: { option: ChatOption }) {
             STATUS_STYLE[problem.status] ?? ""
           }`}
         >
-          {o.blocked_by_confirmed_problem ? "Blocked: " : ""}
-          {problem.title} · {problem.status} {problem.trust_pct}%
+          {o.blocked_by_confirmed_problem ? t("blocked") : ""}
+          {problem.title} · {isStatusKey(problem.status) ? tc(`status.${problem.status}`) : problem.status} {problem.trust_pct}%
         </p>
       )}
     </div>
@@ -658,6 +666,8 @@ function OptionCard({ option: o }: { option: ChatOption }) {
 }
 
 function ProblemRow({ p }: { p: ChatProblem }) {
+  const t = useT(M);
+  const tc = useT(COMMON);
   return (
     <li className="flex items-center justify-between gap-2 rounded-xl bg-container-lowest px-2.5 py-2 shadow-card">
       <span className="min-w-0">
@@ -665,7 +675,7 @@ function ProblemRow({ p }: { p: ChatProblem }) {
         <span className="block truncate text-micro text-on-surface-variant">{p.sources}</span>
       </span>
       <span className={`shrink-0 rounded-md px-2 py-0.5 text-micro font-bold ${STATUS_STYLE[p.status] ?? ""}`}>
-        {p.status === "coordinated" ? "fake burst" : p.status} {p.trust_pct}%
+        {p.status === "coordinated" ? t("fakeBurst") : isStatusKey(p.status) ? tc(`status.${p.status}`) : p.status} {p.trust_pct}%
       </span>
     </li>
   );

@@ -7,10 +7,11 @@ export type Appearance = "light" | "dark";
 export const PROFILE_KEY = "travelbuddy.profile";
 
 /**
- * Runs inline in <head> before the page paints, so a saved dark theme never flashes light.
+ * Runs inline in <head> before the page paints, so a saved dark theme never flashes light
+ * (also sets <html lang> to the saved app language, for screen readers and Devanagari fonts).
  * A string because it must run before React loads.
  */
-export const THEME_BOOT_SCRIPT = `try{var p=JSON.parse(localStorage.getItem(${JSON.stringify(PROFILE_KEY)})||"{}");document.documentElement.dataset.theme=p.appearance==="dark"?"dark":"light"}catch(e){}`;
+export const THEME_BOOT_SCRIPT = `try{var p=JSON.parse(localStorage.getItem(${JSON.stringify(PROFILE_KEY)})||"{}");var d=document.documentElement;d.dataset.theme=p.appearance==="dark"?"dark":"light";d.lang={hi:"hi-IN",mr:"mr-IN"}[p.appLanguage]||"en-IN"}catch(e){}`;
 
 export function applyTheme(appearance: Appearance) {
   document.documentElement.dataset.theme = appearance;

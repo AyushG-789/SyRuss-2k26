@@ -99,10 +99,13 @@ def test_tr3_dadar_closure_replans_before_deadline(world):
 def test_tr4_possible_waterlogging_warns_but_keeps_plan(world):
     client.post("/admin/reset")
     client.post("/admin/clock", json={"set": demo("TR4")["clock"]})
-    r = client.post("/itinerary", json={"traveller": SEED.travellers["TR4"]}).json()
+    tr4 = {**SEED.travellers["TR4"], "language": "en"}                     # warning text checked in English
+    r = client.post("/itinerary", json={"traveller": tr4}).json()
+    mr = client.post("/itinerary", json={"traveller": {**tr4, "language": "mr"}}).json()
     client.post("/admin/reset")
     assert r["feasible"] and r["stops"][-1]["visit_start"] == "18:30"
     assert any("waterlogging" in w and "plan kept" in w for w in r["warnings"])
+    assert any("पाणी साचले" in w and "प्लॅन तसाच" in w for w in mr["warnings"])
 
 
 def test_tr5_andheri_delay_replans(world):

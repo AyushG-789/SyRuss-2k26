@@ -43,6 +43,7 @@ def test_itinerary_orders_stops_within_opening_hours():
 def test_tight_day_plans_what_fits_and_explains_the_rest():
     tr4 = dict(load_seed().travellers["TR4"])
     tr4["itinerary"] = {**tr4["itinerary"], "day_start": "16:30", "day_end": "19:30"}   # too late for the museum
+    tr4["language"] = "en"                                                             # reasons checked in English
     r = client.post("/itinerary", json={"traveller": tr4}).json()
     assert r["feasible"] and r["partial"]
     kept = [s["poi_id"] for s in r["stops"]]
@@ -57,3 +58,22 @@ def test_nothing_fits_explains_every_stop():
                         "stops": [{"poi_id": "poi_csmvs", "must_visit": True}, {"poi_id": "poi_crawford_market", "must_visit": True}]}
     r = client.post("/itinerary", json={"traveller": tr4}).json()
     assert r["feasible"] is False and len(r["dropped"]) == 2 and all(d["reason"] for d in r["dropped"])
+
+
+def test_day_plan_reasons_come_in_the_travellers_language():
+    tr4 = dict(load_seed().travellers["TR4"])
+    tr4["itinerary"] = {**tr4["itinerary"], "day_start": "16:30", "day_end": "19:30"}
+    for lang, word in (("mr", "बंद होते"), ("hi", "बंद होता है")):
+        r = client.post("/itinerary", json={"traveller": {**tr4, "language": lang}}).json()
+        csmvs = next(d for d in r["dropped"] if d["poi_id"] == "poi_csmvs")
+        assert word in csmvs["reason"] and "18:00" in csmvs["reason"]                   # times stay as digits
+
+
+def test_plan_reasons_follow_the_language_but_rejections_keep_english_reason():
+    t = dict(load_seed().travellers["TR3"])
+    plan = client.post("/plan", json={"traveller": {**t, "language": "mr"}, "mode": "baseline"}).json()
+    assert plan["cards"] and "मिनिटे" in plan["cards"][0]["reason"]
+    en = client.post("/plan", json={"traveller": {**t, "language": "en"}, "mode": "baseline"}).json()
+    assert " min, ₹" in en["cards"][0]["reason"]
+    for rej in plan["rejected"]:                         # app logic reads `reason`; people read `message`
+        assert rej["reason"].replace("₹", "").isascii() and rej["message"]

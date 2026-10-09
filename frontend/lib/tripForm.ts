@@ -1,5 +1,7 @@
 // Trip request form state shared by the Home quick search and the Journey Planner.
 
+import { translate } from "./i18n";
+import { M } from "./i18n/messages/tripForm";
 import { findPlace, PLACE_OPTIONS } from "./places";
 import type { Mode, Traveller } from "./types";
 
@@ -94,13 +96,13 @@ export function validateForm(f: FormState): string[] {
   const errors: string[] = [];
   const from = findPlace(f.from);
   const to = findPlace(f.to);
-  if (!from) errors.push("Pick a starting point from the list.");
-  if (!to) errors.push("Pick a destination from the list.");
-  if (from && to && from.label === to.label) errors.push("Start and destination must be different.");
-  if (f.time !== NOW && !/^\d{2}:\d{2}$/.test(f.time)) errors.push("Enter a time.");
-  if (f.modes.length === 0) errors.push("Choose at least one way to travel besides walking.");
-  for (const [value, name] of [[f.budget, "Budget"], [f.maxWalk, "Walking limit"], [f.maxTransfers, "Changes"]] as const) {
-    if (value !== "" && !(Number(value) >= 0)) errors.push(`${name} must be a positive number.`);
+  if (!from) errors.push(translate(M, "noFrom"));
+  if (!to) errors.push(translate(M, "noTo"));
+  if (from && to && from.label === to.label) errors.push(translate(M, "same"));
+  if (f.time !== NOW && !/^\d{2}:\d{2}$/.test(f.time)) errors.push(translate(M, "noTime"));
+  if (f.modes.length === 0) errors.push(translate(M, "noModes"));
+  for (const [value, key] of [[f.budget, "badBudget"], [f.maxWalk, "badWalk"], [f.maxTransfers, "badChanges"]] as const) {
+    if (value !== "" && !(Number(value) >= 0)) errors.push(translate(M, key));
   }
   return errors;
 }

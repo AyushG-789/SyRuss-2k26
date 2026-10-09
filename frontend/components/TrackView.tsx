@@ -6,18 +6,22 @@
 // Sample-only parts (Share link, SOS) are clearly labelled.
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import {
   decideReplan, getClock, getJourney, getPlan, lines, stations, submitReport, travellers, updateClock,
   type ClockState, type Journey, type LegHit, type ReportOut,
 } from "@/lib/api";
-import { lineShortName, pct, placeName, STATUS_STYLE } from "@/lib/format";
+import { lineShortName, MODE_LABEL, pct, placeName, PLAN_LABEL, STATUS_STYLE } from "@/lib/format";
 import { positionAt, toMin } from "@/lib/geo";
+import { activeLang, translate, useT } from "@/lib/i18n";
+import { storyText } from "@/lib/i18n/messages/StoryPanel";
+import { COMMON } from "@/lib/i18n/common";
+import { M } from "@/lib/i18n/messages/TrackView";
 import { reportCategories, share } from "@/lib/mockTracking";
 import { recordReport } from "@/lib/profile";
 import { reporterId } from "@/lib/reporter";
 import { clearTrip, loadTrip, type SavedTrip, saveTrip, startTrip } from "@/lib/savedTrip";
-import type { Leg, RouteCard } from "@/lib/types";
+import type { Leg, Mode, RouteCard } from "@/lib/types";
 import { useLiveEvents, useRefreshLiveEvents } from "@/lib/useLiveEvents";
 import Icon from "./Icon";
 import MapView from "./MapView";
@@ -29,6 +33,16 @@ const MODE_ICON: Record<string, string> = {
   local: "train", metro: "subway", bus: "directions_bus", walk: "directions_walk",
   taxi: "local_taxi", auto: "electric_rickshaw", cab: "directions_car", ferry: "directions_boat",
 };
+
+/** Fill a translated template, putting React nodes (e.g. bold text) where its {placeholders} are. */
+function rich(text: string, nodes: Record<string, React.ReactNode>): React.ReactNode {
+  return text.split(/(\{\w+\})/).map((part, i) => {
+    const k = /^\{(\w+)\}$/.exec(part)?.[1];
+    return <Fragment key={i}>{k && k in nodes ? nodes[k] : part}</Fragment>;
+  });
+}
+
+const modeWord = (mode: string) => MODE_LABEL[mode as Mode] ?? mode;
 
 const hhmm = (min: number) => `${String(Math.floor(min / 60) % 24).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
 
@@ -68,17 +82,20 @@ function useJourney(id: string | null | undefined): [Journey | null, (j: Journey
 /* ---------------------------------------------------------------- page */
 
 export default function TrackView() {
+  const t = useT(M);
   const [trip, setTrip] = useState<SavedTrip | null | undefined>(undefined); // undefined = loading
   useEffect(() => {
     Promise.resolve().then(() => setTrip(loadTrip()));
   }, []);
 
-  if (trip === undefined) return <main className="px-6 py-10 text-sm text-on-surface-variant">Loading your trip…</main>;
+  if (trip === undefined) return <main className="px-6 py-10 text-sm text-on-surface-variant">{t("loadingTrip")}</main>;
   if (!trip) return <NoTrip onStarted={setTrip} />;
   return <LiveTrip trip={trip} onTrip={setTrip} />;
 }
 
 function LiveTrip({ trip, onTrip }: { trip: SavedTrip; onTrip: (t: SavedTrip | null) => void }) {
+  const t = useT(M);
+  const tc = useT(COMMON);
   const [modal, setModal] = useState<Modal>(null);
   const [clock, setClock] = useDemoClock();
   const [journey, setJourney, lost] = useJourney(trip.journeyId);
@@ -96,7 +113,7 @@ function LiveTrip({ trip, onTrip }: { trip: SavedTrip; onTrip: (t: SavedTrip | n
 
   const { traveller } = trip;
   const destination = trip.destination ?? traveller.destination ?? null;
-  const destLabel = destination?.label ?? "Destination";
+  const destLabel = destination?.label ?? tc("place.destination");
   const legs = card.legs;
   const startMin = toMin(legs[0].depart);
   const endMin = toMin(legs[legs.length - 1].arrive);
@@ -142,30 +159,30 @@ function LiveTrip({ trip, onTrip }: { trip: SavedTrip; onTrip: (t: SavedTrip | n
           </div>
           <div className="flex min-w-0 flex-col">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-lg font-semibold">Live Trip</span>
+              <span className="text-lg font-semibold">{t("liveTrip")}</span>
               <PhasePill phase={phase} />
-              <Link href="/admin" title="The demo runs on a simulated clock — move it on Demo control"
+              <Link href="/admin" title={t("clockTitle")}
                 className="flex items-center gap-1 rounded-full bg-container px-2 py-0.5 font-mono text-micro font-bold text-on-surface-variant hover:bg-container-high">
-                <Icon name="schedule" className="text-[14px]" /> {clock ? `Demo time ${clock.now}${clock.speed ? ` · ${clock.speed}×` : " · paused"}` : "Demo clock offline"}
+                <Icon name="schedule" className="text-[14px]" /> {clock ? `${t("demoTime", { time: clock.now })}${clock.speed ? ` · ${clock.speed}×` : ` · ${t("paused")}`}` : t("clockOffline")}
               </Link>
               {clock && phase !== "arrived" && (
                 <ClockButtons speed={clock.speed} onChange={setClock} />
               )}
             </div>
             <p className="truncate text-small text-on-surface-variant">
-              {traveller.origin.label} → {destLabel} · {card.label} route · {routeText(legs)}
+              {traveller.origin.label} → {destLabel} · {t("routeLabel", { label: PLAN_LABEL[card.label] ?? card.label })} · {routeText(legs)}
             </p>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button onClick={() => setModal("sos")} className="flex items-center gap-1 rounded-xl bg-error px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition-transform hover:opacity-95 active:scale-95">
-            <Icon name="emergency" className="text-[18px]" /> Emergency SOS
+            <Icon name="emergency" className="text-[18px]" /> {t("sos")}
           </button>
           <button onClick={() => setModal("share")} className="flex items-center gap-1 rounded-xl bg-container-lowest px-4 py-2.5 text-xs font-semibold shadow-sm transition-colors hover:bg-container">
-            <Icon name="share" className="text-[18px] text-primary" /> Share Live Link
+            <Icon name="share" className="text-[18px] text-primary" /> {t("shareLink")}
           </button>
           <button onClick={endTrip} className="flex items-center gap-1 rounded-xl bg-container-lowest px-4 py-2.5 text-xs font-semibold shadow-sm transition-colors hover:bg-container">
-            <Icon name="stop_circle" className="text-[18px] text-outline" /> End trip
+            <Icon name="stop_circle" className="text-[18px] text-outline" /> {t("endTrip")}
           </button>
         </div>
       </div>
@@ -174,11 +191,11 @@ function LiveTrip({ trip, onTrip }: { trip: SavedTrip; onTrip: (t: SavedTrip | n
       {traveller.demo?.kind === "track" && clock && phase !== "arrived" && (
         <div className="mb-2 flex flex-wrap items-center gap-2 rounded-xl border-2 border-primary/30 bg-primary-fixed/20 p-3 text-small">
           <Icon name="theater_comedy" className="text-[18px] text-primary" />
-          <span className="min-w-0 flex-1"><b>Demo story ({traveller.traveller_id}):</b> the moment is at <b>{traveller.demo.moment}</b>. {traveller.demo.watch}</span>
+          <span className="min-w-0 flex-1"><b>{t("storyLabel", { id: traveller.traveller_id })}</b> {rich(t("storyMoment"), { time: <b>{traveller.demo.moment}</b> })} {storyText(activeLang(), traveller.traveller_id, { watch: traveller.demo.watch }).watch}</span>
           {clock.now < traveller.demo.moment && (
             <button type="button" onClick={() => updateClock({ set: traveller.demo!.moment }).then(setClock).catch(() => undefined)}
               className="flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-caption font-bold text-on-primary hover:bg-primary-container">
-              <Icon name="fast_forward" className="text-[16px]" /> Jump to {traveller.demo.moment}
+              <Icon name="fast_forward" className="text-[16px]" /> {t("jumpTo", { time: traveller.demo.moment })}
             </button>
           )}
         </div>
@@ -196,45 +213,45 @@ function LiveTrip({ trip, onTrip }: { trip: SavedTrip; onTrip: (t: SavedTrip | n
       {lost && (
         <div className="mb-2 flex items-start gap-2 rounded-xl bg-amber-soft p-3 text-small text-amber-ink">
           <Icon name="sync_problem" className="text-[18px]" />
-          The demo was reset, so the server no longer knows this trip (no replan alerts). End it and start again to watch it live.
+          {t("lost")}
         </div>
       )}
       {!trip.journeyId && (
         <div className="mb-2 flex items-start gap-2 rounded-xl bg-amber-soft p-3 text-small text-amber-ink">
           <Icon name="cloud_off" className="text-[18px]" />
-          The TravelBuddy server wasn&apos;t reachable when this trip started, so it is tracked on this device only (no replan alerts).
+          {t("offlineTrip")}
         </div>
       )}
 
       {/* ---- 4 metric cards ---- */}
       <div className="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard label={phase === "upcoming" ? "Starts In" : "Remaining Time"} icon="schedule" iconCls="bg-primary-fixed/40 text-primary"
-          value={<><span className="text-display font-bold tracking-tight tabular-nums">{phase === "upcoming" ? startMin - nowMin : remaining}</span><span className="text-lg font-bold text-primary">mins</span></>}
-          footLeft={<span className="flex items-center gap-1 text-primary"><Icon name="update" className="text-[16px]" /> Follows the demo clock</span>}
-          footRight={<span className="font-mono text-micro font-bold text-outline">{card.duration_min} min trip</span>} />
-        <MetricCard label="Est. Arrival" icon="sports_score" iconCls="bg-secondary-container text-on-secondary-container"
+        <MetricCard label={phase === "upcoming" ? t("startsIn") : t("remaining")} icon="schedule" iconCls="bg-primary-fixed/40 text-primary"
+          value={<><span className="text-display font-bold tracking-tight tabular-nums">{phase === "upcoming" ? startMin - nowMin : remaining}</span><span className="text-lg font-bold text-primary">{t("mins")}</span></>}
+          footLeft={<span className="flex items-center gap-1 text-primary"><Icon name="update" className="text-[16px]" /> {t("followsClock")}</span>}
+          footRight={<span className="font-mono text-micro font-bold text-outline">{t("tripMin", { min: card.duration_min })}</span>} />
+        <MetricCard label={t("estArrival")} icon="sports_score" iconCls="bg-secondary-container text-on-secondary-container"
           value={<span className="text-display font-bold tracking-tight tabular-nums">{hhmm(eta)}</span>}
           footLeft={confirmedDelay > 0 || blocked
-            ? <span className="flex items-center gap-1 font-semibold text-error"><Icon name="warning" className="text-[16px]" /> {blocked ? "Route blocked" : `+${confirmedDelay} min (confirmed)`}</span>
-            : <span className="flex items-center gap-1 font-semibold text-primary"><Icon name="check_circle" className="text-[16px]" /> On schedule</span>}
+            ? <span className="flex items-center gap-1 font-semibold text-error"><Icon name="warning" className="text-[16px]" /> {blocked ? t("routeBlocked") : t("delayConfirmed", { min: confirmedDelay })}</span>
+            : <span className="flex items-center gap-1 font-semibold text-primary"><Icon name="check_circle" className="text-[16px]" /> {t("onSchedule")}</span>}
           footRight={<span className="max-w-[9rem] truncate text-micro font-bold">{destLabel}</span>} />
-        <MetricCard label="Fare" icon="payments" iconCls="bg-tertiary-fixed text-tertiary"
-          value={<><span className="text-display font-bold tracking-tight tabular-nums">₹{card.cost_inr}</span><span className="text-xs font-semibold text-on-surface-variant">total</span></>}
-          footLeft={<span className="flex items-center gap-1 text-on-surface-variant"><span className="h-2 w-2 rounded-full bg-primary" /> ₹{paid} so far</span>}
-          footRight={<span className="text-micro font-bold text-tertiary">{card.transfers} change{card.transfers === 1 ? "" : "s"}</span>} />
+        <MetricCard label={t("fare")} icon="payments" iconCls="bg-tertiary-fixed text-tertiary"
+          value={<><span className="text-display font-bold tracking-tight tabular-nums">₹{card.cost_inr}</span><span className="text-xs font-semibold text-on-surface-variant">{t("total")}</span></>}
+          footLeft={<span className="flex items-center gap-1 text-on-surface-variant"><span className="h-2 w-2 rounded-full bg-primary" /> {t("soFar", { amt: paid })}</span>}
+          footRight={<span className="text-micro font-bold text-tertiary">{t(card.transfers === 1 ? "change1" : "changes", { n: card.transfers })}</span>} />
         <button onClick={() => setModal("report")} disabled={!target}
           className="group flex flex-col justify-between rounded-xl bg-gradient-to-br from-tertiary-fixed to-container p-5 text-left shadow-sm transition-all hover:shadow-md disabled:opacity-50">
           <div className="flex w-full items-start justify-between">
             <div className="flex flex-col">
               <span className="eyebrow text-tertiary">Pakka Check</span>
-              <span className="mt-1 text-xl font-semibold transition-colors group-hover:text-tertiary">Report Issue</span>
+              <span className="mt-1 text-xl font-semibold transition-colors group-hover:text-tertiary">{t("reportIssue")}</span>
             </div>
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-tertiary text-on-primary transition-transform group-hover:scale-105">
               <Icon name="report_problem" className="text-[22px]" />
             </div>
           </div>
           <div className="mt-4 flex w-full items-center justify-between pt-1">
-            <span className="truncate text-small text-tertiary">{target ? `At ${target.label}` : "Delay • Crowding • Lift out"}</span>
+            <span className="truncate text-small text-tertiary">{target ? t("atPlace", { place: target.label }) : t("reportHint")}</span>
             <Icon name="arrow_forward" className="text-[18px] text-tertiary transition-transform group-hover:translate-x-1" />
           </div>
         </button>
@@ -250,10 +267,10 @@ function LiveTrip({ trip, onTrip }: { trip: SavedTrip; onTrip: (t: SavedTrip | n
           <div className="flex flex-col rounded-xl bg-container-lowest p-5 shadow-sm">
             <div className="flex items-center justify-between pb-2">
               <div className="flex flex-col">
-                <span className="eyebrow">Your route, step by step</span>
-                <span className="text-lg font-semibold">Journey Milestones</span>
+                <span className="eyebrow">{t("stepByStep")}</span>
+                <span className="text-lg font-semibold">{t("milestones")}</span>
               </div>
-              <span className="rounded-full bg-container px-2 py-1 font-mono text-micro font-bold text-on-surface-variant">{legs.length} legs</span>
+              <span className="rounded-full bg-container px-2 py-1 font-mono text-micro font-bold text-on-surface-variant">{t(legs.length === 1 ? "leg1" : "legs", { n: legs.length })}</span>
             </div>
             <div className="relative mt-4 flex flex-col">
               {legs.map((leg, i) => (
@@ -264,10 +281,10 @@ function LiveTrip({ trip, onTrip }: { trip: SavedTrip; onTrip: (t: SavedTrip | n
             </div>
             <div className="mt-5 grid grid-cols-2 gap-2 pt-2">
               <Link href={trip.resultsHref} className="flex items-center justify-center gap-1.5 rounded-xl bg-container px-2 py-2.5 text-xs font-semibold shadow-sm transition-colors hover:bg-container-high">
-                <Icon name="alt_route" className="text-[18px]" /> Other routes
+                <Icon name="alt_route" className="text-[18px]" /> {t("otherRoutes")}
               </Link>
               <Link href="/report" className="flex items-center justify-center gap-1.5 rounded-xl bg-container px-2 py-2.5 text-xs font-semibold shadow-sm transition-colors hover:bg-container-high">
-                <Icon name="campaign" className="text-[18px]" /> Live reports
+                <Icon name="campaign" className="text-[18px]" /> {t("liveReports")}
               </Link>
             </div>
           </div>
@@ -282,10 +299,10 @@ function LiveTrip({ trip, onTrip }: { trip: SavedTrip; onTrip: (t: SavedTrip | n
               <div className="flex items-center gap-2">
                 <div className="flex items-center gap-1.5 rounded-full bg-primary-fixed px-2 py-1 text-micro font-bold text-on-primary-fixed">
                   <span className={`h-2 w-2 rounded-full bg-primary ${phase === "moving" ? "animate-ping" : ""}`} />
-                  {phase === "moving" ? "Your position (from the timetable)" : phase === "upcoming" ? "Not started yet" : "Arrived"}
+                  {phase === "moving" ? t("position") : phase === "upcoming" ? t("notStartedYet") : t("arrived")}
                 </div>
               </div>
-              <span className="text-small text-on-surface-variant">{mapEvents.length ? `${mapEvents.length} problem${mapEvents.length === 1 ? "" : "s"} on route` : "No problems on route"}</span>
+              <span className="text-small text-on-surface-variant">{mapEvents.length ? t(mapEvents.length === 1 ? "problem1" : "problems", { n: mapEvents.length }) : t("noProblems")}</span>
             </div>
             <div className="h-[520px] w-full">
               <MapView card={card} origin={traveller.origin} destination={destination} events={mapEvents} here={here} />
@@ -294,7 +311,7 @@ function LiveTrip({ trip, onTrip }: { trip: SavedTrip; onTrip: (t: SavedTrip | n
               {legendFor(legs).map((l) => (
                 <span key={l.label} className="flex items-center gap-1"><span className="h-1.5 w-4 rounded-full" style={{ background: l.color }} /> {l.label}</span>
               ))}
-              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full border-2 border-white bg-primary shadow" /> You</span>
+              <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full border-2 border-white bg-primary shadow" /> {t("you")}</span>
             </div>
           </div>
         </div>
@@ -310,6 +327,7 @@ function LiveTrip({ trip, onTrip }: { trip: SavedTrip; onTrip: (t: SavedTrip | n
 /* ---------------------------------------------------------------- no trip yet */
 
 function NoTrip({ onStarted }: { onStarted: (t: SavedTrip) => void }) {
+  const t = useT(M);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -328,7 +346,7 @@ function NoTrip({ onStarted }: { onStarted: (t: SavedTrip) => void }) {
       const saved = await startTrip({ traveller, destination: traveller.destination, card, resultsHref: "/routes/TR3", savedAt: new Date().toISOString() });
       onStarted(saved);
     } catch {
-      setError("Couldn't plan the demo trip — is the backend running on port 8000?");
+      setError(translate(M, "demoError"));
     } finally {
       setBusy(false);
     }
@@ -341,22 +359,21 @@ function NoTrip({ onStarted }: { onStarted: (t: SavedTrip) => void }) {
           <Icon name="fmd_good" className="text-[30px]" />
         </div>
         <div>
-          <h1 className="text-xl font-semibold">No trip in progress</h1>
+          <h1 className="text-xl font-semibold">{t("noTrip")}</h1>
           <p className="mt-1 text-sm text-on-surface-variant">
-            Plan a route and press <b>Start trip</b>. This page then follows you leg by leg and warns you if
-            Pakka Check confirms a problem on the way.
+            {rich(t("noTripBody"), { start: <b>{t("startTrip")}</b> })}
           </p>
         </div>
         <div className="flex w-full flex-col gap-2 sm:flex-row">
           <Link href="/plan" className="flex flex-1 items-center justify-center gap-1 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-on-primary hover:bg-primary-container">
-            <Icon name="alt_route" className="text-[18px]" /> Plan a trip
+            <Icon name="alt_route" className="text-[18px]" /> {t("planTrip")}
           </Link>
           <button onClick={startDemo} disabled={busy}
             className="flex flex-1 items-center justify-center gap-1 rounded-xl bg-container px-4 py-3 text-sm font-semibold hover:bg-container-high disabled:opacity-50">
-            <Icon name="play_circle" className="text-[18px] text-primary" /> {busy ? "Starting…" : "Demo: Thane → Wankhede"}
+            <Icon name="play_circle" className="text-[18px] text-primary" /> {busy ? t("starting") : t("demoBtn")}
           </button>
         </div>
-        <p className="text-caption text-outline">Demo trip: Arjun&apos;s route via the Dadar foot-overbridge (leaves 16:44). Reset and play the clock on Demo control.</p>
+        <p className="text-caption text-outline">{t("demoNote")}</p>
         {error && <p className="rounded-xl bg-amber-soft px-3 py-2 text-small text-amber-ink">{error}</p>}
       </div>
     </main>
@@ -368,18 +385,18 @@ function NoTrip({ onStarted }: { onStarted: (t: SavedTrip) => void }) {
 function routeText(legs: Leg[]): string {
   const parts: string[] = [];
   for (const l of legs) {
-    const p = l.line_id ? lineShortName(l.line_id) : l.mode === "walk" ? null : l.mode[0].toUpperCase() + l.mode.slice(1);
+    const p = l.line_id ? lineShortName(l.line_id) : l.mode === "walk" ? null : modeWord(l.mode);
     if (p && parts[parts.length - 1] !== p) parts.push(p);
   }
-  return parts.join(" → ") || "Walk";
+  return parts.join(" → ") || MODE_LABEL.walk;
 }
 
 function legendFor(legs: Leg[]) {
   const seen = new Map<string, string>();
   for (const l of legs) {
     if (l.line_id && lines[l.line_id]) seen.set(lineShortName(l.line_id), lines[l.line_id].color);
-    else if (l.mode === "walk") seen.set("Walk", "#8a94a6");
-    else seen.set(l.mode[0].toUpperCase() + l.mode.slice(1), "#64748b");
+    else if (l.mode === "walk") seen.set(MODE_LABEL.walk, "#8a94a6");
+    else seen.set(modeWord(l.mode), "#64748b");
   }
   return [...seen].map(([label, color]) => ({ label, color }));
 }
@@ -421,29 +438,31 @@ function reportTargetFor(legs: Leg[], from: number, nowMin: number): { stop_id: 
 
 /** The demo clock is paused after a reset; let the presenter play it from here (same as Demo control). */
 function ClockButtons({ speed, onChange }: { speed: number; onChange: (c: ClockState) => void }) {
+  const t = useT(M);
   const set = (body: { speed?: number; advance_min?: number }) => updateClock(body).then(onChange).catch(() => undefined);
   const btn = "flex items-center gap-0.5 rounded-full bg-primary px-2 py-0.5 text-micro font-bold text-on-primary hover:bg-primary-container";
   return speed === 0 ? (
     <>
-      <button type="button" onClick={() => set({ speed: 10 })} className={btn} title="Play the demo clock at 10× (1 demo minute every 6 seconds)">
-        <Icon name="play_arrow" className="text-[14px]" /> Play 10×
+      <button type="button" onClick={() => set({ speed: 10 })} className={btn} title={t("play10Title")}>
+        <Icon name="play_arrow" className="text-[14px]" /> {t("play10")}
       </button>
-      <button type="button" onClick={() => set({ advance_min: 5 })} className={btn.replace("bg-primary ", "bg-container ").replace("text-on-primary", "text-on-surface")} title="Jump 5 demo minutes ahead">
-        +5 min
+      <button type="button" onClick={() => set({ advance_min: 5 })} className={btn.replace("bg-primary ", "bg-container ").replace("text-on-primary", "text-on-surface")} title={t("jump5Title")}>
+        {t("plus5")}
       </button>
     </>
   ) : (
     <button type="button" onClick={() => set({ speed: 0 })} className={btn.replace("bg-primary ", "bg-container ").replace("text-on-primary", "text-on-surface")}>
-      <Icon name="pause" className="text-[14px]" /> Pause
+      <Icon name="pause" className="text-[14px]" /> {t("pause")}
     </button>
   );
 }
 
 function PhasePill({ phase }: { phase: "upcoming" | "moving" | "arrived" }) {
+  const t = useT(M);
   const map = {
-    upcoming: { text: "Not started", cls: "bg-container-high text-on-surface-variant" },
-    moving: { text: "On the way", cls: "bg-primary-fixed text-on-primary-fixed" },
-    arrived: { text: "Arrived", cls: "bg-secondary-container text-on-secondary-container" },
+    upcoming: { text: t("notStarted"), cls: "bg-container-high text-on-surface-variant" },
+    moving: { text: t("onTheWay"), cls: "bg-primary-fixed text-on-primary-fixed" },
+    arrived: { text: t("arrived"), cls: "bg-secondary-container text-on-secondary-container" },
   }[phase];
   return (
     <span className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-micro font-bold uppercase ${map.cls}`}>
@@ -455,26 +474,27 @@ function PhasePill({ phase }: { phase: "upcoming" | "moving" | "arrived" }) {
 function CurrentLeg({ phase, leg, nowMin, name, destLabel }: {
   phase: "upcoming" | "moving" | "arrived"; leg: Leg | null; nowMin: number; name: (id: string) => string; destLabel: string;
 }) {
+  const t = useT(M);
   let badge = "";
   let title = "";
   let sub: React.ReactNode = null;
   if (phase === "arrived" || !leg) {
-    badge = "Done";
-    title = `You have arrived at ${destLabel}`;
-    sub = "Trip complete. Thanks for travelling with TravelBuddy.";
+    badge = t("badgeDone");
+    title = t("arrivedAt", { place: destLabel });
+    sub = t("tripComplete");
   } else if (phase === "upcoming") {
-    badge = leg.line_id ? lineShortName(leg.line_id) : leg.mode;
-    title = `First: ${legVerb(leg, name)}`;
-    sub = <>Leaves at <b className="text-primary">{leg.depart}</b> ({toMin(leg.depart) - nowMin} min from now)</>;
+    badge = leg.line_id ? lineShortName(leg.line_id) : modeWord(leg.mode);
+    title = t("first", { step: legVerb(leg, name) });
+    sub = rich(t("leavesAt", { min: toMin(leg.depart) - nowMin }), { time: <b className="text-primary">{leg.depart}</b> });
   } else if (leg.line_id) {
     const ns = nextStop(leg, nowMin);
     badge = lineShortName(leg.line_id);
-    title = `On ${lines[leg.line_id]?.name ?? lineShortName(leg.line_id)} towards ${name(leg.to_id)}`;
-    sub = <>Next stop: <b className="text-primary">{name(ns.id)}</b> in about {ns.inMin} min · get off at {name(leg.to_id)} at {leg.arrive}</>;
+    title = t("onLine", { line: lines[leg.line_id]?.name ?? lineShortName(leg.line_id), place: name(leg.to_id) });
+    sub = rich(t("nextStop", { min: ns.inMin, place: name(leg.to_id), time: leg.arrive }), { stop: <b className="text-primary">{name(ns.id)}</b> });
   } else {
-    badge = leg.mode;
+    badge = modeWord(leg.mode);
     title = legVerb(leg, name);
-    sub = <>{Math.max(0, toMin(leg.arrive) - nowMin)} min left on this leg · arrive {leg.arrive}</>;
+    sub = t("legLeft", { min: Math.max(0, toMin(leg.arrive) - nowMin), time: leg.arrive });
   }
   return (
     <div className="mt-4 flex flex-col items-start gap-2 rounded-xl bg-container-lowest p-4 shadow-sm sm:flex-row sm:items-center">
@@ -490,13 +510,14 @@ function CurrentLeg({ phase, leg, nowMin, name, destLabel }: {
 }
 
 function legVerb(leg: Leg, name: (id: string) => string): string {
-  if (leg.line_id) return `Board ${lineShortName(leg.line_id)} at ${name(leg.from_id)} → ${name(leg.to_id)}`;
+  if (leg.line_id) return translate(M, "board", { line: lineShortName(leg.line_id), from: name(leg.from_id), to: name(leg.to_id) });
   if (leg.mode === "walk") {
     const change = leg.from_id !== "origin" && leg.to_id !== "destination";
-    return change ? `Change: walk from ${name(leg.from_id)} to ${name(leg.to_id)}` : `Walk to ${name(leg.to_id)}`;
+    return change
+      ? translate(M, "changeWalk", { from: name(leg.from_id), to: name(leg.to_id) })
+      : translate(M, "walkTo", { to: name(leg.to_id) });
   }
-  const word = { taxi: "Taxi", auto: "Auto", cab: "Cab", bus: "Bus", ferry: "Ferry" }[leg.mode as string] ?? leg.mode;
-  return `${word} from ${name(leg.from_id)} to ${name(leg.to_id)}`;
+  return translate(M, "rideFrom", { mode: modeWord(leg.mode), from: name(leg.from_id), to: name(leg.to_id) });
 }
 
 function MetricCard({ label, icon, iconCls, value, footLeft, footRight }: {
@@ -531,6 +552,8 @@ const BOX: Record<LegState, string> = { done: "bg-container-low/70", now: "bg-pr
 function Milestone({ leg, state, name, hits, nowMin }: {
   leg: Leg; state: LegState; name: (id: string) => string; hits: LegHit[]; nowMin: number;
 }) {
+  const t = useT(M);
+  const tc = useT(COMMON);
   const stops = leg.line_id ? rideStops(leg).length - 1 : 0;
   return (
     <div className="relative flex items-start gap-4 pb-5">
@@ -550,20 +573,20 @@ function Milestone({ leg, state, name, hits, nowMin }: {
           <div className="flex min-w-0 items-center gap-1">
             {leg.line_id && <span className="rounded bg-container-highest px-1.5 py-0.5 text-micro font-bold">{lineShortName(leg.line_id)}</span>}
             <span className={`text-sm ${state === "now" ? "font-bold text-primary" : "font-semibold"}`}>{legVerb(leg, name)}</span>
-            {state === "now" && <span className="rounded-full bg-primary px-1 py-0.5 text-micro font-bold uppercase text-on-primary">Now</span>}
+            {state === "now" && <span className="rounded-full bg-primary px-1 py-0.5 text-micro font-bold uppercase text-on-primary">{t("now")}</span>}
           </div>
           <span className={`font-mono text-micro font-bold ${state === "now" ? "text-primary" : "text-on-surface-variant"}`}>{leg.depart}–{leg.arrive}</span>
         </div>
         <p className="mt-0.5 text-small text-on-surface-variant">
-          {leg.duration_min} min{stops > 0 ? ` · ${stops} stop${stops === 1 ? "" : "s"}` : ""}{leg.cost_inr ? ` · ₹${leg.cost_inr}` : ""}
-          {state === "now" && !leg.line_id ? ` · ${Math.max(0, toMin(leg.arrive) - nowMin)} min left` : ""}
-          {!leg.step_free ? " · stairs" : ""}
+          {t("durMin", { min: leg.duration_min })}{stops > 0 ? ` · ${t(stops === 1 ? "stop1" : "stops", { n: stops })}` : ""}{leg.cost_inr ? ` · ₹${leg.cost_inr}` : ""}
+          {state === "now" && !leg.line_id ? ` · ${t("minLeft", { min: Math.max(0, toMin(leg.arrive) - nowMin) })}` : ""}
+          {!leg.step_free ? ` · ${t("stairs")}` : ""}
         </p>
         {hits.map((h) => (
           <span key={h.event_id} className="mt-1 flex items-center gap-1 rounded-md px-2 py-1 text-micro font-semibold"
             style={{ background: h.status === "confirmed" ? "var(--error-container)" : "var(--tertiary-fixed)", color: h.status === "confirmed" ? "var(--on-error-container)" : "var(--tertiary)" }}>
             <Icon name={h.blocked ? "block" : "schedule"} className="text-[14px]" />
-            {h.title} · {STATUS_STYLE[h.status].label} {pct(h.confidence)}{h.blocked ? " · can't be used" : h.delay_min ? ` · +${h.delay_min} min` : ""}
+            {h.title} · {STATUS_STYLE[h.status].label} {pct(h.confidence)}{h.blocked ? ` · ${t("cantUse")}` : h.delay_min ? ` · +${h.delay_min} ${tc("min")}` : ""}
           </span>
         ))}
       </div>
@@ -572,36 +595,38 @@ function Milestone({ leg, state, name, hits, nowMin }: {
 }
 
 function Arrival({ label, time, reached, delayed }: { label: string; time: string; reached: boolean; delayed: boolean }) {
+  const t = useT(M);
   return (
     <div className="relative flex items-start gap-4">
       <div className={`relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${reached ? NODE.done : "bg-container text-on-surface shadow-sm"}`}>
         <Icon name="flag" className="text-[16px]" />
       </div>
       <div className="flex min-w-0 flex-1 items-center justify-between gap-2 rounded-xl p-2">
-        <span className="text-sm font-bold">Arrive: {label}</span>
-        <span className={`font-mono text-micro font-bold ${delayed ? "text-error" : "text-on-surface-variant"}`}>{time}{delayed ? " (delayed)" : ""}</span>
+        <span className="text-sm font-bold">{t("arriveAt", { place: label })}</span>
+        <span className={`font-mono text-micro font-bold ${delayed ? "text-error" : "text-on-surface-variant"}`}>{time}{delayed ? ` ${t("delayed")}` : ""}</span>
       </div>
     </div>
   );
 }
 
 function RouteProblems({ hits, connected, journeyId }: { hits: LegHit[]; connected: boolean; journeyId?: string | null }) {
+  const t = useT(M);
   const unique = [...new Map(hits.map((h) => [h.event_id, h])).values()];
   return (
     <div className="flex flex-col rounded-xl bg-container-lowest p-5 shadow-sm">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1">
           <Icon name="verified_user" className="text-[20px] text-primary" />
-          <span className="text-sm font-semibold">Problems on the rest of your route</span>
+          <span className="text-sm font-semibold">{t("problemsTitle")}</span>
         </div>
         <span className="text-micro font-bold text-primary">Pakka Check</span>
       </div>
       {!journeyId ? (
-        <p className="mt-3 text-small text-on-surface-variant">Live checks need the TravelBuddy server.</p>
+        <p className="mt-3 text-small text-on-surface-variant">{t("needsServer")}</p>
       ) : !connected ? (
-        <p className="mt-3 text-small text-on-surface-variant">Checking…</p>
+        <p className="mt-3 text-small text-on-surface-variant">{t("checking")}</p>
       ) : unique.length === 0 ? (
-        <p className="mt-3 flex items-center gap-1 text-small text-primary"><Icon name="check_circle" className="text-[16px]" /> Nothing reported on the legs ahead.</p>
+        <p className="mt-3 flex items-center gap-1 text-small text-primary"><Icon name="check_circle" className="text-[16px]" /> {t("nothingAhead")}</p>
       ) : (
         <ul className="mt-3 flex flex-col gap-2">
           {unique.map((h) => (
@@ -609,8 +634,8 @@ function RouteProblems({ hits, connected, journeyId }: { hits: LegHit[]; connect
               <span className="min-w-0">
                 <Link href={`/events/${h.event_id}`} className="block truncate text-small font-semibold hover:text-primary hover:underline">{h.title}</Link>
                 <span className="text-micro text-on-surface-variant">
-                  {h.blocked ? "Blocks this route" : h.delay_min ? `About +${h.delay_min} min` : "May slow you down"}
-                  {h.status === "possible" ? " · not confirmed yet, no action needed" : ""}
+                  {h.blocked ? t("blocksRoute") : h.delay_min ? t("aboutPlus", { min: h.delay_min }) : t("maySlow")}
+                  {h.status === "possible" ? ` · ${t("notConfirmed")}` : ""}
                 </span>
               </span>
               <span className="shrink-0 rounded-md px-2 py-0.5 text-micro font-bold"
@@ -626,6 +651,8 @@ function RouteProblems({ hits, connected, journeyId }: { hits: LegHit[]; connect
 }
 
 function ReplanBanner({ journey, name, onDecided }: { journey: Journey; name: (id: string) => string; onDecided: (j: Journey) => void }) {
+  const t = useT(M);
+  const tc = useT(COMMON);
   const p = journey.proposal!;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -640,7 +667,7 @@ function ReplanBanner({ journey, name, onDecided }: { journey: Journey; name: (i
     try {
       onDecided(await decideReplan(journey.journey_id, accept));
     } catch {
-      setError("Couldn't reach the server — try again in a moment.");
+      setError(translate(M, "replanError"));
     } finally {
       setBusy(false);
     }
@@ -650,24 +677,24 @@ function ReplanBanner({ journey, name, onDecided }: { journey: Journey; name: (i
       <div className="flex items-start gap-2">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-error text-white"><Icon name="alt_route" className="text-[20px]" /></span>
         <div className="min-w-0">
-          <p className="text-sm font-semibold">Better route suggested</p>
+          <p className="text-sm font-semibold">{t("betterRoute")}</p>
           <p className="text-small text-on-surface-variant">{p.message}</p>
         </div>
       </div>
       <div className="flex flex-wrap items-center gap-2 text-caption">
-        <span className="rounded-md bg-container px-2 py-1 font-semibold">From {p.from_label}: {newLegs.map((l) => legVerb(l, name)).join(" · ")}</span>
-        <span className="rounded-md bg-container px-2 py-1 font-semibold">Arrive {p.new_card.legs[p.new_card.legs.length - 1].arrive}</span>
+        <span className="rounded-md bg-container px-2 py-1 font-semibold">{t("fromPlace", { place: p.from_label, steps: newLegs.map((l) => legVerb(l, name)).join(" · ") })}</span>
+        <span className="rounded-md bg-container px-2 py-1 font-semibold">{t("arriveTime", { time: p.new_card.legs[p.new_card.legs.length - 1].arrive })}</span>
         <span className={`rounded-md px-2 py-1 font-bold ${p.delta.min <= 0 ? "bg-primary-fixed text-on-primary-fixed" : "bg-tertiary-fixed text-tertiary"}`}>
-          {p.delta.min > 0 ? "+" : ""}{p.delta.min} min
+          {p.delta.min > 0 ? "+" : ""}{p.delta.min} {tc("min")}
         </span>
         <span className="rounded-md bg-container px-2 py-1 font-bold">{p.delta.inr >= 0 ? "+" : "−"}₹{Math.abs(p.delta.inr)}</span>
       </div>
       <div className="flex gap-2">
         <button onClick={() => decide(true)} disabled={busy} className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-on-primary hover:bg-primary-container disabled:opacity-50">
-          Switch to new route
+          {t("switchRoute")}
         </button>
         <button onClick={() => decide(false)} disabled={busy} className="rounded-xl bg-container px-4 py-2 text-xs font-semibold hover:bg-container-high disabled:opacity-50">
-          Keep my route
+          {t("keepRoute")}
         </button>
       </div>
       {error && <p className="text-caption text-error">{error}</p>}
@@ -680,6 +707,7 @@ function ReplanBanner({ journey, name, onDecided }: { journey: Journey; name: (i
 function ModalShell({ title, sub, icon, iconCls, onClose, children }: {
   title: string; sub: string; icon: string; iconCls: string; onClose: () => void; children: React.ReactNode;
 }) {
+  const tc = useT(COMMON);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", onKey);
@@ -687,7 +715,7 @@ function ModalShell({ title, sub, icon, iconCls, onClose, children }: {
   }, [onClose]);
   return (
     <div className="fixed inset-0 z-[1300] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label={title}>
-      <button className="absolute inset-0 bg-scrim backdrop-blur-sm" aria-label="Close" onClick={onClose} />
+      <button className="absolute inset-0 bg-scrim backdrop-blur-sm" aria-label={tc("close")} onClick={onClose} />
       <div className="relative flex w-full max-w-lg flex-col gap-4 rounded-2xl bg-container-lowest p-6 shadow-xl">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-2">
@@ -697,7 +725,7 @@ function ModalShell({ title, sub, icon, iconCls, onClose, children }: {
               <span className="text-small text-on-surface-variant">{sub}</span>
             </div>
           </div>
-          <button onClick={onClose} aria-label="Close" className="flex h-8 w-8 items-center justify-center rounded-lg text-outline hover:bg-container">
+          <button onClick={onClose} aria-label={tc("close")} className="flex h-8 w-8 items-center justify-center rounded-lg text-outline hover:bg-container">
             <Icon name="close" className="text-[20px]" />
           </button>
         </div>
@@ -708,6 +736,8 @@ function ModalShell({ title, sub, icon, iconCls, onClose, children }: {
 }
 
 function ReportModal({ target, onClose }: { target: { stop_id: string; line_id: string | null; label: string }; onClose: () => void }) {
+  const t = useT(M);
+  const tc = useT(COMMON);
   const refresh = useRefreshLiveEvents();
   const [cat, setCat] = useState<(typeof reportCategories)[number]["id"]>("delay");
   const [details, setDetails] = useState("");
@@ -721,62 +751,63 @@ function ReportModal({ target, onClose }: { target: { stop_id: string; line_id: 
     try {
       const out = await submitReport({
         reporter_id: reporterId(),
+        // sent to Pakka Check in English (c.label); the commuter's own words go as typed
         text: details.trim() || `${c.label} near ${target.label}`,
         type: c.type, severity: "medium",
         affected: { stop_ids: [target.stop_id], line_ids: target.line_id ? [target.line_id] : [], transfer_ids: [] },
       });
       setResult({ ok: true, out });
-      recordReport(out.event_id, `${c.label} near ${target.label}`);
+      recordReport(out.event_id, t("reportText", { what: t(`cat.${c.id}`), place: target.label }));
       refresh();
     } catch {
-      setResult({ ok: false, msg: "Couldn't reach Pakka Check — start the backend to send reports." });
+      setResult({ ok: false, msg: t("sendError") });
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <ModalShell title="Report a problem" sub="Checked by Pakka Check before it changes anyone's route" icon="flag" iconCls="bg-tertiary-fixed text-tertiary" onClose={onClose}>
+    <ModalShell title={t("reportTitle")} sub={t("reportSub")} icon="flag" iconCls="bg-tertiary-fixed text-tertiary" onClose={onClose}>
       {result ? (
         <div className="flex flex-col gap-3">
           {result.ok ? (
             <p className="flex items-start gap-2 rounded-xl bg-primary-soft p-3 text-sm text-primary-ink">
               <Icon name="check_circle" />
               {result.out
-                ? `Received by Pakka Check at ${result.out.reported_at}. Current verdict: ${STATUS_STYLE[result.out.status].label} (${pct(result.out.confidence)}). New reporters start with a low weight until others confirm.`
-                : "Logged. Facility defects don't change routes, so they aren't scored by Pakka Check."}
+                ? t("received", { time: result.out.reported_at, status: STATUS_STYLE[result.out.status].label, pct: pct(result.out.confidence) })
+                : t("facilityLogged")}
             </p>
           ) : (
             <p className="rounded-xl bg-amber-soft p-3 text-sm text-amber-ink">{result.msg}</p>
           )}
-          <button onClick={onClose} className="self-end rounded-xl bg-primary px-5 py-2.5 text-xs font-semibold text-on-primary">Done</button>
+          <button onClick={onClose} className="self-end rounded-xl bg-primary px-5 py-2.5 text-xs font-semibold text-on-primary">{t("doneBtn")}</button>
         </div>
       ) : (
         <>
           <p className="text-small text-on-surface-variant">
-            This report is filed against <b>{target.label}</b>, the next stop on your trip.
+            {rich(t("filedAgainst"), { place: <b>{target.label}</b> })}
           </p>
           <div className="flex flex-col gap-1">
-            <span className="text-micro font-bold uppercase">Issue Category</span>
+            <span className="text-micro font-bold uppercase">{t("category")}</span>
             <div className="grid grid-cols-2 gap-2">
               {reportCategories.map((c) => (
                 <button key={c.id} type="button" onClick={() => setCat(c.id)} aria-pressed={cat === c.id}
                   className={`flex items-center gap-2 rounded-xl p-2 text-left text-xs font-semibold transition-colors ${cat === c.id ? "bg-primary-fixed text-on-primary-fixed" : "bg-container hover:bg-primary-fixed hover:text-on-primary-fixed"}`}>
-                  <Icon name={c.icon} className={`text-[18px] ${c.iconCls}`} /> {c.label}
+                  <Icon name={c.icon} className={`text-[18px] ${c.iconCls}`} /> {t(`cat.${c.id}`)}
                 </button>
               ))}
             </div>
           </div>
           <label className="flex flex-col gap-1">
-            <span className="text-micro font-bold uppercase">Details (Optional)</span>
+            <span className="text-micro font-bold uppercase">{t("details")}</span>
             <textarea value={details} onChange={(e) => setDetails(e.target.value)} rows={3} maxLength={500}
-              placeholder="e.g. Train stopped between stations for 10 minutes, heavy queue at the exit…"
+              placeholder={t("detailsPh")}
               className="w-full resize-none rounded-xl bg-container p-2 text-small placeholder:text-outline focus:outline-none focus:ring-2 focus:ring-primary" />
           </label>
           <div className="flex items-center justify-end gap-2 pt-1">
-            <button onClick={onClose} className="rounded-xl bg-container px-4 py-2.5 text-xs font-semibold hover:bg-container-high">Cancel</button>
+            <button onClick={onClose} className="rounded-xl bg-container px-4 py-2.5 text-xs font-semibold hover:bg-container-high">{tc("cancel")}</button>
             <button onClick={dispatch} disabled={busy} className="rounded-xl bg-primary px-5 py-2.5 text-xs font-semibold text-on-primary shadow-sm hover:bg-primary-container disabled:opacity-50">
-              {busy ? "Sending…" : "Send report"}
+              {busy ? t("sending") : t("sendReport")}
             </button>
           </div>
         </>
@@ -786,37 +817,40 @@ function ReportModal({ target, onClose }: { target: { stop_id: string; line_id: 
 }
 
 function ShareModal({ destLabel, eta, onClose }: { destLabel: string; eta: string; onClose: () => void }) {
+  const t = useT(M);
   const [copied, setCopied] = useState(false);
   return (
-    <ModalShell title="Share Live Tracking" sub="Family & colleague safety link" icon="share_location" iconCls="bg-primary-fixed text-primary" onClose={onClose}>
-      <p className="text-small text-on-surface-variant">Recipients would see your progress and expected {eta} arrival at {destLabel}.</p>
+    <ModalShell title={t("shareTitle")} sub={t("shareSub")} icon="share_location" iconCls="bg-primary-fixed text-primary" onClose={onClose}>
+      <p className="text-small text-on-surface-variant">{t("shareBody", { time: eta, place: destLabel })}</p>
       <div className="flex items-center justify-between gap-2 rounded-xl bg-container p-2">
         <span className="truncate font-mono text-small">{share.link}</span>
         <button onClick={() => { navigator.clipboard?.writeText(share.link).catch(() => undefined); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
-          className="shrink-0 rounded-lg bg-primary px-2 py-1.5 text-micro font-bold text-on-primary">{copied ? "Copied!" : "Copy Link"}</button>
+          className="shrink-0 rounded-lg bg-primary px-2 py-1.5 text-micro font-bold text-on-primary">{copied ? t("copied") : t("copyLink")}</button>
       </div>
       <div className="flex items-center gap-1 text-micro font-bold text-on-surface-variant">
-        <Icon name="info" className="text-[16px] text-primary" /> Sample link — sharing isn&apos;t live yet
+        <Icon name="info" className="text-[16px] text-primary" /> {t("sampleLink")}
       </div>
     </ModalShell>
   );
 }
 
 function SosModal({ onClose }: { onClose: () => void }) {
+  const t = useT(M);
+  const tc = useT(COMMON);
   return (
-    <ModalShell title="Emergency SOS" sub="Prototype — no alert is sent" icon="emergency" iconCls="bg-error text-white" onClose={onClose}>
+    <ModalShell title={t("sos")} sub={t("sosSub")} icon="emergency" iconCls="bg-error text-white" onClose={onClose}>
       <p className="text-sm">
-        This button is a design placeholder. <b>It does not contact anyone.</b> In a real emergency, call:
+        {rich(t("sosBody"), { bold: <b>{t("sosBold")}</b> })}
       </p>
       <div className="grid grid-cols-2 gap-2">
         <a href="tel:112" className="flex flex-col rounded-xl bg-error-container p-3 text-on-error-container">
-          <span className="text-2xl font-bold">112</span><span className="text-small">Police / emergency</span>
+          <span className="text-2xl font-bold">112</span><span className="text-small">{t("police")}</span>
         </a>
         <a href="tel:139" className="flex flex-col rounded-xl bg-container p-3">
-          <span className="text-2xl font-bold">139</span><span className="text-small">Railway helpline</span>
+          <span className="text-2xl font-bold">139</span><span className="text-small">{t("railway")}</span>
         </a>
       </div>
-      <button onClick={onClose} className="self-end rounded-xl bg-container px-4 py-2.5 text-xs font-semibold hover:bg-container-high">Close</button>
+      <button onClick={onClose} className="self-end rounded-xl bg-container px-4 py-2.5 text-xs font-semibold hover:bg-container-high">{tc("close")}</button>
     </ModalShell>
   );
 }

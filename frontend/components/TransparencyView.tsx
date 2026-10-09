@@ -8,13 +8,23 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getTransparency, type Transparency } from "@/lib/api";
 import { pct, STATUS_STYLE, TYPE_LABEL } from "@/lib/format";
+import { useT } from "@/lib/i18n";
+import { COMMON } from "@/lib/i18n/common";
+import { M } from "@/lib/i18n/messages/TransparencyView";
 import Icon from "./Icon";
+
+const ROUTE_KEYS = ["baseline", "aware", "replan"] as const;
+type RouteKey = (typeof ROUTE_KEYS)[number];
+const KIND_KEYS = ["proposed", "accepted", "rejected", "notice"] as const;
+type KindKey = (typeof KIND_KEYS)[number];
 
 const SOURCE_ICON: Record<string, string> = { crowd: "groups", news: "newspaper", official: "verified", weather: "rainy" };
 
 export default function TransparencyView() {
   const [t, setT] = useState<Transparency | null>(null);
   const [error, setError] = useState(false);
+  const tr = useT(M);
+  const tc = useT(COMMON);
 
   useEffect(() => {
     let alive = true;
@@ -24,8 +34,8 @@ export default function TransparencyView() {
     return () => { alive = false; clearInterval(id); };
   }, []);
 
-  if (error && !t) return <main className="px-6 py-10 text-sm text-on-surface-variant">Can&apos;t reach the TravelBuddy server — start the backend on port 8000.</main>;
-  if (!t) return <main className="px-6 py-10 text-sm text-on-surface-variant">Loading…</main>;
+  if (error && !t) return <main className="px-6 py-10 text-sm text-on-surface-variant">{tr("offline")}</main>;
+  if (!t) return <main className="px-6 py-10 text-sm text-on-surface-variant">{tc("loading")}</main>;
 
   const p = t.policy as Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
   const thresholds = p.thresholds ?? { confirmed: p.confirmed_at, possible: p.possible_at };
@@ -35,11 +45,10 @@ export default function TransparencyView() {
   return (
     <main className="flex w-full flex-col gap-4 px-4 pb-16 pt-4 md:px-6">
       <header className="flex flex-col gap-1">
-        <span className="flex items-center gap-1 text-caption font-bold uppercase tracking-wider text-primary"><Icon name="visibility" className="text-[16px]" /> Transparency</span>
-        <h1 className="text-2xl font-semibold">How TravelBuddy decides</h1>
+        <span className="flex items-center gap-1 text-caption font-bold uppercase tracking-wider text-primary"><Icon name="visibility" className="text-[16px]" /> {tr("eyebrow")}</span>
+        <h1 className="text-2xl font-semibold">{tr("title")}</h1>
         <p className="max-w-3xl text-sm text-on-surface-variant">
-          Every number below is read from the running code, not written by hand. A report changes your route only after
-          Pakka Check confirms it from several sources. Live as of demo time <b>{t.as_of}</b>.
+          {tr("intro")} <b>{t.as_of}</b>.
         </p>
       </header>
 
@@ -63,25 +72,25 @@ export default function TransparencyView() {
       <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-2">
         {/* ---- Rules ---- */}
         <section className="flex flex-col gap-3 rounded-2xl bg-container-lowest p-5 shadow-sm">
-          <h2 className="flex items-center gap-2 font-semibold"><Icon name="rule" className="text-primary" /> Pakka Check rules</h2>
+          <h2 className="flex items-center gap-2 font-semibold"><Icon name="rule" className="text-primary" /> {tr("rules")}</h2>
           <p className="rounded-xl bg-container-low p-3 font-mono text-caption">{t.formula}</p>
           <div className="grid grid-cols-3 gap-2 text-center">
-            <Threshold label="Ignored" value={`< ${Math.round((thresholds.possible ?? 0.4) * 100)}%`} cls="bg-container-high" />
-            <Threshold label="Possible" value={`${Math.round((thresholds.possible ?? 0.4) * 100)}–${Math.round((thresholds.confirmed ?? 0.7) * 100) - 1}%`} cls="bg-tertiary-fixed text-tertiary" />
-            <Threshold label="Confirmed" value={`≥ ${Math.round((thresholds.confirmed ?? 0.7) * 100)}%`} cls="bg-error-container text-on-error-container" />
+            <Threshold label={tc("status.ignored")} value={`< ${Math.round((thresholds.possible ?? 0.4) * 100)}%`} cls="bg-container-high" />
+            <Threshold label={tc("status.possible")} value={`${Math.round((thresholds.possible ?? 0.4) * 100)}–${Math.round((thresholds.confirmed ?? 0.7) * 100) - 1}%`} cls="bg-tertiary-fixed text-tertiary" />
+            <Threshold label={tc("status.confirmed")} value={`≥ ${Math.round((thresholds.confirmed ?? 0.7) * 100)}%`} cls="bg-error-container text-on-error-container" />
           </div>
-          <h3 className="mt-1 text-small font-bold uppercase tracking-wider text-on-surface-variant">Anti-gaming</h3>
+          <h3 className="mt-1 text-small font-bold uppercase tracking-wider text-on-surface-variant">{tr("antiGaming")}</h3>
           <ul className="flex flex-col gap-1 text-small">
-            <li className="flex gap-2"><Icon name="person_off" className="text-[18px] text-error" /> New (&lt; {anti.new_account_max_age_days ?? 1} day) or low-reputation (&lt; {anti.low_reputation ?? 0.2}) accounts count only {anti.untrusted_weight ?? 0.05}.</li>
-            <li className="flex gap-2"><Icon name="content_copy" className="text-[18px] text-error" /> {anti.burst?.min_reports ?? 3}+ near-identical new-account reports within {anti.burst?.window_min ?? 10} min = one suspicious burst (weight {anti.burst?.weight ?? 0.05}).</li>
-            <li className="flex gap-2"><Icon name="repeat_one" className="text-[18px] text-error" /> The same person reporting twice counts once.</li>
-            <li className="flex gap-2"><Icon name="gavel" className="text-[18px] text-primary" /> A &quot;running normally&quot; only cancels a claim if it comes from a more trusted source (official &gt; news &gt; commuter).</li>
+            <li className="flex gap-2"><Icon name="person_off" className="text-[18px] text-error" /> {tr("anti1", { days: anti.new_account_max_age_days ?? 1, rep: anti.low_reputation ?? 0.2, w: anti.untrusted_weight ?? 0.05 })}</li>
+            <li className="flex gap-2"><Icon name="content_copy" className="text-[18px] text-error" /> {tr("anti2", { n: anti.burst?.min_reports ?? 3, min: anti.burst?.window_min ?? 10, w: anti.burst?.weight ?? 0.05 })}</li>
+            <li className="flex gap-2"><Icon name="repeat_one" className="text-[18px] text-error" /> {tr("anti3")}</li>
+            <li className="flex gap-2"><Icon name="gavel" className="text-[18px] text-primary" /> {tr("anti4")}</li>
           </ul>
-          <h3 className="mt-1 text-small font-bold uppercase tracking-wider text-on-surface-variant">How long a problem lasts after its last report</h3>
+          <h3 className="mt-1 text-small font-bold uppercase tracking-wider text-on-surface-variant">{tr("lifetimes")}</h3>
           <div className="flex flex-wrap gap-1.5">
             {Object.entries(lifetimes).map(([type, min]) => (
               <span key={type} className="rounded-lg bg-container-low px-2 py-1 text-caption">
-                <b>{TYPE_LABEL[type] ?? type}</b> {min == null ? "until announced end" : min >= 60 ? `${min / 60} h` : `${min} min`}
+                <b>{TYPE_LABEL[type] ?? type}</b> {min == null ? tr("untilEnd") : min >= 60 ? tr("hours", { n: min / 60 }) : `${min} ${tc("min")}`}
               </span>
             ))}
           </div>
@@ -89,19 +98,19 @@ export default function TransparencyView() {
 
         {/* ---- Routing, AI, assumptions ---- */}
         <section className="flex flex-col gap-3 rounded-2xl bg-container-lowest p-5 shadow-sm">
-          <h2 className="flex items-center gap-2 font-semibold"><Icon name="alt_route" className="text-primary" /> Routing &amp; AI</h2>
+          <h2 className="flex items-center gap-2 font-semibold"><Icon name="alt_route" className="text-primary" /> {tr("routingAi")}</h2>
           <ul className="flex flex-col gap-2 text-small">
             {Object.entries(t.routing).map(([k, v]) => (
-              <li key={k} className="rounded-xl bg-container-low p-2.5"><b className="capitalize">{k === "aware" ? "TravelBuddy (aware)" : k}:</b> {v}</li>
+              <li key={k} className="rounded-xl bg-container-low p-2.5"><b className="capitalize">{(ROUTE_KEYS as readonly string[]).includes(k) ? tr(`route.${k as RouteKey}`) : k}:</b> {v}</li>
             ))}
-            <li className="rounded-xl bg-container-low p-2.5"><b>Chat assistant:</b> {t.ai.chatbot} ({t.ai.model}). {t.ai.number_check ? "Every number in a reply is checked against our data." : ""} {t.ai.fallback}</li>
+            <li className="rounded-xl bg-container-low p-2.5"><b>{tr("chatAssistant")}</b> {t.ai.chatbot} ({t.ai.model}). {t.ai.number_check ? tr("numberCheck") : ""} {t.ai.fallback}</li>
           </ul>
-          <h3 className="mt-1 text-small font-bold uppercase tracking-wider text-on-surface-variant">Assumptions &amp; limits</h3>
+          <h3 className="mt-1 text-small font-bold uppercase tracking-wider text-on-surface-variant">{tr("assumptions")}</h3>
           <ol className="flex list-decimal flex-col gap-1.5 pl-5 text-small text-on-surface-variant">
             {t.assumptions.map((a) => <li key={a}>{a}</li>)}
           </ol>
           <p className="text-caption text-outline">
-            Network: {t.data.stations} stations · {t.data.lines} lines · {t.data.transfers} interchanges · {t.data.pois} places · {t.data.reporters} known reporters.
+            {tr("network", { stations: t.data.stations, lines: t.data.lines, transfers: t.data.transfers, pois: t.data.pois, reporters: t.data.reporters })}
           </p>
         </section>
       </div>
@@ -109,13 +118,13 @@ export default function TransparencyView() {
       {/* ---- Event log ---- */}
       <section className="flex flex-col gap-3 rounded-2xl bg-container-lowest p-5 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="flex items-center gap-2 font-semibold"><Icon name="list_alt" className="text-primary" /> Live event log ({t.event_log.length})</h2>
-          <span className="text-caption text-on-surface-variant">Including what was ignored — nothing is hidden</span>
+          <h2 className="flex items-center gap-2 font-semibold"><Icon name="list_alt" className="text-primary" /> {tr("eventLog", { n: t.event_log.length })}</h2>
+          <span className="text-caption text-on-surface-variant">{tr("nothingHidden")}</span>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-small">
             <thead className="bg-container-low eyebrow">
-              <tr><th className="px-3 py-2">Problem</th><th className="px-3 py-2">Verdict</th><th className="px-3 py-2">Why</th><th className="px-3 py-2">Seen</th><th className="px-3 py-2">Expires</th></tr>
+              <tr><th className="px-3 py-2">{tr("colProblem")}</th><th className="px-3 py-2">{tr("colVerdict")}</th><th className="px-3 py-2">{tr("colWhy")}</th><th className="px-3 py-2">{tr("colSeen")}</th><th className="px-3 py-2">{tr("colExpires")}</th></tr>
             </thead>
             <tbody className="divide-y divide-hairline-soft">
               {t.event_log.map((e) => (
@@ -141,21 +150,21 @@ export default function TransparencyView() {
 
       {/* ---- Decisions ---- */}
       <section className="flex flex-col gap-2 rounded-2xl bg-container-lowest p-5 shadow-sm">
-        <h2 className="flex items-center gap-2 font-semibold"><Icon name="history" className="text-primary" /> Replan decisions</h2>
+        <h2 className="flex items-center gap-2 font-semibold"><Icon name="history" className="text-primary" /> {tr("decisions")}</h2>
         {t.decisions.length === 0 ? (
-          <p className="text-small text-on-surface-variant">No saved trip has been affected yet. Start a trip on Route Results and play the demo clock.</p>
+          <p className="text-small text-on-surface-variant">{tr("noDecisions")}</p>
         ) : (
           <ul className="flex flex-col gap-1.5 text-small">
             {t.decisions.map((d, i) => (
               <li key={i} className="flex flex-wrap items-start gap-2 rounded-lg bg-container-low p-2">
                 <span className="font-mono font-bold">{d.at}</span>
-                <span className={`rounded px-1.5 py-0.5 text-micro font-bold uppercase ${d.kind === "accepted" ? "bg-primary-fixed text-on-primary-fixed" : d.kind === "rejected" ? "bg-container-high" : "bg-tertiary-fixed text-tertiary"}`}>{d.kind}</span>
+                <span className={`rounded px-1.5 py-0.5 text-micro font-bold uppercase ${d.kind === "accepted" ? "bg-primary-fixed text-on-primary-fixed" : d.kind === "rejected" ? "bg-container-high" : "bg-tertiary-fixed text-tertiary"}`}>{(KIND_KEYS as readonly string[]).includes(d.kind) ? tr(`kind.${d.kind as KindKey}`) : d.kind}</span>
                 <span className="min-w-0 flex-1">{d.traveller}: {d.detail}</span>
               </li>
             ))}
           </ul>
         )}
-        <Link href="/compare" className="self-start text-small font-semibold text-primary hover:underline">See the evaluation: normal app vs TravelBuddy →</Link>
+        <Link href="/compare" className="self-start text-small font-semibold text-primary hover:underline">{tr("seeEval")}</Link>
       </section>
     </main>
   );

@@ -1,6 +1,8 @@
 """Baseline schedule-only router. SPEC.md §5.2, §5.3, §5.4."""
 from __future__ import annotations
 
+from app.i18n import T, tr
+
 import networkx as nx
 
 from app.clock import clock, fmt_hhmm
@@ -57,6 +59,20 @@ def _why_no_path(traveller: Traveller, stations) -> str:
     return "No connection between these places with the transport modes you allowed. Try allowing more modes."
 
 
+def _why_no_path_text(traveller: Traveller, stations) -> str:
+    """_why_no_path in the traveller's language (English keeps the detailed wording)."""
+    if traveller.language not in ("hi", "mr"):
+        return _why_no_path(traveller, stations)
+    allowed = set(traveller.modes_allowed)
+    usable = [s for s in stations.values() if s.mode in allowed]
+    for end, place in (("start", traveller.origin), ("destination", traveller.destination)):
+        best = min(usable, key=lambda s: haversine_km(place.lat, place.lon, s.lat, s.lon), default=None)
+        km = haversine_km(place.lat, place.lon, best.lat, best.lon) if best else 0.0
+        if best is None or km > WALK_REACH_KM:
+            return tr(traveller.language, "rej.too_far", end=tr(traveller.language, f"end.{end}"), place=place.label, km=f"{km:.1f}")
+    return tr(traveller.language, "rej.no_path")
+
+
 def plan_baseline(
     traveller: Traveller,
     departure_time: str | None = None,
@@ -72,7 +88,8 @@ def plan_baseline(
     if not traveller.destination:
         return PlanResponse(
             cards=[],
-            rejected=[RejectedOption(summary="Trip request", reason="No destination specified (use /itinerary for multi-stop day trips)")],
+            rejected=[RejectedOption(summary="Trip request", reason="No destination specified (use /itinerary for multi-stop day trips)",
+                                          message=tr(traveller.language, "rej.no_destination"))],
             as_of=departure_time or fmt_hhmm(clock.now()),
         )
 
@@ -122,7 +139,8 @@ def plan_baseline(
     # No path at all (e.g. only rail allowed and the destination is far from any station): say why.
     if not unique_candidates:
         return PlanResponse(
-            cards=[], rejected=[RejectedOption(summary="Any route", reason=_why_no_path(traveller, stations))],
+            cards=[], rejected=[RejectedOption(summary="Any route", reason=_why_no_path(traveller, stations),
+                                                message=_why_no_path_text(traveller, stations))],
             destination=traveller.destination, as_of=dep_time,
         )
 
@@ -137,7 +155,8 @@ def plan_baseline(
         if effects is not None:
             legs, reliability, risk_delay, blocked_by = effects.apply(legs)
             if blocked_by:
-                rejected.append(RejectedOption(summary=summary, reason=f"Uses {blocked_by} (confirmed by Pakka Check)"))
+                rejected.append(RejectedOption(summary=summary, reason=f"Uses {blocked_by} (confirmed by Pakka Check)",
+                                                   message=tr(traveller.language, "rej.blocked", what=blocked_by)))
                 continue
 
         # Calculate metrics
@@ -151,32 +170,38 @@ def plan_baseline(
         # Filter A: Modes allowed
         disallowed_mode = next((leg.mode for leg in legs if leg.mode not in traveller.modes_allowed), None)
         if disallowed_mode:
-            rejected.append(RejectedOption(summary=summary, reason=f"Uses mode '{disallowed_mode}' not in allowed modes"))
+            rejected.append(RejectedOption(summary=summary, reason=f"Uses mode '{disallowed_mode}' not in allowed modes",
+                                                   message=tr(traveller.language, "rej.mode", mode=tr(traveller.language, f"word.{disallowed_mode}") if f"word.{disallowed_mode}" in T else disallowed_mode)))
             continue
 
         # Filter B: Step-free requirement
         if traveller.step_free and any(not leg.step_free for leg in legs):
-            rejected.append(RejectedOption(summary=summary, reason="Not step-free (requires stairs or non-accessible interchange)"))
+            rejected.append(RejectedOption(summary=summary, reason="Not step-free (requires stairs or non-accessible interchange)",
+                                                   message=tr(traveller.language, "rej.step_free")))
             continue
 
         # Filter C: Budget
         if traveller.max_budget_inr is not None and cost > traveller.max_budget_inr:
-            rejected.append(RejectedOption(summary=summary, reason=f"Over budget (est. {cost} rupees > {traveller.max_budget_inr})"))
+            rejected.append(RejectedOption(summary=summary, reason=f"Over budget (est. {cost} rupees > {traveller.max_budget_inr})",
+                                                   message=tr(traveller.language, "rej.budget", cost=cost, max=traveller.max_budget_inr)))
             continue
 
         # Filter D: Hard deadline
         if traveller.hard_deadline and traveller.arrive_by and final_arrive > traveller.arrive_by:
-            rejected.append(RejectedOption(summary=summary, reason=f"Arrives at {final_arrive}, after strict deadline {traveller.arrive_by}"))
+            rejected.append(RejectedOption(summary=summary, reason=f"Arrives at {final_arrive}, after strict deadline {traveller.arrive_by}",
+                                                   message=tr(traveller.language, "rej.deadline", at=final_arrive, by=traveller.arrive_by)))
             continue
 
         # Filter E: Max walking time
         if traveller.max_walk_min is not None and walk_min > traveller.max_walk_min:
-            rejected.append(RejectedOption(summary=summary, reason=f"Walking time {walk_min} min exceeds max {traveller.max_walk_min} min"))
+            rejected.append(RejectedOption(summary=summary, reason=f"Walking time {walk_min} min exceeds max {traveller.max_walk_min} min",
+                                                   message=tr(traveller.language, "rej.walk", walk=walk_min, max=traveller.max_walk_min)))
             continue
 
         # Filter F: Max transfers
         if traveller.max_transfers is not None and num_transfers > traveller.max_transfers:
-            rejected.append(RejectedOption(summary=summary, reason=f"Requires {num_transfers} transfers, exceeding max {traveller.max_transfers}"))
+            rejected.append(RejectedOption(summary=summary, reason=f"Requires {num_transfers} transfers, exceeding max {traveller.max_transfers}",
+                                                   message=tr(traveller.language, "rej.transfers", n=num_transfers, max=traveller.max_transfers)))
             continue
 
         surviving.append(
@@ -193,7 +218,7 @@ def plan_baseline(
         )
 
     # 4. Score and select top 3 cards
-    cards = build_route_cards(surviving, traveller.priority)
+    cards = build_route_cards(surviving, traveller.priority, traveller.language)
 
     return PlanResponse(
         cards=cards,

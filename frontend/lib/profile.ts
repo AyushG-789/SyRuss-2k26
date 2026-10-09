@@ -23,8 +23,14 @@ export interface SavedPlace {
 export interface ActivityEntry {
   at: string;          // ISO time
   kind: "planned" | "started" | "reported";
+  /** English summary (older entries only have this). */
   text: string;
   href?: string;
+  /** Parts, so the ledger can show the entry in any language. */
+  from?: string;
+  to?: string;          // empty for a day trip
+  route?: string;       // plan label: fastest / optimal / cheapest
+  what?: string;        // what was reported
 }
 
 export interface Profile {
@@ -32,7 +38,8 @@ export interface Profile {
   name: string;
   email: string;
   phone: string;
-  languages: Language[];
+  /** Language the whole app is shown in (and the chat / voice reply in). */
+  appLanguage: Language;
   territory: string;
   memberSince: string; // "Oct 2023"
   modes: Mode[];       // preferred vehicles (walking is always allowed)
@@ -54,7 +61,7 @@ export const DEFAULT_PROFILE: Profile = {
   name: "Rohan Sharma",
   email: "rohan.sharma@example.in",
   phone: "+91 98201 23456",
-  languages: ["en", "mr"],
+  appLanguage: "en",
   territory: "Mumbai Region (MMR)",
   memberSince: "Oct 2023",
   modes: ["metro", "local", "bus"],
@@ -95,7 +102,9 @@ function read(): Profile {
   if (cache) return cache;
   try {
     const raw = localStorage.getItem(KEY);
-    cache = raw ? { ...DEFAULT_PROFILE, ...(JSON.parse(raw) as Partial<Profile>) } : DEFAULT_PROFILE;
+    const saved = raw ? (JSON.parse(raw) as Partial<Profile> & { languages?: unknown }) : null;
+    if (saved) delete saved.languages; // older profiles kept a list of spoken languages
+    cache = saved ? { ...DEFAULT_PROFILE, ...saved } : DEFAULT_PROFILE;
   } catch {
     cache = DEFAULT_PROFILE;
   }
@@ -137,14 +146,35 @@ export function updateProfile(patch: Partial<Profile> | ((p: Profile) => Partial
 
 /** Sign out: personal details go, travel preferences and counts stay. */
 export function signOut() {
-  const { modes, priority, stepFree, privacy, appearance, stats, activity } = read();
-  write({ ...GUEST_PROFILE, modes, priority, stepFree, privacy, appearance, stats, activity, smsAlerts: false });
+  const { modes, priority, stepFree, privacy, appearance, appLanguage, stats, activity } = read();
+  write({ ...GUEST_PROFILE, modes, priority, stepFree, privacy, appearance, appLanguage, stats, activity, smsAlerts: false });
 }
 
-export function signIn() {
-  const { modes, priority, stepFree, privacy, appearance, stats, activity } = read();
-  write({ ...DEFAULT_PROFILE, modes, priority, stepFree, privacy, appearance, stats, activity });
+export interface SignInDetails {
+  name: string;
+  email: string;
+  phone: string;
+  appLanguage: Language;
+  territory: string;
 }
+
+/** Sign in with the details typed in the panel; travel preferences and counts carry over. */
+export function signIn(details: SignInDetails) {
+  const { modes, priority, stepFree, privacy, appearance, stats, activity } = read();
+  write({
+    ...DEFAULT_PROFILE, ...details, modes, priority, stepFree, privacy, appearance, stats, activity,
+    memberSince: new Date().toLocaleDateString("en-IN", { month: "short", year: "numeric" }),
+    smsAlerts: Boolean(details.phone),
+  });
+}
+
+/** Switch the app language (saved with the profile). */
+export function setAppLanguage(appLanguage: Language) {
+  document.documentElement.lang = LANG_HTML[appLanguage];
+  updateProfile({ appLanguage });
+}
+
+export const LANG_HTML: Record<Language, string> = { en: "en-IN", hi: "hi-IN", mr: "mr-IN" };
 
 /** Wipe everything this app stored in the browser (profile, saved trip, reporter id). */
 export function clearDeviceData() {
@@ -183,17 +213,19 @@ function log(entry: Omit<ActivityEntry, "at">, stat?: (s: Profile["stats"]) => P
 }
 
 export function recordPlanned(t: Traveller, href: string) {
-  log({ kind: "planned", text: `Planned ${t.origin.label} → ${t.destination?.label ?? "day trip"}`, href },
+  log({ kind: "planned", text: `Planned ${t.origin.label} → ${t.destination?.label ?? "day trip"}`, href,
+    from: t.origin.label, to: t.destination?.label ?? "" },
     (s) => ({ ...s, planned: s.planned + 1 }));
 }
 
 export function recordStarted(t: Traveller, route: string) {
-  log({ kind: "started", text: `Started ${t.origin.label} → ${t.destination?.label ?? ""} (${route})`, href: "/track" },
+  log({ kind: "started", text: `Started ${t.origin.label} → ${t.destination?.label ?? ""} (${route})`, href: "/track",
+    from: t.origin.label, to: t.destination?.label ?? "", route },
     (s) => ({ ...s, started: s.started + 1 }));
 }
 
 export function recordReport(eventId: string, what: string) {
-  log({ kind: "reported", text: `Reported: ${what}`, href: `/events/${eventId}` },
+  log({ kind: "reported", text: `Reported: ${what}`, href: `/events/${eventId}`, what },
     (s) => ({ ...s, reportIds: s.reportIds.includes(eventId) ? s.reportIds : [eventId, ...s.reportIds].slice(0, 50) }));
 }
 

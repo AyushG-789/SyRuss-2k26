@@ -2,104 +2,112 @@
 // Frontend only. Station positions come from the real network (stations.json); departures,
 // crowding, gates and facilities are sample until live feeds exist.
 
+// Visible text lives in lib/i18n/messages/StationExplorer.ts; text fields hold its keys
+// (a [key, vars] pair when the text has numbers in it).
+
+import type { Vars } from "./i18n";
+import type { StationKey } from "./i18n/messages/StationExplorer";
+
 export type Kind = "metro" | "rail" | "bus" | "auto";
 type Tone = "ok" | "warn" | "neutral";
+/** A message key, or a key with its {placeholders}. */
+export type Txt = StationKey | [StationKey, Vars];
 
 export const hub = {
-  breadcrumb: ["MMR Transit Network", "Western Corridor & Line 1", "Andheri Multi-Modal Hub"],
-  feeds: "Station layout: sample · problems: live Pakka Check",
+  breadcrumb: ["crumb.mmr", "crumb.western", "crumb.hub"] as StationKey[],
+  feeds: "feeds" as StationKey,
   search: "Andheri Transit Hub (Line 1 & WR)",
   radii: ["500m", "1km", "1.5km", "2km", "5km"],
   defaultRadius: "1.5km",
   /** Map centre + "you are here" (real coordinates near Andheri station). */
   center: { label: "Andheri station", lat: 19.1197, lon: 72.8464 },
-  you: { lat: 19.1205, lon: 72.8420, text: "Andheri West Link Road", dist: "(320m WSW)", walk: "Walk: ~4 min" },
+  you: { lat: 19.1205, lon: 72.8420, text: "Andheri West Link Road", dist: "youDist" as StationKey, walk: ["youWalk", { min: 4 }] as Txt },
 };
 
-export const filters: { id: Kind | "all"; label: string; icon: string; iconCls: string; count: number }[] = [
-  { id: "all", label: "All Stations", icon: "hub", iconCls: "", count: 14 },
-  { id: "metro", label: "Metro Stations", icon: "subway", iconCls: "text-primary", count: 3 },
-  { id: "rail", label: "Suburban Rail", icon: "train", iconCls: "text-primary", count: 1 },
-  { id: "bus", label: "Bus Terminals", icon: "directions_bus", iconCls: "text-tertiary", count: 6 },
-  { id: "auto", label: "Auto/Cab Stands", icon: "electric_rickshaw", iconCls: "text-tertiary-container", count: 4 },
+export const filters: { id: Kind | "all"; label: StationKey; icon: string; iconCls: string; count: number }[] = [
+  { id: "all", label: "filter.all", icon: "hub", iconCls: "", count: 14 },
+  { id: "metro", label: "filter.metro", icon: "subway", iconCls: "text-primary", count: 3 },
+  { id: "rail", label: "filter.rail", icon: "train", iconCls: "text-primary", count: 1 },
+  { id: "bus", label: "filter.bus", icon: "directions_bus", iconCls: "text-tertiary", count: 6 },
+  { id: "auto", label: "filter.auto", icon: "electric_rickshaw", iconCls: "text-tertiary-container", count: 4 },
 ];
 
-export interface Departure { code: string; title: string; meta: { text: string; cls?: string }[]; crowd: { text: string; tone: Tone; dot?: boolean }; eta: string; etaPrimary: boolean; then: string }
+export interface Departure { code: string; title: StationKey; meta: { text: Txt; cls?: string }[]; crowd: { text: StationKey; tone: Tone; dot?: boolean }; eta: Txt; etaPrimary: boolean; then: Txt }
 export interface Station {
-  id: string; kinds: Kind[]; name: string; tag: string; icon: string; iconBox: string; tagCls: string; codeCls: string;
-  sub: { text: string; cls?: string; dot?: boolean }[]; walk: string; departures: Departure[];
-  amenities: { icon: string; text: string; iconCls: string }[];
-  auto?: { title: string; text: string; badge: string };
+  id: string; kinds: Kind[]; name: StationKey; tag: StationKey; icon: string; iconBox: string; tagCls: string; codeCls: string;
+  sub: { text: StationKey; cls?: string; dot?: boolean }[]; walk: Txt; departures: Departure[];
+  amenities: { icon: string; text: StationKey; iconCls: string }[];
+  auto?: { title: StationKey; text: StationKey; badge: StationKey };
 }
 
 /** backend: station facilities + live departures (not in PS scope yet) */
 export const stationCards: Station[] = [
   {
-    id: "metro", kinds: ["metro"], name: "Andheri Metro Station", tag: "Line 1", icon: "subway", iconBox: "bg-primary-fixed text-primary",
+    id: "metro", kinds: ["metro"], name: "metro.name", tag: "metro.tag", icon: "subway", iconBox: "bg-primary-fixed text-primary",
     tagCls: "bg-primary text-on-primary", codeCls: "bg-primary/10 text-primary",
-    sub: [{ text: "Elevated Concourse" }, { text: "Skywalk Connected", cls: "font-semibold text-primary", dot: true }, { text: "Gate 2 / 3 Access" }],
-    walk: "3 mins (210m)",
+    sub: [{ text: "metro.sub1" }, { text: "metro.sub2", cls: "font-semibold text-primary", dot: true }, { text: "metro.sub3" }],
+    walk: ["walkDist", { min: 3, m: 210 }],
     departures: [
-      { code: "P1", title: "Platform 1 → Versova", meta: [{ text: "Normal Service" }, { text: "AC 4-Car", cls: "font-semibold text-primary" }],
-        crowd: { text: "Low Crowd", tone: "ok", dot: true }, eta: "2 min", etaPrimary: true, then: "Then: 6m" },
-      { code: "P2", title: "Platform 2 → Ghatkopar (Interchange)", meta: [{ text: "High Frequency" }, { text: "AC 4-Car", cls: "font-semibold text-primary" }],
-        crowd: { text: "Med Crowd", tone: "warn", dot: true }, eta: "4 min", etaPrimary: false, then: "Then: 7m" },
+      { code: "P1", title: "metro.d1", meta: [{ text: "meta.normal" }, { text: "meta.ac4", cls: "font-semibold text-primary" }],
+        crowd: { text: "crowd.low", tone: "ok", dot: true }, eta: ["etaMin", { min: 2 }], etaPrimary: true, then: ["then", { min: 6 }] },
+      { code: "P2", title: "metro.d2", meta: [{ text: "meta.highFreq" }, { text: "meta.ac4", cls: "font-semibold text-primary" }],
+        crowd: { text: "crowd.med", tone: "warn", dot: true }, eta: ["etaMin", { min: 4 }], etaPrimary: false, then: ["then", { min: 7 }] },
     ],
     amenities: [
-      { icon: "wifi", text: "High-Speed Wi-Fi", iconCls: "text-primary" },
-      { icon: "elevator", text: "4 Escalators • 2 Lifts", iconCls: "text-primary" },
-      { icon: "water_drop", text: "RO Drinking Water", iconCls: "text-primary" },
-      { icon: "accessible", text: "Step-free entry (Gate 3)", iconCls: "text-primary" },
+      { icon: "wifi", text: "amen.wifi", iconCls: "text-primary" },
+      { icon: "elevator", text: "amen.escalators", iconCls: "text-primary" },
+      { icon: "water_drop", text: "amen.water", iconCls: "text-primary" },
+      { icon: "accessible", text: "amen.stepFree", iconCls: "text-primary" },
     ],
   },
   {
-    id: "rail", kinds: ["rail"], name: "Andheri Suburban Rail", tag: "WR Zone", icon: "train", iconBox: "bg-secondary-fixed text-secondary",
+    id: "rail", kinds: ["rail"], name: "rail.name", tag: "rail.tag", icon: "train", iconBox: "bg-secondary-fixed text-secondary",
     tagCls: "bg-secondary text-container-lowest", codeCls: "bg-secondary-fixed text-on-secondary-fixed",
-    sub: [{ text: "Ground & Foot Over Bridge Grid" }, { text: "9 Operational Platforms", cls: "font-semibold text-secondary" }],
-    walk: "5 mins (340m)",
+    sub: [{ text: "rail.sub1" }, { text: "rail.sub2", cls: "font-semibold text-secondary" }],
+    walk: ["walkDist", { min: 5, m: 340 }],
     departures: [
-      { code: "P1", title: "Platform 1 Slow → Churchgate", meta: [{ text: "Slow Local (All Stops)", cls: "font-semibold text-secondary" }, { text: "12 Coaches" }],
-        crowd: { text: "High Crowd", tone: "warn", dot: true }, eta: "1 min", etaPrimary: true, then: "Arriving" },
-      { code: "P3", title: "Platform 3 Fast → Borivali • Virar", meta: [{ text: "Fast (Jogeshwari Skip)", cls: "font-semibold text-secondary" }, { text: "15 Coaches AC", cls: "font-semibold text-primary" }],
-        crowd: { text: "Low Crowd", tone: "ok", dot: true }, eta: "3 min", etaPrimary: false, then: "Then: 8m" },
+      { code: "P1", title: "rail.d1", meta: [{ text: "meta.slowLocal", cls: "font-semibold text-secondary" }, { text: "meta.coaches12" }],
+        crowd: { text: "crowd.high", tone: "warn", dot: true }, eta: ["etaMin", { min: 1 }], etaPrimary: true, then: "arriving" },
+      { code: "P3", title: "rail.d2", meta: [{ text: "meta.fastSkip", cls: "font-semibold text-secondary" }, { text: "meta.coaches15ac", cls: "font-semibold text-primary" }],
+        crowd: { text: "crowd.low", tone: "ok", dot: true }, eta: ["etaMin", { min: 3 }], etaPrimary: false, then: ["then", { min: 8 }] },
     ],
     amenities: [
-      { icon: "confirmation_number", text: "UTS QR Smart Kiosks (8)", iconCls: "text-secondary" },
-      { icon: "local_parking", text: "East / West Multi-Level Parking", iconCls: "text-secondary" },
-      { icon: "accessible", text: "Tactile Paving • Wheelchair Ramp", iconCls: "text-secondary" },
+      { icon: "confirmation_number", text: "amen.uts", iconCls: "text-secondary" },
+      { icon: "local_parking", text: "amen.parking", iconCls: "text-secondary" },
+      { icon: "accessible", text: "amen.tactile", iconCls: "text-secondary" },
     ],
   },
   {
-    id: "bus", kinds: ["bus", "auto"], name: "BEST Bus Depot No. 4 (Andheri West)", tag: "BEST Municipal", icon: "directions_bus", iconBox: "bg-tertiary-fixed text-tertiary",
+    id: "bus", kinds: ["bus", "auto"], name: "bus.name", tag: "bus.tag", icon: "directions_bus", iconBox: "bg-tertiary-fixed text-tertiary",
     tagCls: "bg-tertiary text-container-lowest", codeCls: "bg-tertiary-fixed text-on-tertiary-fixed",
-    sub: [{ text: "SV Road Junction Terminal" }, { text: "18 Active City Routes", cls: "font-semibold text-tertiary" }],
-    walk: "6 mins (420m)",
+    sub: [{ text: "bus.sub1" }, { text: "bus.sub2", cls: "font-semibold text-tertiary" }],
+    walk: ["walkDist", { min: 6, m: 420 }],
     departures: [
-      { code: "202", title: "Route 202 → Gorai Depot / Borivali W", meta: [{ text: "EV Double-Decker Electric" }, { text: "Bay 3" }],
-        crowd: { text: "Boarding", tone: "ok" }, eta: "NOW", etaPrimary: true, then: "Bay 3" },
-      { code: "359", title: "Route 359 → Kurla Station (West)", meta: [{ text: "Single-Axle CNG Non-AC" }, { text: "Bay 1B" }],
-        crowd: { text: "Scheduled", tone: "neutral" }, eta: "8 min", etaPrimary: false, then: "Then: 18m" },
+      { code: "202", title: "bus.d1", meta: [{ text: "meta.evDecker" }, { text: ["bay", { n: "3" }] }],
+        crowd: { text: "crowd.boarding", tone: "ok" }, eta: "now", etaPrimary: true, then: ["bay", { n: "3" }] },
+      { code: "359", title: "bus.d2", meta: [{ text: "meta.cng" }, { text: ["bay", { n: "1B" }] }],
+        crowd: { text: "crowd.scheduled", tone: "neutral" }, eta: ["etaMin", { min: 8 }], etaPrimary: false, then: ["then", { min: 18 }] },
     ],
     amenities: [],
-    auto: { title: "Shared Auto-Rickshaw Stand (Gate 4 East)", text: "Average Queue Wait Time: ~2 mins • Regulated Prepaid Meter Available", badge: "Fast Moving" },
+    auto: { title: "auto.title", text: "auto.text", badge: "auto.badge" },
   },
 ];
 
-export const mapLayers = ["All Layers", "Gates (1-6)", "EV & Auto", "Tickets"];
-export const skywalk = "Skywalk Span: Metro ↔ WR Platforms";
+export const mapLayers: StationKey[] = ["layer.all", "layer.gates", "layer.ev", "layer.tickets"];
+export const skywalk: StationKey = "skywalk";
 
-export const gates = [
-  { gate: "Gate 1", icon: "escalator", iconCls: "text-primary", title: "West SV Road", text: "Auto stand, Market link" },
-  { gate: "Gate 2", icon: "directions_walk", iconCls: "text-primary", title: "Metro Skywalk North", text: "Direct concourse walk" },
-  { gate: "Gate 3", icon: "accessible", iconCls: "text-primary", title: "East Railway Plaza", text: "Elevator • Wheelchair" },
-  { gate: "Gate 4", icon: "electric_rickshaw", iconCls: "text-primary", title: "East Auto Ring", text: "Prepaid auto queues" },
-  { gate: "Gate 5", icon: "ev_station", iconCls: "text-tertiary", title: "Bus Depot Terminal", text: "EV Chargers • BEST Bays" },
-  { gate: "Gate 6", icon: "local_parking", iconCls: "text-primary", title: "South FOB Exit", text: "2-Wheeler Parking Park" },
+export const gates: { gate: number; icon: string; iconCls: string; title: StationKey; text: StationKey }[] = [
+  { gate: 1, icon: "escalator", iconCls: "text-primary", title: "gate1.title", text: "gate1.text" },
+  { gate: 2, icon: "directions_walk", iconCls: "text-primary", title: "gate2.title", text: "gate2.text" },
+  { gate: 3, icon: "accessible", iconCls: "text-primary", title: "gate3.title", text: "gate3.text" },
+  { gate: 4, icon: "electric_rickshaw", iconCls: "text-primary", title: "gate4.title", text: "gate4.text" },
+  { gate: 5, icon: "ev_station", iconCls: "text-tertiary", title: "gate5.title", text: "gate5.text" },
+  { gate: 6, icon: "local_parking", iconCls: "text-primary", title: "gate6.title", text: "gate6.text" },
 ];
 
-export const facilities = [
-  { icon: "confirmation_number", title: "Ticket Counters & UTS Kiosks", text: "Concourse A & Platform 1 East", foot: "Open 04:00–01:00" },
-  { icon: "ev_station", title: "EV Chargers", text: "Gate 5 Parking Area", foot: "Sample — no live charger feed" },
-  { icon: "accessible_forward", title: "Universal Accessibility", text: "Braille maps, audio escalators", foot: "Assistance Booth: Gate 2" },
-  { icon: "medical_services", title: "First Aid & Transit Police", text: "RPF/GRP Booth, Central FOB", foot: "Emergency: Dial 139" },
+export const facilities: { icon: string; title: StationKey; text: StationKey; foot: Txt }[] = [
+  { icon: "confirmation_number", title: "fac.tickets.title", text: "fac.tickets.text", foot: ["fac.tickets.foot", { hours: "04:00–01:00" }] },
+  { icon: "ev_station", title: "fac.ev.title", text: "fac.ev.text", foot: "fac.ev.foot" },
+  { icon: "accessible_forward", title: "fac.access.title", text: "fac.access.text", foot: "fac.access.foot" },
+  { icon: "medical_services", title: "fac.aid.title", text: "fac.aid.text", foot: "fac.aid.foot" },
 ];

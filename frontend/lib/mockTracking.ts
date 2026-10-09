@@ -1,7 +1,9 @@
 // Live Trip Tracking now runs on the real trip (see components/TrackView.tsx). What's left here:
 // report categories (real: sent to Pakka Check) and the sample share link (sharing isn't built).
 
-/** Report categories → Pakka Check disruption types (POST /reports) */
+/** Report categories → Pakka Check disruption types (POST /reports).
+ *  `label` is the English text sent to Pakka Check; the screen shows `cat.<id>` from
+ *  lib/i18n/messages/TrackView.ts in the app language. */
 export const reportCategories = [
   { id: "delay", label: "Unexpected Delay", icon: "timer_off", iconCls: "text-tertiary", type: "delay" },
   { id: "crowd", label: "Extreme Crowding", icon: "groups", iconCls: "text-error", type: "crowding" },

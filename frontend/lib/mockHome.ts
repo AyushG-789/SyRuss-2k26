@@ -10,20 +10,21 @@ export const shell = {
   activeCity: { name: "Mumbai Transit Region (MMR)", lines: "Metro • Western • Central • BEST", badge: "Unified" },
 };
 
-/** backend: GET /health + GET /events counts */
+/** backend: GET /health + GET /events counts. Values are message keys (text in lib/i18n/messages/HomeHub.ts). */
 export const hero = {
-  badge: "MMR Unified Mobility",
-  title: "Welcome back, Commuter!",
-  subtitle: "Plan and track trips across Mumbai Metro, Suburban rail, BEST buses and last-mile autos & taxis — around problems other commuters have reported and Pakka Check has verified.",
-};
+  badge: "hero.badge",
+  title: "hero.title",
+  subtitle: "hero.subtitle",
+} as const;
 
-/** Quick trips (sample saved places — accounts aren't in the prototype). Each opens live results. */
+/** Quick trips (sample saved places — accounts aren't in the prototype). Each opens live results.
+ *  title / place are message keys (text in lib/i18n/messages/HomeHub.ts); from / to are place names. */
 export const frequentTrips = [
-  { id: "office", title: "Home → Office", place: "Andheri to BKC", icon: "work", iconClass: "bg-primary-fixed text-on-primary-fixed",
+  { id: "office", title: "trip.office.title", place: "trip.office.place", icon: "work", iconClass: "bg-primary-fixed text-on-primary-fixed",
     from: "Andheri station", to: "Jio World Centre, BKC" },
-  { id: "match", title: "To the match", place: "Thane to Wankhede Stadium", icon: "sports_cricket", iconClass: "bg-secondary-container text-on-secondary-container",
+  { id: "match", title: "trip.match.title", place: "trip.match.place", icon: "sports_cricket", iconClass: "bg-secondary-container text-on-secondary-container",
     from: "Thane station", to: "Wankhede Stadium" },
-]
+] as const;
 
 export const TONE = {
   ok: { chip: "bg-primary-fixed text-on-primary-fixed", text: "text-primary", dot: "bg-primary", bar: "bg-primary" },

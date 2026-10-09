@@ -8,7 +8,9 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { stations, submitReport, type ReportOut } from "@/lib/api";
 import { eventTitle, evidenceSummary, pct, STATUS_ORDER, STATUS_STYLE, TYPE_LABEL } from "@/lib/format";
-import { categories, corridors, defaultDescription, directions, location, page, radarLayers, reputation, sampleStats, voiceMemo } from "@/lib/mockReport";
+import { useT } from "@/lib/i18n";
+import { M } from "@/lib/i18n/messages/ReportIncident";
+import { categories, CORRIDOR_KEY, corridors, defaultDescription, DIRECTION_KEY, directions, location, page, radarLayers, reputation, sampleStats, voiceMemo } from "@/lib/mockReport";
 import { recordReport } from "@/lib/profile";
 import { reporterId } from "@/lib/reporter";
 import type { DisruptionEvent } from "@/lib/types";
@@ -19,14 +21,20 @@ import MapView from "./MapView";
 const DRAFT_KEY = "travelbuddy.reportDraft";
 const MAX_CHARS = 500;
 
-const STATION_OPTIONS = Object.entries(stations)
-  .filter(([, s]) => s.mode !== "bus")
-  .map(([id, s]) => ({ id, label: `${s.name}${s.mode === "metro" ? "" : " (local)"}` }))
-  .sort((a, b) => a.label.localeCompare(b.label));
+const STATION_LIST = Object.entries(stations).filter(([, s]) => s.mode !== "bus");
 
-type Result = { ok: true; out: ReportOut } | { ok: false; msg: string };
+/** msg is the backend's error text; without one the backend was unreachable (shown translated). */
+type Result = { ok: true; out: ReportOut } | { ok: false; msg?: string };
 
 export default function ReportIncident() {
+  const t = useT(M);
+  const stationOptions = useMemo(
+    () => STATION_LIST
+      .map(([id, s]) => ({ id, label: s.mode === "metro" ? s.name : t("stationLocal", { name: s.name }) }))
+      .sort((a, b) => a.label.localeCompare(b.label)),
+    [t],
+  );
+  const corridorLabel = (c: string) => (CORRIDOR_KEY[c] ? t(CORRIDOR_KEY[c]) : c);
   const live = useLiveEvents();
   const refresh = useRefreshLiveEvents();
   const [category, setCategory] = useState(categories[1].id);
@@ -85,11 +93,11 @@ export default function ReportIncident() {
         affected: { stop_ids: [stationId], line_ids: [], transfer_ids: [] },
       });
       setResult({ ok: true, out });
-      recordReport(out.event_id, `${cat.label} at ${corridor}`);
+      recordReport(out.event_id, t("recorded", { cat: t(cat.label), corridor: corridorLabel(corridor) }));
       try { localStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
       refresh();
     } catch (err) {
-      setResult({ ok: false, msg: backend ? String(err instanceof Error ? err.message : err) : "Couldn't reach Pakka Check — start the backend to send reports." });
+      setResult({ ok: false, msg: backend ? String(err instanceof Error ? err.message : err) : undefined });
     } finally {
       setBusy(false);
     }
@@ -111,28 +119,28 @@ export default function ReportIncident() {
           {page.breadcrumb.map((b, i) => (
             <span key={b} className="flex items-center gap-1">
               {i > 0 && <Icon name="chevron_right" className="text-[14px] text-outline" />}
-              {i === 0 ? <Link href="/" className="hover:text-primary">{b}</Link>
-                : <span className={i === page.breadcrumb.length - 1 ? "font-semibold text-primary" : ""}>{b}</span>}
+              {i === 0 ? <Link href="/" className="hover:text-primary">{t(b)}</Link>
+                : <span className={i === page.breadcrumb.length - 1 ? "font-semibold text-primary" : ""}>{t(b)}</span>}
             </span>
           ))}
         </div>
         <div className="mt-1 flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
           <div>
             <div className="mb-1 flex flex-wrap items-center gap-1">
-              <h1 className="text-2xl font-bold tracking-tight">{page.title}</h1>
+              <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
               <span className="flex items-center gap-1 rounded-full bg-primary-fixed px-1 py-0.5 eyebrow text-on-primary-fixed">
-                <span className="h-1.5 w-1.5 animate-ping rounded-full bg-primary" /> {page.badge}
+                <span className="h-1.5 w-1.5 animate-ping rounded-full bg-primary" /> {t("badge")}
               </span>
-              <span className="rounded-full bg-container-high px-1 py-0.5 text-micro font-bold text-on-surface-variant">{page.synced}</span>
+              <span className="rounded-full bg-container-high px-1 py-0.5 text-micro font-bold text-on-surface-variant">{t("synced")}</span>
             </div>
-            <p className="text-sm text-on-surface-variant">{page.subtitle}</p>
+            <p className="text-sm text-on-surface-variant">{t("subtitle")}</p>
           </div>
           <div className="flex items-center gap-2 self-start rounded-xl bg-container-lowest p-1 shadow-sm lg:self-auto">
-            <HeaderStat label={stats ? "Reported" : "Active Today"} value={stats?.active ?? sampleStats.active} cls="text-primary" />
+            <HeaderStat label={stats ? t("stat.reported") : t("stat.activeToday")} value={stats?.active ?? sampleStats.active} cls="text-primary" />
             <div className="h-7 w-px bg-container-high" />
-            <HeaderStat label={stats ? "Verified" : "Verified <3m"} value={stats?.verified ?? sampleStats.verified} cls="text-on-surface" />
+            <HeaderStat label={stats ? t("stat.verified") : t("stat.verified3m")} value={stats?.verified ?? sampleStats.verified} cls="text-on-surface" />
             <div className="h-7 w-px bg-container-high" />
-            <HeaderStat label={stats ? "Caught / ignored" : "Alerted"} value={stats?.caught ?? sampleStats.alerted} cls="text-secondary" />
+            <HeaderStat label={stats ? t("stat.caught") : t("stat.alerted")} value={stats?.caught ?? sampleStats.alerted} cls="text-secondary" />
           </div>
         </div>
       </div>
@@ -143,10 +151,10 @@ export default function ReportIncident() {
           {/* 1. Category */}
           <section className="flex flex-col gap-4 rounded-xl bg-container-lowest p-5 shadow-sm">
             <div className="flex items-center justify-between">
-              <StepTitle n={1} title="Select Incident Classification" />
-              <span className="text-micro font-bold text-on-surface-variant">Tap to select category</span>
+              <StepTitle n={1} title={t("step1")} />
+              <span className="text-micro font-bold text-on-surface-variant">{t("tapToSelect")}</span>
             </div>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3" role="radiogroup" aria-label="Incident category">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3" role="radiogroup" aria-label={t("categoryAria")}>
               {categories.map((c) => {
                 const on = c.id === category;
                 return (
@@ -156,8 +164,8 @@ export default function ReportIncident() {
                     <div className={`flex h-10 w-10 items-center justify-center rounded-lg shadow-sm transition-transform group-hover:scale-105 ${on ? "bg-primary text-on-primary" : `bg-container-lowest ${c.iconCls}`}`}>
                       <Icon name={c.icon} className="text-[24px]" />
                     </div>
-                    <div className={`mt-1 text-xs font-bold ${on ? "text-primary" : ""}`}>{c.label}</div>
-                    <p className="text-small leading-snug text-on-surface-variant">{c.text}</p>
+                    <div className={`mt-1 text-xs font-bold ${on ? "text-primary" : ""}`}>{t(c.label)}</div>
+                    <p className="text-small leading-snug text-on-surface-variant">{t(c.text)}</p>
                   </button>
                 );
               })}
@@ -166,15 +174,15 @@ export default function ReportIncident() {
 
           {/* 2. Telemetry */}
           <section className="flex flex-col gap-4 rounded-xl bg-container-lowest p-5 shadow-sm">
-            <StepTitle n={2} title="Multimodal Incident Telemetry" />
+            <StepTitle n={2} title={t("step2")} />
             <VoiceMemo use={useTranscript} onUse={setUseTranscript} />
             <label className="flex flex-col gap-1.5">
               <span className="flex items-center justify-between">
-                <span className="text-xs font-semibold">Written Description &amp; Additional Landmarks</span>
-                <span className="text-micro font-bold text-on-surface-variant">{description.length} / {MAX_CHARS} characters</span>
+                <span className="text-xs font-semibold">{t("descLabel")}</span>
+                <span className="text-micro font-bold text-on-surface-variant">{t("chars", { n: description.length, max: MAX_CHARS })}</span>
               </span>
               <textarea value={description} onChange={(e) => setDescription(e.target.value.slice(0, MAX_CHARS))} rows={3}
-                placeholder="Provide specific landmark details, lane directions, or vehicle numbers... (any language)"
+                placeholder={t("descPlaceholder")}
                 className="w-full rounded-xl bg-container p-4 text-small placeholder:text-outline transition-colors focus:bg-container-lowest focus:outline-none focus:ring-2 focus:ring-primary" />
             </label>
             <MediaPicker media={media} setMedia={setMedia} />
@@ -183,9 +191,9 @@ export default function ReportIncident() {
           {/* 3. Location */}
           <section className="flex flex-col gap-4 rounded-xl bg-container-lowest p-5 shadow-sm">
             <div className="flex items-center justify-between">
-              <StepTitle n={3} title="Location & Corridor Geotag" />
+              <StepTitle n={3} title={t("step3")} />
               <span className="flex items-center gap-1 rounded-lg bg-container px-2 py-1 text-micro font-semibold text-primary">
-                <Icon name="edit_location_alt" className="text-[16px]" /> Refine Pin
+                <Icon name="edit_location_alt" className="text-[16px]" /> {t("refinePin")}
               </span>
             </div>
             <div className="flex items-start gap-2 rounded-xl bg-container p-2">
@@ -194,8 +202,8 @@ export default function ReportIncident() {
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-1">
-                  <span className="text-xs font-bold">{location.title}</span>
-                  <span className="rounded bg-primary-fixed px-1.5 py-0.5 text-micro font-bold text-on-primary-fixed">GEOTAGGED</span>
+                  <span className="text-xs font-bold">{t(location.title)}</span>
+                  <span className="rounded bg-primary-fixed px-1.5 py-0.5 text-micro font-bold text-on-primary-fixed">{t("geotagged")}</span>
                 </div>
                 <p className="truncate text-small text-on-surface-variant">{location.sub}</p>
               </div>
@@ -203,14 +211,14 @@ export default function ReportIncident() {
 
             <label className="flex flex-col gap-1.5">
               <span className="flex items-center justify-between text-xs font-semibold">
-                <span>Linked Station (used to verify and reroute)</span>
-                <span className="text-micro font-bold text-primary">Required by Pakka Check</span>
+                <span>{t("linkedStation")}</span>
+                <span className="text-micro font-bold text-primary">{t("requiredBy")}</span>
               </span>
               <span className="relative">
                 <Icon name="train" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-primary" />
                 <select value={stationId} onChange={(e) => setStationId(e.target.value)}
                   className="h-11 w-full cursor-pointer appearance-none rounded-xl bg-container pl-10 pr-10 text-small focus:outline-none focus:ring-2 focus:ring-primary">
-                  {STATION_OPTIONS.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
+                  {stationOptions.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
                 </select>
                 <Icon name="expand_more" className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[20px] text-outline" />
               </span>
@@ -218,22 +226,22 @@ export default function ReportIncident() {
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <label className="flex flex-col gap-1.5">
-                <span className="text-xs font-semibold">Transit Arterial Corridor</span>
+                <span className="text-xs font-semibold">{t("corridorLabel")}</span>
                 <span className="relative">
                   <select value={corridor} onChange={(e) => setCorridor(e.target.value)}
                     className="h-11 w-full cursor-pointer appearance-none rounded-xl bg-container px-4 text-small focus:outline-none focus:ring-2 focus:ring-primary">
-                    {corridors.map((c) => <option key={c}>{c}</option>)}
+                    {corridors.map((c) => <option key={c} value={c}>{corridorLabel(c)}</option>)}
                   </select>
                   <Icon name="expand_more" className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[20px] text-outline" />
                 </span>
               </label>
               <div className="flex flex-col gap-1.5">
-                <span className="text-xs font-semibold">Direction of Movement Affected</span>
-                <div className="grid grid-cols-3 gap-1 rounded-xl bg-container p-1" role="radiogroup" aria-label="Direction">
+                <span className="text-xs font-semibold">{t("directionLabel")}</span>
+                <div className="grid grid-cols-3 gap-1 rounded-xl bg-container p-1" role="radiogroup" aria-label={t("directionAria")}>
                   {directions.map((d) => (
                     <button key={d} type="button" role="radio" aria-checked={direction === d} onClick={() => setDirection(d)}
                       className={`rounded-lg py-2 text-center text-micro ${direction === d ? "bg-container-lowest font-bold text-primary shadow-sm" : "font-medium text-on-surface-variant hover:text-on-surface"}`}>
-                      {d}
+                      {t(DIRECTION_KEY[d])}
                     </button>
                   ))}
                 </div>
@@ -248,21 +256,20 @@ export default function ReportIncident() {
               <div className="flex w-full items-center gap-2 sm:w-auto">
                 <button type="button" onClick={submit} disabled={busy || description.trim().length < 3}
                   className="flex h-12 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-primary px-6 text-sm font-bold text-on-primary shadow-sm transition-all hover:bg-primary-container active:scale-[0.98] disabled:opacity-50 sm:flex-initial">
-                  <Icon name="send" className="text-[20px]" /> {busy ? "Sending…" : "Submit Incident Report"}
+                  <Icon name="send" className="text-[20px]" /> {busy ? t("sending") : t("submit")}
                 </button>
                 <button type="button" onClick={saveDraft} className="h-12 rounded-xl bg-container px-4 text-sm font-semibold transition-colors hover:bg-container-high">
-                  {draftSaved ? "Saved ✓" : "Save Draft"}
+                  {draftSaved ? t("draftSaved") : t("saveDraft")}
                 </button>
               </div>
               <div className="flex items-center gap-1 text-micro font-bold text-outline">
-                <Icon name="verified_user" className="text-[18px] text-primary" /> Filed at {station?.name ?? stationId} · {TYPE_LABEL[cat.type] ?? cat.type}
+                <Icon name="verified_user" className="text-[18px] text-primary" /> {t("filedAt", { station: station?.name ?? stationId, type: TYPE_LABEL[cat.type] ?? cat.type })}
               </div>
             </div>
             <div className="flex items-start gap-1 border-t border-container-high/60 pt-2">
               <Icon name="info" className="mt-0.5 text-[16px] text-outline" />
               <p className="text-small leading-relaxed text-on-surface-variant">
-                Reports are cross-checked against other commuters, news and official notices. A new reporter counts for little until
-                others confirm; near-identical bursts from new accounts are flagged as suspicious and never reroute anyone.
+                {t("howChecked")}
               </p>
             </div>
           </section>
@@ -274,10 +281,10 @@ export default function ReportIncident() {
             <div className="flex items-center justify-between p-4">
               <div className="flex items-center gap-1">
                 <Icon name="radar" className="text-[20px] text-primary" />
-                <span className="text-lg font-bold">Live Sector Incident Radar</span>
+                <span className="text-lg font-bold">{t("radarTitle")}</span>
               </div>
               <span className="rounded-full bg-secondary-fixed px-2 py-0.5 text-micro font-semibold text-on-secondary-fixed">
-                {backend ? `Demo clock ${live?.asOf}` : "Sample data"}
+                {backend ? t("demoClock", { time: live?.asOf ?? "" }) : t("sampleData")}
               </span>
             </div>
             <div className="relative h-72 w-full overflow-hidden bg-container">
@@ -285,13 +292,13 @@ export default function ReportIncident() {
               <div className="pointer-events-none absolute left-14 top-3 z-[500] flex flex-wrap gap-1.5">
                 {radarLayers.map((l, i) => (
                   <span key={l} className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-micro shadow-sm backdrop-blur ${i === 0 ? "bg-container-lowest/90 font-bold text-primary" : "bg-container-lowest/80 font-medium text-on-surface-variant"}`}>
-                    {i === 0 && <span className="h-2 w-2 rounded-full bg-primary" />} {l}
+                    {i === 0 && <span className="h-2 w-2 rounded-full bg-primary" />} {t(l)}
                   </span>
                 ))}
               </div>
             </div>
             <div className="flex items-center justify-between bg-container-low p-2 text-micro font-bold text-on-surface-variant">
-              <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-primary" /> Pin: {station?.name ?? "—"}</span>
+              <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-primary" /> {t("pin", { name: station?.name ?? "—" })}</span>
               <span className="font-mono text-micro">{station ? `${station.lat.toFixed(4)}° N, ${station.lon.toFixed(4)}° E` : ""}</span>
             </div>
           </section>
@@ -305,26 +312,26 @@ export default function ReportIncident() {
                   <Icon name="workspace_premium" className="text-[18px]" />
                 </div>
                 <div className="flex flex-col">
-                  <span className="eyebrow">Reputation Tier</span>
-                  <span className="text-xs font-bold">{reputation.tier}</span>
+                  <span className="eyebrow">{t("repTier")}</span>
+                  <span className="text-xs font-bold">{t(reputation.tier)}</span>
                 </div>
               </div>
-              <span className="rounded-full bg-primary-fixed px-2 py-0.5 text-micro font-bold text-on-primary-fixed">{reputation.badge}</span>
+              <span className="rounded-full bg-primary-fixed px-2 py-0.5 text-micro font-bold text-on-primary-fixed">{t(reputation.badge)}</span>
             </div>
             <div className="flex items-center justify-between rounded-lg bg-container-lowest/80 p-2 backdrop-blur">
               <div className="flex flex-col">
-                <span className="text-micro font-bold text-on-surface-variant">Citizen Impact Reward</span>
-                <span className="text-sm font-bold text-primary">{reputation.reward}</span>
+                <span className="text-micro font-bold text-on-surface-variant">{t("impactReward")}</span>
+                <span className="text-sm font-bold text-primary">{t(reputation.reward)}</span>
               </div>
               <button type="button" className="rounded-lg bg-primary px-2 py-1.5 text-micro font-semibold text-on-primary transition-colors hover:bg-primary-container">
-                Redeem to Card
+                {t("redeem")}
               </button>
             </div>
             <div className="flex items-center justify-between text-micro font-bold text-on-surface-variant">
-              <span>{reputation.accuracy}</span>
-              <span>{reputation.reports}</span>
+              <span>{t("rep.accuracy", { n: reputation.accuracy })}</span>
+              <span>{t("rep.reports", { n: reputation.reports })}</span>
             </div>
-            <p className="text-micro text-outline">Sample profile — accounts aren&apos;t part of the prototype.</p>
+            <p className="text-micro text-outline">{t("sampleProfile")}</p>
           </section>
         </div>
       </div>
@@ -355,21 +362,22 @@ function StepTitle({ n, title }: { n: number; title: string }) {
 const WAVE = [3, 5, 6, 3, 7, 4, 5, 6, 3, 5, 4, 6, 2, 4, 6, 3, 5, 2, 4, 2];
 
 function VoiceMemo({ use, onUse }: { use: boolean; onUse: (v: boolean) => void }) {
+  const t = useT(M);
   return (
     <div className="flex flex-col gap-2 rounded-xl bg-container-low p-4">
       <div className="flex items-center justify-between">
         <div className="flex flex-wrap items-center gap-1">
           <Icon name="mic" className="text-[20px] text-primary" />
-          <span className="text-xs font-semibold">Commuter Voice Memo Recording</span>
-          <span className="rounded-full bg-primary-fixed px-2 py-0.5 text-micro font-bold uppercase text-on-primary-fixed">Sample</span>
+          <span className="text-xs font-semibold">{t("voiceTitle")}</span>
+          <span className="rounded-full bg-primary-fixed px-2 py-0.5 text-micro font-bold uppercase text-on-primary-fixed">{t("sample")}</span>
         </div>
-        <button type="button" onClick={() => onUse(false)} title="Don't attach the voice memo" aria-label="Remove voice memo"
+        <button type="button" onClick={() => onUse(false)} title={t("voiceRemoveTitle")} aria-label={t("voiceRemoveAria")}
           className="rounded-lg p-1.5 text-outline transition-colors hover:bg-container-high hover:text-error">
           <Icon name="delete" className="text-[18px]" />
         </button>
       </div>
       <div className="flex items-center gap-4 rounded-lg bg-container-lowest p-2 shadow-sm">
-        <button type="button" aria-label="Play sample memo" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-on-primary shadow-sm">
+        <button type="button" aria-label={t("playAria")} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-on-primary shadow-sm">
           <Icon name="play_arrow" className="text-[20px]" fill />
         </button>
         <div className="flex flex-1 flex-col gap-1">
@@ -379,7 +387,7 @@ function VoiceMemo({ use, onUse }: { use: boolean; onUse: (v: boolean) => void }
             ))}
           </div>
           <div className="flex items-center justify-between text-micro font-bold text-on-surface-variant">
-            <span>{voiceMemo.length}</span><span>{voiceMemo.max}</span>
+            <span>{voiceMemo.length}</span><span>{t("voiceMax", { t: voiceMemo.max })}</span>
           </div>
         </div>
         <div className="hidden items-center gap-1.5 rounded-md bg-secondary-container px-1 py-1 text-micro font-bold text-on-secondary-fixed sm:flex">
@@ -389,10 +397,10 @@ function VoiceMemo({ use, onUse }: { use: boolean; onUse: (v: boolean) => void }
       <label className={`flex cursor-pointer items-start gap-1 rounded-lg bg-container px-2 py-1 ${use ? "" : "opacity-60"}`}>
         <Icon name="neurology" className="mt-0.5 text-[16px] text-outline" />
         <span className="flex-1">
-          <span className="text-micro font-bold text-on-surface-variant">Speech-to-Text: </span>
-          <span className="text-small italic">&ldquo;{voiceMemo.transcript}&rdquo;</span>
+          <span className="text-micro font-bold text-on-surface-variant">{t("speechToText")}</span>
+          <span className="text-small italic">&ldquo;{t("transcript")}&rdquo;</span>
         </span>
-        <input type="checkbox" checked={use} onChange={(e) => onUse(e.target.checked)} className="mt-1 accent-[var(--primary)]" aria-label="Attach transcript to report" />
+        <input type="checkbox" checked={use} onChange={(e) => onUse(e.target.checked)} className="mt-1 accent-[var(--primary)]" aria-label={t("attachAria")} />
       </label>
     </div>
   );
@@ -402,6 +410,7 @@ function MediaPicker({ media, setMedia }: {
   media: { name: string; url: string; video: boolean }[];
   setMedia: React.Dispatch<React.SetStateAction<{ name: string; url: string; video: boolean }[]>>;
 }) {
+  const t = useT(M);
   const urls = useRef<string[]>([]);
   useEffect(() => () => urls.current.forEach((u) => URL.revokeObjectURL(u)), []);
   function add(files: FileList | null, video: boolean) {
@@ -416,8 +425,8 @@ function MediaPicker({ media, setMedia }: {
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold">Media &amp; Photographic Evidence</span>
-        <span className="text-micro font-bold text-on-surface-variant">Max 4 photos or 15s clip · stays on your device</span>
+        <span className="text-xs font-semibold">{t("mediaTitle")}</span>
+        <span className="text-micro font-bold text-on-surface-variant">{t("mediaHint")}</span>
       </div>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {media.map((m) => (
@@ -426,7 +435,7 @@ function MediaPicker({ media, setMedia }: {
               // eslint-disable-next-line @next/next/no-img-element -- local preview of a user-picked file
               <img src={m.url} alt={m.name} className="h-full w-full object-cover" />
             )}
-            <button type="button" onClick={() => setMedia((all) => all.filter((x) => x.url !== m.url))} aria-label={`Remove ${m.name}`}
+            <button type="button" onClick={() => setMedia((all) => all.filter((x) => x.url !== m.url))} aria-label={t("removeAria", { name: m.name })}
               className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-container-lowest text-error opacity-0 transition-opacity group-hover:opacity-100">
               <Icon name="close" className="text-[16px]" />
             </button>
@@ -437,13 +446,13 @@ function MediaPicker({ media, setMedia }: {
           <>
             <label className="group flex aspect-video cursor-pointer flex-col items-center justify-center gap-1 rounded-xl bg-container p-2 text-center transition-colors hover:bg-container-high">
               <Icon name="add_a_photo" className="text-[24px] text-outline transition-colors group-hover:text-primary" />
-              <span className="text-micro font-semibold text-on-surface-variant">Add Snapshot</span>
+              <span className="text-micro font-semibold text-on-surface-variant">{t("addSnapshot")}</span>
               <span className="text-micro text-outline">JPG, PNG &lt; 10MB</span>
               <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => add(e.target.files, false)} />
             </label>
             <label className="group flex aspect-video cursor-pointer flex-col items-center justify-center gap-1 rounded-xl bg-container p-2 text-center transition-colors hover:bg-container-high">
               <Icon name="videocam" className="text-[24px] text-outline transition-colors group-hover:text-primary" />
-              <span className="text-micro font-semibold text-on-surface-variant">15s Dashcam Clip</span>
+              <span className="text-micro font-semibold text-on-surface-variant">{t("dashcam")}</span>
               <span className="text-micro text-outline">MP4, MOV</span>
               <input type="file" accept="video/*" className="hidden" onChange={(e) => add(e.target.files, true)} />
             </label>
@@ -452,10 +461,10 @@ function MediaPicker({ media, setMedia }: {
         <div className="flex aspect-video flex-col justify-between rounded-xl bg-container-low p-1">
           <div className="flex items-center gap-1 text-primary">
             <Icon name="verified" className="text-[16px]" />
-            <span className="text-micro font-bold uppercase">Not uploaded</span>
+            <span className="text-micro font-bold uppercase">{t("notUploaded")}</span>
           </div>
-          <p className="text-micro leading-tight text-on-surface-variant">Photos are previewed only; they aren&apos;t sent in this prototype.</p>
-          <span className="text-micro text-outline">{media.length} / 4 attached</span>
+          <p className="text-micro leading-tight text-on-surface-variant">{t("notSentNote")}</p>
+          <span className="text-micro text-outline">{t("attached", { n: media.length })}</span>
         </div>
       </div>
     </div>
@@ -463,30 +472,37 @@ function MediaPicker({ media, setMedia }: {
 }
 
 function ResultBanner({ result }: { result: Result }) {
-  if (!result.ok) return <p className="rounded-xl bg-amber-soft p-3 text-sm text-amber-ink">{result.msg}</p>;
+  const t = useT(M);
+  if (!result.ok) return <p className="rounded-xl bg-amber-soft p-3 text-sm text-amber-ink">{result.msg ?? t("offlineErr")}</p>;
   const r = result.out;
   const style = STATUS_STYLE[r.status];
   return (
     <div className="flex flex-col gap-1 rounded-xl bg-primary-soft p-3 text-sm text-primary-ink">
       <p className="flex items-center gap-2 font-semibold">
-        <Icon name="check_circle" /> Received by Pakka Check at {r.reported_at} — {r.created_event ? "new report started" : "added to an existing report"}
+        <Icon name="check_circle" /> {t("received", { time: r.reported_at })} — {r.created_event ? t("newReport") : t("addedExisting")}
       </p>
       <p>
-        Current verdict: <b style={{ color: style.color }}>{style.label}</b> at <b>{pct(r.confidence)}</b>.{" "}
-        {r.status === "confirmed" ? "Routes through this spot will now avoid it." : "It will turn confirmed once other commuters, news or an official notice agree."}
+        {t("verdictPre")} <b style={{ color: style.color }}>{style.label}</b> {t("verdictAt")} <b>{pct(r.confidence)}</b>.{" "}
+        {r.status === "confirmed" ? t("confirmedNote") : t("pendingNote")}
       </p>
     </div>
   );
 }
 
 function NearbyFeed({ events, backend }: { events: DisruptionEvent[]; backend: boolean }) {
+  const t = useT(M);
   const refresh = useRefreshLiveEvents();
-  const [confirmed, setConfirmed] = useState<Record<string, string>>({});
+  const [confirmed, setConfirmed] = useState<Record<string, { kind: "added"; confidence: number } | { kind: "failed" | "offline" }>>({});
   const feed = useMemo(
     () => events.filter((e) => e.status !== "expired")
       .sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status] || b.last_seen.localeCompare(a.last_seen)),
     [events],
   );
+
+  function confirmedText(c: (typeof confirmed)[string]): string {
+    if (c.kind === "added") return t("addedNow", { pct: pct(c.confidence) });
+    return c.kind === "failed" ? t("couldntAdd") : t("backendOffline");
+  }
 
   async function seeToo(ev: DisruptionEvent) {
     try {
@@ -495,11 +511,11 @@ function NearbyFeed({ events, backend }: { events: DisruptionEvent[]; backend: b
         type: ev.type, severity: ev.severity,
         affected: { stop_ids: ev.affected.stop_ids, line_ids: ev.affected.line_ids, transfer_ids: ev.affected.transfer_ids },
       });
-      recordReport(out.event_id, `Confirmed ${eventTitle(ev)}`);
-      setConfirmed((c) => ({ ...c, [ev.event_id]: `Added · now ${pct(out.confidence)}` }));
+      recordReport(out.event_id, t("recordedConfirm", { title: eventTitle(ev) }));
+      setConfirmed((c) => ({ ...c, [ev.event_id]: { kind: "added", confidence: out.confidence } }));
       refresh();
     } catch {
-      setConfirmed((c) => ({ ...c, [ev.event_id]: backend ? "Couldn't add" : "Backend offline" }));
+      setConfirmed((c) => ({ ...c, [ev.event_id]: { kind: backend ? "failed" : "offline" } }));
     }
   }
 
@@ -508,11 +524,11 @@ function NearbyFeed({ events, backend }: { events: DisruptionEvent[]; backend: b
       <div className="flex items-center justify-between border-b border-container-high/60 pb-1">
         <div className="flex items-center gap-1">
           <Icon name="stream" className="text-[20px] text-secondary" />
-          <span className="text-lg font-bold">Nearby Active Feed</span>
+          <span className="text-lg font-bold">{t("feedTitle")}</span>
         </div>
-        <Link href="/admin" className="text-micro font-semibold text-primary hover:underline">View All ({feed.length})</Link>
+        <Link href="/admin" className="text-micro font-semibold text-primary hover:underline">{t("viewAll", { n: feed.length })}</Link>
       </div>
-      {feed.length === 0 && <p className="py-2 text-sm text-on-surface-variant">Nothing reported right now.</p>}
+      {feed.length === 0 && <p className="py-2 text-sm text-on-surface-variant">{t("nothing")}</p>}
       <div className="mt-1 flex flex-col gap-1">
         {feed.slice(0, 4).map((ev) => {
           const style = STATUS_STYLE[ev.status];
@@ -528,18 +544,18 @@ function NearbyFeed({ events, backend }: { events: DisruptionEvent[]; backend: b
                   </span>
                   <span className="text-xs font-bold">{eventTitle(ev).split(" · ")[1]}</span>
                 </div>
-                <span className="shrink-0 text-micro font-bold text-outline">since {ev.first_seen}</span>
+                <span className="shrink-0 text-micro font-bold text-outline">{t("since", { time: ev.first_seen })}</span>
               </div>
               <p className="line-clamp-1 text-small text-on-surface-variant">{evidenceSummary(ev)} · {pct(ev.confidence)}</p>
               <div className="flex items-center justify-between pt-1">
                 <div className={`flex items-center gap-1 text-micro font-bold ${burst ? "text-outline" : "text-primary"}`}>
                   <Icon name={burst ? "flag" : official ? "verified" : "groups"} className="text-[16px]" />
-                  {burst ? "Suspicious burst — ignored" : official ? "Verified by official notice" : style.label === "Confirmed" ? "Community confirmed" : style.label}
+                  {burst ? t("burstIgnored") : official ? t("verifiedOfficial") : ev.status === "confirmed" ? t("communityConfirmed") : style.label}
                 </div>
                 <div className="flex items-center gap-2">
-                  {backend && <Link href={`/events/${ev.event_id}`} className="text-micro font-bold text-primary hover:underline">Why?</Link>}
-                  {confirmed[ev.event_id] && <span className="text-micro font-bold text-primary">{confirmed[ev.event_id]}</span>}
-                  <button type="button" onClick={() => seeToo(ev)} disabled={!backend || burst} title="I see this too"
+                  {backend && <Link href={`/events/${ev.event_id}`} className="text-micro font-bold text-primary hover:underline">{t("why")}</Link>}
+                  {confirmed[ev.event_id] && <span className="text-micro font-bold text-primary">{confirmedText(confirmed[ev.event_id])}</span>}
+                  <button type="button" onClick={() => seeToo(ev)} disabled={!backend || burst} title={t("seeToo")}
                     className="flex items-center gap-1 rounded bg-container-lowest px-2 py-0.5 text-micro font-bold shadow-sm transition-colors hover:bg-container-high disabled:opacity-50">
                     <Icon name="thumb_up" className="text-[14px] text-primary" /> {crowd}
                   </button>

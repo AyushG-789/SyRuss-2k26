@@ -32,7 +32,7 @@ def tidy_rejected(rejected: list[RejectedOption], limit: int = MAX_REJECTED) -> 
         if summary in seen:
             continue
         seen.add(summary)
-        out.append(RejectedOption(summary=summary, reason=r.reason))
+        out.append(RejectedOption(summary=summary, reason=r.reason, message=r.message))
         if len(out) >= limit:
             break
     return out
