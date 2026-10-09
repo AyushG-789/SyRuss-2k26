@@ -75,6 +75,10 @@ class Settings(BaseSettings):
     sarvam_api_key: str = ""
     # Shared team keys for live feeds (B8, maps). All optional: everything works on mock data without them.
     railradar_api_key: str = ""     # RailRadar.in — live train running status
+    rapidapi_key: str = ""          # RapidAPI key (alternative / proxy)
+    rapidapi_host: str = ""         # RapidAPI host header (optional)
+    railway_api_base_url: str = "https://api.railradar.in/v1"
+    railway_cache_ttl_seconds: int = 120
     tomtom_api_key: str = ""        # TomTom — road traffic / incidents
     newsapi_key: str = ""           # newsapi.org — news search (B8)
     mapbox_token: str = ""          # Mapbox — map tiles / directions
@@ -99,6 +103,10 @@ class Settings(BaseSettings):
         p = self.cache_dir / "tts"
         p.mkdir(parents=True, exist_ok=True)
         return p
+
+    @property
+    def active_railway_key(self) -> str:
+        return (self.railradar_api_key or self.rapidapi_key).strip()
 
 
 settings = Settings()

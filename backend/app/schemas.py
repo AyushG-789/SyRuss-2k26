@@ -211,3 +211,16 @@ class Journey(BaseModel):
 class JourneyIn(BaseModel):
     traveller: Traveller
     card: RouteCard
+
+
+class StationSearchItem(BaseModel):
+    id: str
+    name: str
+    mode: str
+    lat: float
+    lon: float
+    step_free: bool = False
+    aliases: list[str] = []
+    lines: list[str] = []
+    distance_km: float | None = None
+    distance_m: int | None = None

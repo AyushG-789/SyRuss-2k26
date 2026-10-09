@@ -6,791 +6,1019 @@
    "mode": "local",
    "lat": 18.9355,
    "lon": 72.8272,
-   "step_free": false
+   "step_free": false,
+   "aliases": [
+    "CCG"
+   ]
   },
   "marine_lines": {
    "name": "Marine Lines",
    "mode": "local",
    "lat": 18.9458,
    "lon": 72.8237,
-   "step_free": false
+   "step_free": false,
+   "aliases": []
   },
   "charni_road": {
    "name": "Charni Road",
    "mode": "local",
    "lat": 18.9518,
    "lon": 72.8182,
-   "step_free": false
+   "step_free": false,
+   "aliases": []
   },
   "grant_road": {
    "name": "Grant Road",
    "mode": "local",
    "lat": 18.9634,
    "lon": 72.8158,
-   "step_free": false
+   "step_free": false,
+   "aliases": []
   },
   "mumbai_central": {
    "name": "Mumbai Central",
    "mode": "local",
    "lat": 18.9696,
    "lon": 72.8193,
-   "step_free": false
+   "step_free": false,
+   "aliases": [
+    "BCT",
+    "MMCT",
+    "Bombay Central"
+   ]
   },
   "mahalaxmi": {
    "name": "Mahalaxmi",
    "mode": "local",
    "lat": 18.9825,
    "lon": 72.8242,
-   "step_free": false
+   "step_free": false,
+   "aliases": []
   },
   "lower_parel": {
    "name": "Lower Parel",
    "mode": "local",
    "lat": 18.9957,
    "lon": 72.8303,
-   "step_free": false
+   "step_free": false,
+   "aliases": []
   },
   "prabhadevi": {
    "name": "Prabhadevi",
    "mode": "local",
    "lat": 19.0075,
    "lon": 72.8359,
-   "step_free": false
+   "step_free": false,
+   "aliases": [
+    "Elphinstone Road",
+    "Elphinstone"
+   ]
   },
   "dadar_wr": {
    "name": "Dadar (Western)",
    "mode": "local",
    "lat": 19.0192,
    "lon": 72.8428,
-   "step_free": false
+   "step_free": false,
+   "aliases": [
+    "Dadar West",
+    "Dadar WR",
+    "Dadar",
+    "DDR"
+   ]
   },
   "matunga_road": {
    "name": "Matunga Road",
    "mode": "local",
    "lat": 19.0278,
    "lon": 72.8467,
-   "step_free": false
+   "step_free": false,
+   "aliases": []
   },
   "mahim": {
    "name": "Mahim Junction",
    "mode": "local",
    "lat": 19.0407,
    "lon": 72.8466,
-   "step_free": false
+   "step_free": false,
+   "aliases": [
+    "Mahim"
+   ]
   },
   "bandra": {
    "name": "Bandra",
    "mode": "local",
    "lat": 19.055,
    "lon": 72.8402,
-   "step_free": false
+   "step_free": false,
+   "aliases": [
+    "BA",
+    "Bandra West"
+   ]
   },
   "khar_road": {
    "name": "Khar Road",
    "mode": "local",
    "lat": 19.0682,
    "lon": 72.84,
-   "step_free": false
+   "step_free": false,
+   "aliases": [
+    "Khar"
+   ]
   },
   "santacruz": {
    "name": "Santacruz",
    "mode": "local",
    "lat": 19.0815,
    "lon": 72.8418,
-   "step_free": false
+   "step_free": false,
+   "aliases": [
+    "Santa Cruz"
+   ]
   },
   "vile_parle": {
    "name": "Vile Parle",
    "mode": "local",
    "lat": 19.0999,
    "lon": 72.844,
-   "step_free": false
+   "step_free": false,
+   "aliases": [
+    "Parle"
+   ]
   },
   "andheri_wr": {
    "name": "Andheri",
    "mode": "local",
    "lat": 19.1197,
    "lon": 72.8464,
-   "step_free": false
+   "step_free": false,
+   "aliases": [
+    "Andheri station",
+    "ADH",
+    "Andheri West"
+   ]
   },
   "jogeshwari": {
    "name": "Jogeshwari",
    "mode": "local",
    "lat": 19.1361,
    "lon": 72.8489,
-   "step_free": false
+   "step_free": false,
+   "aliases": []
   },
   "ram_mandir": {
    "name": "Ram Mandir",
    "mode": "local",
    "lat": 19.151,
    "lon": 72.8501,
-   "step_free": false
+   "step_free": false,
+   "aliases": []
   },
   "goregaon": {
    "name": "Goregaon",
    "mode": "local",
    "lat": 19.1649,
    "lon": 72.8495,
-   "step_free": false
+   "step_free": false,
+   "aliases": []
   },
   "malad": {
    "name": "Malad",
    "mode": "local",
    "lat": 19.1867,
    "lon": 72.8486,
-   "step_free": false
+   "step_free": false,
+   "aliases": []
   },
   "kandivali": {
    "name": "Kandivali",
    "mode": "local",
    "lat": 19.2041,
    "lon": 72.8517,
-   "step_free": false
+   "step_free": false,
+   "aliases": []
   },
   "borivali": {
    "name": "Borivali",
    "mode": "local",
    "lat": 19.2291,
    "lon": 72.8574,
-   "step_free": false
+   "step_free": false,
+   "aliases": [
+    "BVI",
+    "Borivali West"
+   ]
   },
   "csmt": {
    "name": "CSMT",
    "mode": "local",
    "lat": 18.9405,
    "lon": 72.8358,
-   "step_free": false
+   "step_free": false,
+   "aliases": [
+    "VT",
+    "Victoria Terminus",
+    "Chhatrapati Shivaji Maharaj Terminus",
+    "CST",
+    "CSMT"
+   ]
   },
   "masjid": {
    "name": "Masjid",
    "mode": "local",
    "lat": 18.9523,
    "lon": 72.8382,
-   "step_free": false
+   "step_free": false,
+   "aliases": [
+    "Masjid Bunder"
+   ]
   },
   "sandhurst_road": {
    "name": "Sandhurst Road",
    "mode": "local",
    "lat": 18.9609,
    "lon": 72.8394,
-   "step_free": false
+   "step_free": false,
+   "aliases": []
   },
   "byculla": {
    "name": "Byculla",
    "mode": "local",
    "lat": 18.9766,
    "lon": 72.8328,
-   "step_free": false
+   "step_free": false,
+   "aliases": []
   },
   "chinchpokli": {
    "name": "Chinchpokli",
    "mode": "local",
    "lat": 18.9872,
    "lon": 72.8327,
-   "step_free": false
+   "step_free": false,
+   "aliases": []
   },
   "currey_road": {
    "name": "Currey Road",
    "mode": "local",
    "lat": 18.9937,
    "lon": 72.8329,
-   "step_free": false
+   "step_free": false,
+   "aliases": []
   },
   "parel": {
    "name": "Parel",
    "mode": "local",
    "lat": 19.0095,
    "lon": 72.8377,
-   "step_free": false
+   "step_free": false,
+   "aliases": []
   },
   "dadar_cr": {
    "name": "Dadar (Central)",
    "mode": "local",
    "lat": 19.0174,
    "lon": 72.843,
-   "step_free": false
+   "step_free": false,
+   "aliases": [
+    "Dadar East",
+    "Dadar CR",
+    "Dadar TT",
+    "Dadar",
+    "DDR"
+   ]
   },
   "matunga": {
    "name": "Matunga",
    "mode": "local",
    "lat": 19.0274,
    "lon": 72.8501,
-   "step_free": false
+   "step_free": false,
+   "aliases": []
   },
   "sion": {
    "name": "Sion",
    "mode": "local",
    "lat": 19.0465,
    "lon": 72.8633,
-   "step_free": false
+   "step_free": false,
+   "aliases": []
   },
   "kurla": {
    "name": "Kurla",
    "mode": "local",
    "lat": 19.0653,
    "lon": 72.8794,
-   "step_free": false
+   "step_free": false,
+   "aliases": [
+    "CLA"
+   ]
   },
   "vidyavihar": {
    "name": "Vidyavihar",
    "mode": "local",
    "lat": 19.0795,
    "lon": 72.8971,
-   "step_free": false
+   "step_free": false,
+   "aliases": []
   },
   "ghatkopar": {
    "name": "Ghatkopar",
    "mode": "local",
    "lat": 19.0857,
    "lon": 72.9084,
-   "step_free": false
+   "step_free": false,
+   "aliases": [
+    "GC",
+    "Ghatkopar Central"
+   ]
   },
   "vikhroli": {
    "name": "Vikhroli",
    "mode": "local",
    "lat": 19.1115,
    "lon": 72.928,
-   "step_free": false
+   "step_free": false,
+   "aliases": []
   },
   "kanjurmarg": {
    "name": "Kanjurmarg",
    "mode": "local",
    "lat": 19.1287,
    "lon": 72.928,
-   "step_free": false
+   "step_free": false,
+   "aliases": [
+    "Kanjur Marg",
+    "Kanjur"
+   ]
   },
   "bhandup": {
    "name": "Bhandup",
    "mode": "local",
    "lat": 19.1428,
    "lon": 72.9377,
-   "step_free": false
+   "step_free": false,
+   "aliases": []
   },
   "nahur": {
    "name": "Nahur",
    "mode": "local",
    "lat": 19.1546,
    "lon": 72.9467,
-   "step_free": false
+   "step_free": false,
+   "aliases": []
   },
   "mulund": {
    "name": "Mulund",
    "mode": "local",
    "lat": 19.1721,
    "lon": 72.9567,
-   "step_free": false
+   "step_free": false,
+   "aliases": []
   },
   "thane": {
    "name": "Thane",
    "mode": "local",
    "lat": 19.1865,
    "lon": 72.9758,
-   "step_free": false
+   "step_free": false,
+   "aliases": [
+    "TNA"
+   ]
   },
   "dockyard_road": {
    "name": "Dockyard Road",
    "mode": "local",
    "lat": 18.9675,
    "lon": 72.8445,
-   "step_free": false
+   "step_free": false,
+   "aliases": []
   },
   "reay_road": {
    "name": "Reay Road",
    "mode": "local",
    "lat": 18.9776,
    "lon": 72.8441,
-   "step_free": false
+   "step_free": false,
+   "aliases": []
   },
   "cotton_green": {
    "name": "Cotton Green",
    "mode": "local",
    "lat": 18.9872,
    "lon": 72.8439,
-   "step_free": false
+   "step_free": false,
+   "aliases": []
   },
   "sewri": {
    "name": "Sewri",
    "mode": "local",
    "lat": 18.9988,
    "lon": 72.8544,
-   "step_free": false
+   "step_free": false,
+   "aliases": []
   },
   "vadala_road": {
    "name": "Wadala Road",
    "mode": "local",
    "lat": 19.0162,
    "lon": 72.8588,
-   "step_free": false
+   "step_free": false,
+   "aliases": [
+    "Vadala",
+    "Wadala"
+   ]
   },
   "gtb_nagar": {
    "name": "GTB Nagar",
    "mode": "local",
    "lat": 19.038,
    "lon": 72.8643,
-   "step_free": false
+   "step_free": false,
+   "aliases": [
+    "Guru Tegh Bahadur Nagar"
+   ]
   },
   "chunabhatti": {
    "name": "Chunabhatti",
    "mode": "local",
    "lat": 19.0518,
    "lon": 72.8691,
-   "step_free": false
+   "step_free": false,
+   "aliases": [
+    "Chuna Bhatti"
+   ]
   },
   "kurla_hb": {
    "name": "Kurla (Harbour platforms)",
    "mode": "local",
    "lat": 19.0656,
    "lon": 72.879,
-   "step_free": false
+   "step_free": false,
+   "aliases": [
+    "Kurla harbour"
+   ]
   },
   "tilak_nagar": {
    "name": "Tilak Nagar",
    "mode": "local",
    "lat": 19.0658,
    "lon": 72.8905,
-   "step_free": false
+   "step_free": false,
+   "aliases": []
   },
   "chembur": {
    "name": "Chembur",
    "mode": "local",
    "lat": 19.0626,
    "lon": 72.9011,
-   "step_free": false
+   "step_free": false,
+   "aliases": []
   },
   "govandi": {
    "name": "Govandi",
    "mode": "local",
    "lat": 19.0554,
    "lon": 72.9151,
-   "step_free": false
+   "step_free": false,
+   "aliases": []
   },
   "mankhurd": {
    "name": "Mankhurd",
    "mode": "local",
    "lat": 19.0482,
    "lon": 72.9317,
-   "step_free": false
+   "step_free": false,
+   "aliases": []
   },
   "vashi": {
    "name": "Vashi",
    "mode": "local",
    "lat": 19.0633,
    "lon": 72.9988,
-   "step_free": false
+   "step_free": false,
+   "aliases": []
   },
   "versova": {
    "name": "Versova",
    "mode": "metro",
    "lat": 19.1303,
    "lon": 72.8214,
-   "step_free": true
+   "step_free": true,
+   "aliases": []
   },
   "dn_nagar": {
    "name": "D N Nagar",
    "mode": "metro",
    "lat": 19.1283,
    "lon": 72.8302,
-   "step_free": true
+   "step_free": true,
+   "aliases": [
+    "DN Nagar"
+   ]
   },
   "azad_nagar": {
    "name": "Azad Nagar",
    "mode": "metro",
    "lat": 19.1269,
    "lon": 72.8376,
-   "step_free": true
+   "step_free": true,
+   "aliases": []
   },
   "andheri_m1": {
    "name": "Andheri (Metro 1)",
    "mode": "metro",
    "lat": 19.1206,
    "lon": 72.8488,
-   "step_free": true
+   "step_free": true,
+   "aliases": [
+    "Andheri metro",
+    "ADH"
+   ]
   },
   "weh_m1": {
    "name": "Western Express Highway",
    "mode": "metro",
    "lat": 19.1159,
    "lon": 72.8564,
-   "step_free": true
+   "step_free": true,
+   "aliases": [
+    "WEH"
+   ]
   },
   "chakala": {
    "name": "Chakala (J B Nagar)",
    "mode": "metro",
    "lat": 19.112,
    "lon": 72.8676,
-   "step_free": true
+   "step_free": true,
+   "aliases": [
+    "JB Nagar"
+   ]
   },
   "airport_road": {
    "name": "Airport Road",
    "mode": "metro",
    "lat": 19.1101,
    "lon": 72.8742,
-   "step_free": true
+   "step_free": true,
+   "aliases": []
   },
   "marol_naka_m1": {
    "name": "Marol Naka (Metro 1)",
    "mode": "metro",
    "lat": 19.1082,
    "lon": 72.8795,
-   "step_free": true
+   "step_free": true,
+   "aliases": [
+    "Marol Naka",
+    "Marol"
+   ]
   },
   "saki_naka": {
    "name": "Saki Naka",
    "mode": "metro",
    "lat": 19.1035,
    "lon": 72.888,
-   "step_free": true
+   "step_free": true,
+   "aliases": [
+    "Sakinaka"
+   ]
   },
   "asalpha": {
    "name": "Asalpha",
    "mode": "metro",
    "lat": 19.0964,
    "lon": 72.8949,
-   "step_free": true
+   "step_free": true,
+   "aliases": []
   },
   "jagruti_nagar": {
    "name": "Jagruti Nagar",
    "mode": "metro",
    "lat": 19.0926,
    "lon": 72.9019,
-   "step_free": true
+   "step_free": true,
+   "aliases": []
   },
   "ghatkopar_m1": {
    "name": "Ghatkopar (Metro 1)",
    "mode": "metro",
    "lat": 19.0867,
    "lon": 72.9081,
-   "step_free": true
+   "step_free": true,
+   "aliases": [
+    "Ghatkopar metro",
+    "GC"
+   ]
   },
   "cuffe_parade": {
    "name": "Cuffe Parade",
    "mode": "metro",
    "lat": 18.9136,
    "lon": 72.8207,
-   "step_free": true
+   "step_free": true,
+   "aliases": []
   },
   "vidhan_bhavan": {
    "name": "Vidhan Bhavan",
    "mode": "metro",
    "lat": 18.9248,
    "lon": 72.8255,
-   "step_free": true
+   "step_free": true,
+   "aliases": []
   },
   "churchgate_m3": {
    "name": "Churchgate (Metro 3)",
    "mode": "metro",
    "lat": 18.9315,
    "lon": 72.8269,
-   "step_free": true
+   "step_free": true,
+   "aliases": []
   },
   "hutatma_chowk": {
    "name": "Hutatma Chowk",
    "mode": "metro",
    "lat": 18.9342,
    "lon": 72.8325,
-   "step_free": true
+   "step_free": true,
+   "aliases": [
+    "Flora Fountain"
+   ]
   },
   "csmt_m3": {
    "name": "CSMT (Metro 3)",
    "mode": "metro",
    "lat": 18.9408,
    "lon": 72.8319,
-   "step_free": true
+   "step_free": true,
+   "aliases": [
+    "CSMT",
+    "VT"
+   ]
   },
   "kalbadevi": {
    "name": "Kalbadevi",
    "mode": "metro",
    "lat": 18.9463,
    "lon": 72.8272,
-   "step_free": true
+   "step_free": true,
+   "aliases": []
   },
   "girgaon": {
    "name": "Girgaon",
    "mode": "metro",
    "lat": 18.9521,
    "lon": 72.8222,
-   "step_free": true
+   "step_free": true,
+   "aliases": []
   },
   "grant_road_m3": {
    "name": "Grant Road (Metro 3)",
    "mode": "metro",
    "lat": 18.9632,
    "lon": 72.818,
-   "step_free": true
+   "step_free": true,
+   "aliases": []
   },
   "mumbai_central_m3": {
    "name": "Jagannath Shankar Sheth (Mumbai Central)",
    "mode": "metro",
    "lat": 18.97,
    "lon": 72.8212,
-   "step_free": true
+   "step_free": true,
+   "aliases": []
   },
   "mahalaxmi_m3": {
    "name": "Mahalaxmi (Metro 3)",
    "mode": "metro",
    "lat": 18.9795,
    "lon": 72.8254,
-   "step_free": true
+   "step_free": true,
+   "aliases": []
   },
   "science_centre": {
    "name": "Science Centre",
    "mode": "metro",
    "lat": 18.9909,
    "lon": 72.8214,
-   "step_free": true
+   "step_free": true,
+   "aliases": [
+    "Science Museum",
+    "Nehru Science Centre"
+   ]
   },
   "acharya_atre_chowk": {
    "name": "Acharya Atre Chowk",
    "mode": "metro",
    "lat": 18.9978,
    "lon": 72.8177,
-   "step_free": true
+   "step_free": true,
+   "aliases": []
   },
   "worli_m3": {
    "name": "Worli",
    "mode": "metro",
    "lat": 19.0086,
    "lon": 72.8193,
-   "step_free": true
+   "step_free": true,
+   "aliases": []
   },
   "siddhivinayak": {
    "name": "Siddhivinayak Temple",
    "mode": "metro",
    "lat": 19.0159,
    "lon": 72.8309,
-   "step_free": true
+   "step_free": true,
+   "aliases": []
   },
   "dadar_m3": {
    "name": "Dadar (Metro 3)",
    "mode": "metro",
    "lat": 19.0236,
    "lon": 72.8392,
-   "step_free": true
+   "step_free": true,
+   "aliases": [
+    "DDR",
+    "Dadar Metro"
+   ]
   },
   "shitaladevi": {
    "name": "Shitala Devi Mandir",
    "mode": "metro",
    "lat": 19.0385,
    "lon": 72.842,
-   "step_free": true
+   "step_free": true,
+   "aliases": []
   },
   "dharavi_m3": {
    "name": "Dharavi",
    "mode": "metro",
    "lat": 19.0463,
    "lon": 72.8497,
-   "step_free": true
+   "step_free": true,
+   "aliases": []
   },
   "bkc_m3": {
    "name": "Bandra Kurla Complex",
    "mode": "metro",
    "lat": 19.0607,
    "lon": 72.8547,
-   "step_free": true
+   "step_free": true,
+   "aliases": [
+    "BKC"
+   ]
   },
   "bandra_colony": {
    "name": "Bandra Colony",
    "mode": "metro",
    "lat": 19.07,
    "lon": 72.8494,
-   "step_free": true
+   "step_free": true,
+   "aliases": [
+    "Vidyanagari"
+   ]
   },
   "santacruz_m3": {
    "name": "Santacruz (Metro 3)",
    "mode": "metro",
    "lat": 19.0793,
    "lon": 72.8471,
-   "step_free": true
+   "step_free": true,
+   "aliases": []
   },
   "csmia_t1": {
    "name": "Airport T1 (Domestic)",
    "mode": "metro",
    "lat": 19.0939,
    "lon": 72.8536,
-   "step_free": true
+   "step_free": true,
+   "aliases": [
+    "T1",
+    "Domestic Airport"
+   ]
   },
   "sahar_road": {
    "name": "Sahar Road",
    "mode": "metro",
    "lat": 19.1022,
    "lon": 72.8652,
-   "step_free": true
+   "step_free": true,
+   "aliases": []
   },
   "csmia_t2": {
    "name": "Airport T2 (International)",
    "mode": "metro",
    "lat": 19.1023,
    "lon": 72.8745,
-   "step_free": true
+   "step_free": true,
+   "aliases": [
+    "T2",
+    "International Airport"
+   ]
   },
   "marol_naka_m3": {
    "name": "Marol Naka (Metro 3)",
    "mode": "metro",
    "lat": 19.1085,
    "lon": 72.8786,
-   "step_free": true
+   "step_free": true,
+   "aliases": []
   },
   "midc_andheri": {
    "name": "MIDC Andheri",
    "mode": "metro",
    "lat": 19.1174,
    "lon": 72.8736,
-   "step_free": true
+   "step_free": true,
+   "aliases": [
+    "MIDC"
+   ]
   },
   "seepz": {
    "name": "SEEPZ",
    "mode": "metro",
    "lat": 19.126,
    "lon": 72.8737,
-   "step_free": true
+   "step_free": true,
+   "aliases": []
   },
   "aarey_jvlr": {
    "name": "Aarey JVLR",
    "mode": "metro",
    "lat": 19.1304,
    "lon": 72.8843,
-   "step_free": true
+   "step_free": true,
+   "aliases": []
   },
   "colaba_depot_bus": {
    "name": "Colaba Bus Depot",
    "mode": "bus",
    "lat": 18.921,
    "lon": 72.8305,
-   "step_free": false
+   "step_free": false,
+   "aliases": []
   },
   "regal_circle_bus": {
    "name": "Regal Circle",
    "mode": "bus",
    "lat": 18.9256,
    "lon": 72.832,
-   "step_free": false
+   "step_free": false,
+   "aliases": [
+    "Regal",
+    "Gateway"
+   ]
   },
   "kala_ghoda_bus": {
    "name": "Kala Ghoda",
    "mode": "bus",
    "lat": 18.9283,
    "lon": 72.8318,
-   "step_free": false
+   "step_free": false,
+   "aliases": []
   },
   "csmt_bus": {
    "name": "CSMT Bus Stop",
    "mode": "bus",
    "lat": 18.94,
    "lon": 72.8348,
-   "step_free": false
+   "step_free": false,
+   "aliases": []
   },
   "crawford_market_bus": {
    "name": "Crawford Market",
    "mode": "bus",
    "lat": 18.9474,
    "lon": 72.8345,
-   "step_free": false
+   "step_free": false,
+   "aliases": []
   },
   "churchgate_bus": {
    "name": "Churchgate Bus Stop",
    "mode": "bus",
    "lat": 18.934,
    "lon": 72.8265,
-   "step_free": false
+   "step_free": false,
+   "aliases": []
   },
   "marine_drive_bus": {
    "name": "Marine Drive",
    "mode": "bus",
    "lat": 18.944,
    "lon": 72.8235,
-   "step_free": false
+   "step_free": false,
+   "aliases": []
   },
   "girgaum_chowpatty_bus": {
    "name": "Girgaum Chowpatty",
    "mode": "bus",
    "lat": 18.9545,
    "lon": 72.8143,
-   "step_free": false
+   "step_free": false,
+   "aliases": [
+    "Chowpatty"
+   ]
   },
   "kemps_corner_bus": {
    "name": "Kemps Corner",
    "mode": "bus",
    "lat": 18.964,
    "lon": 72.8095,
-   "step_free": false
+   "step_free": false,
+   "aliases": []
   },
   "haji_ali_bus": {
    "name": "Haji Ali Junction",
    "mode": "bus",
    "lat": 18.98,
    "lon": 72.813,
-   "step_free": false
+   "step_free": false,
+   "aliases": []
   },
   "bandra_bus": {
    "name": "Bandra Station (W)",
    "mode": "bus",
    "lat": 19.0547,
    "lon": 72.8392,
-   "step_free": false
+   "step_free": false,
+   "aliases": []
   },
   "hill_road_bus": {
    "name": "Hill Road",
    "mode": "bus",
    "lat": 19.055,
    "lon": 72.832,
-   "step_free": false
+   "step_free": false,
+   "aliases": []
   },
   "mount_mary_bus": {
    "name": "Mount Mary Steps",
    "mode": "bus",
    "lat": 19.047,
    "lon": 72.8232,
-   "step_free": false
+   "step_free": false,
+   "aliases": []
   },
   "bandstand_bus": {
    "name": "Bandstand",
    "mode": "bus",
    "lat": 19.045,
    "lon": 72.8205,
-   "step_free": false
+   "step_free": false,
+   "aliases": []
   },
   "andheri_bus": {
    "name": "Andheri Station (W)",
    "mode": "bus",
    "lat": 19.119,
    "lon": 72.8448,
-   "step_free": false
+   "step_free": false,
+   "aliases": []
   },
   "juhu_circle_bus": {
    "name": "Juhu Circle",
    "mode": "bus",
    "lat": 19.105,
    "lon": 72.833,
-   "step_free": false
+   "step_free": false,
+   "aliases": []
   },
   "juhu_beach_bus": {
    "name": "Juhu Beach",
    "mode": "bus",
    "lat": 19.0985,
    "lon": 72.827,
-   "step_free": false
+   "step_free": false,
+   "aliases": []
   },
   "kanjurmarg_bus": {
    "name": "Kanjurmarg Station (W)",
    "mode": "bus",
    "lat": 19.129,
    "lon": 72.927,
-   "step_free": false
+   "step_free": false,
+   "aliases": []
   },
   "iit_main_gate_bus": {
    "name": "IIT Main Gate",
    "mode": "bus",
    "lat": 19.1255,
    "lon": 72.916,
-   "step_free": false
+   "step_free": false,
+   "aliases": [
+    "IIT Bombay",
+    "IITB"
+   ]
   },
   "powai_hiranandani_bus": {
    "name": "Hiranandani Powai",
    "mode": "bus",
    "lat": 19.118,
    "lon": 72.9075,
-   "step_free": false
+   "step_free": false,
+   "aliases": [
+    "Powai"
+   ]
   }
  }
 }
