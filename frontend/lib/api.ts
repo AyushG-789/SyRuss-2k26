@@ -42,10 +42,31 @@ function inAppLanguage(traveller: Traveller): Traveller {
   return { ...traveller, language: activeLang() };
 }
 
+// ---- Demo clock kept in this browser ---------------------------------------------------------
+// The hosted backend runs as several server copies, each with its own memory, so a clock kept only
+// on the server jumps between copies. The browser keeps the clock (demo time at an anchor, real
+// time of the anchor, speed) and sends it with every request; every copy then computes the same
+// "now". The backend returns the new value whenever the clock changes (see backend app/clock.py).
+const CLOCK_KEY = "travelbuddy.demoClock";
+const DEMO_START = "2026-10-20T16:30:00";   // scenario start (data/scenarios/demo.json), paused
+
+function clockHeader(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  let saved: string | null = null;
+  try { saved = localStorage.getItem(CLOCK_KEY); } catch { /* storage blocked */ }
+  return { "X-Demo-Clock": saved ?? `${DEMO_START}|${(Date.now() / 1000).toFixed(3)}|0` };
+}
+
+function rememberClock(data: unknown) {
+  const anchor = (data as { anchor?: unknown } | null)?.anchor;
+  if (typeof anchor !== "string" || typeof window === "undefined") return;
+  try { localStorage.setItem(CLOCK_KEY, anchor); } catch { /* storage blocked */ }
+}
+
 async function post<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...clockHeader() },
     body: JSON.stringify(body),
   });
 
@@ -53,7 +74,9 @@ async function post<T>(path: string, body: unknown): Promise<T> {
     throw new Error(`${path} failed: ${res.status} ${await res.text()}`);
   }
 
-  return res.json() as Promise<T>;
+  const data = (await res.json()) as T;
+  rememberClock(data);
+  return data;
 }
 
 /** Thrown in mock mode for trips we have no mock plan for (i.e. anything typed into the form). */
@@ -107,13 +130,16 @@ async function fetchJson<T>(path: string, timeoutMs: number): Promise<T> {
     const res = await fetch(`${API_URL}${path}`, {
       signal: ctrl.signal,
       cache: "no-store",
+      headers: clockHeader(),
     });
 
     if (!res.ok) {
       throw new Error(`${path} failed: ${res.status}`);
     }
 
-    return (await res.json()) as T;
+    const data = (await res.json()) as T;
+    rememberClock(data);
+    return data;
   } finally {
     clearTimeout(timer);
   }
@@ -156,6 +182,8 @@ export interface ClockState {
   iso: string;
   speed: number;
   mode: "scripted" | "manual";
+  /** The clock to send back as X-Demo-Clock (kept by lib/api.ts). */
+  anchor?: string;
 }
 
 export interface Preset {

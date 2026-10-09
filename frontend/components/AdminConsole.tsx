@@ -51,7 +51,13 @@ export default function AdminConsole() {
   const refresh = useCallback(async () => {
     try {
       const [t, ev] = await Promise.all([getTimeline(), getBackendEvents()]);
-      setTimeline(t);
+      // The story ends at the scenario end (18:30): stop the clock there instead of running on.
+      if (t.speed > 0 && toMin(t.now) >= toMin(t.end)) {
+        const stopped = await updateClock({ set: t.end, speed: 0 });
+        setTimeline({ ...t, ...stopped });
+      } else {
+        setTimeline(t);
+      }
       setEvents(ev);
       setOffline(false);
     } catch {
