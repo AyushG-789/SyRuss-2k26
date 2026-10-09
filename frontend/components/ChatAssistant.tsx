@@ -368,7 +368,7 @@ export default function ChatAssistant() {
         >
           <header className="flex items-center justify-between gap-2 bg-primary px-4 py-3 text-on-primary">
             <div className="flex items-center gap-2">
-              <span className="grid h-8 w-8 place-items-center rounded-full bg-white/15">
+              <span className="grid h-8 w-8 place-items-center rounded-full bg-on-primary/15">
                 <Icon name="forum" className="text-[18px]" />
               </span>
               <div className="leading-tight">
@@ -385,7 +385,7 @@ export default function ChatAssistant() {
                     setEntries([]);
                   }}
                   aria-label="Clear chat"
-                  className="rounded-lg p-1.5 hover:bg-white/15"
+                  className="rounded-lg p-1.5 hover:bg-on-primary/15"
                 >
                   <Icon name="restart_alt" className="text-[20px]" />
                 </button>
@@ -397,7 +397,7 @@ export default function ChatAssistant() {
                   setOpen(false);
                 }}
                 aria-label="Close assistant"
-                className="rounded-lg p-1.5 hover:bg-white/15"
+                className="rounded-lg p-1.5 hover:bg-on-primary/15"
               >
                 <Icon name="close" className="text-[20px]" />
               </button>

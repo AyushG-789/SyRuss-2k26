@@ -10,7 +10,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useId, useMemo, useState } from "react";
 import { getPlan } from "@/lib/api";
 import { eventTitle, evidenceSummary, lineShortName, MODE_LABEL, pct, PLAN_LABEL, STATUS_STYLE } from "@/lib/format";
-import { defaults, quickChips, savedPlaces } from "@/lib/mockPlanner";
+import { defaults, quickChips } from "@/lib/mockPlanner";
+import { getProfile, openProfile, useProfile } from "@/lib/profile";
 import { activeEvents } from "@/lib/network";
 import { useLiveEvents } from "@/lib/useLiveEvents";
 import { findPlace, PLACE_OPTIONS } from "@/lib/places";
@@ -59,6 +60,19 @@ export default function JourneyPlanner() {
   const [editTime, setEditTime] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) => setForm((f) => ({ ...f, [key]: value }));
+  const profile = useProfile();
+
+  // Start from the commuter's saved preferences (profile panel). Applied after mount, because the
+  // profile lives in this browser and the first render must match the server's.
+  useEffect(() => {
+    let cancelled = false;
+    Promise.resolve().then(() => {
+      if (cancelled) return;
+      const p = getProfile();
+      setForm((f) => ({ ...f, priority: p.priority, stepFree: p.stepFree, modes: p.modes.length ? [...p.modes] : f.modes }));
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   const origin = findPlace(form.from) ?? null;
   const destination = findPlace(form.to) ?? null;
@@ -173,13 +187,13 @@ export default function JourneyPlanner() {
             <div className="flex flex-col gap-2">
               <span className="text-small text-on-surface-variant">Quick-Access Shortcuts</span>
               <div className="grid grid-cols-2 gap-2">
-                {savedPlaces.map((p) => (
-                  <button key={p.id} type="button" onClick={() => set("to", p.place)}
-                    className="flex items-center gap-3 rounded-xl border border-hairline bg-container-low/50 px-4 py-3 text-left transition hover:border-primary">
-                    <span className="grid h-10 w-10 place-items-center rounded-lg bg-container"><Icon name={p.icon} className="text-on-surface-variant" /></span>
-                    <span className="flex flex-col">
+                {profile.places.map((p) => (
+                  <button key={p.id} type="button" onClick={() => (p.place ? set("to", snap(p.place) ?? p.place) : openProfile("places"))}
+                    className="flex min-w-0 items-center gap-3 rounded-xl border border-hairline bg-container-low/50 px-4 py-3 text-left transition hover:border-primary">
+                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-container"><Icon name={p.id === "home" ? "home" : "work"} className="text-on-surface-variant" /></span>
+                    <span className="flex min-w-0 flex-col">
                       <span className="font-semibold">{p.title}</span>
-                      <span className="text-small text-on-surface-variant">{p.sub}</span>
+                      <span className="truncate text-small text-on-surface-variant">{p.place || "Add in your profile"}</span>
                     </span>
                   </button>
                 ))}
@@ -357,7 +371,7 @@ export default function JourneyPlanner() {
           {/* More ways to plan */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Link href="/itinerary" className="flex items-center gap-4 rounded-2xl bg-container-lowest p-4 shadow-sm hover:shadow-md">
-              <div className="grid h-20 w-20 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-tertiary-container to-tertiary text-white"><Icon name="event_note" className="text-[36px]" /></div>
+              <div className="grid h-20 w-20 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-tertiary-container to-tertiary text-on-primary"><Icon name="event_note" className="text-[36px]" /></div>
               <div className="min-w-0">
                 <p className="text-caption font-bold uppercase tracking-wide text-on-surface-variant">Several stops?</p>
                 <p className="text-subtitle font-bold">Day Itinerary</p>
@@ -365,7 +379,7 @@ export default function JourneyPlanner() {
               </div>
             </Link>
             <Link href="/compare" className="flex items-center gap-4 rounded-2xl bg-container-lowest p-4 shadow-sm hover:shadow-md">
-              <div className="grid h-20 w-20 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-primary to-primary-container text-white"><Icon name="compare_arrows" className="text-[36px]" /></div>
+              <div className="grid h-20 w-20 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-primary to-primary-container text-on-primary"><Icon name="compare_arrows" className="text-[36px]" /></div>
               <div className="min-w-0">
                 <p className="text-caption font-bold uppercase tracking-wide text-on-surface-variant">Why TravelBuddy?</p>
                 <p className="text-subtitle font-bold">Normal app vs us</p>

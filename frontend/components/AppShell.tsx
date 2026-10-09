@@ -5,11 +5,14 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Suspense, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { shell } from "@/lib/mockHome";
+import { getProfile, initials, OPEN_EVENT, type ProfileSection, useProfile } from "@/lib/profile";
+import { applyTheme } from "@/lib/theme";
 import { LiveEventsProvider, useLiveEvents } from "@/lib/useLiveEvents";
 import ChatAssistant from "./ChatAssistant";
 import Icon from "./Icon";
+import ProfilePanel from "./ProfilePanel";
 
 type NavItem = { href: string; label: string; icon: string; match: (p: string) => boolean };
 
@@ -160,6 +163,32 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   );
 }
 
+/** Top-bar avatar: opens the Commuter Profile panel (also opened from elsewhere via openProfile()). */
+function ProfileButton() {
+  const profile = useProfile();
+  const [open, setOpen] = useState(false);
+  const [section, setSection] = useState<ProfileSection>("top");
+  const close = useCallback(() => setOpen(false), []);
+  // Keep <html data-theme> in step with the saved choice (e.g. changed in another tab). Reads the
+  // store directly: during hydration the hook still returns the server default.
+  useEffect(() => { applyTheme(getProfile().appearance); }, [profile.appearance]);
+  useEffect(() => {
+    const onOpen = (e: Event) => { setSection((e as CustomEvent<ProfileSection>).detail ?? "top"); setOpen(true); };
+    window.addEventListener(OPEN_EVENT, onOpen);
+    return () => window.removeEventListener(OPEN_EVENT, onOpen);
+  }, []);
+  return (
+    <>
+      <button type="button" onClick={() => { setSection("top"); setOpen(true); }} aria-haspopup="dialog" aria-expanded={open}
+        aria-label={profile.signedIn ? `Profile: ${profile.name}` : "Profile (guest)"} title="Your profile"
+        className={`flex h-9 w-9 items-center justify-center rounded-full bg-primary text-caption font-bold text-on-primary transition hover:ring-2 hover:ring-primary/30 ${open ? "ring-2 ring-primary ring-offset-2" : ""}`}>
+        {profile.signedIn ? initials(profile.name) : <Icon name="person" className="text-[18px]" />}
+      </button>
+      <ProfilePanel open={open} section={section} onClose={close} />
+    </>
+  );
+}
+
 /** Whether pages show live backend data or the bundled sample (backend offline). */
 function FeedPill() {
   const live = useLiveEvents();
@@ -177,14 +206,14 @@ function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-full">
       {/* Sidebar (desktop) */}
-      <aside className="sticky top-0 z-50 hidden h-screen w-72 shrink-0 flex-col justify-between overflow-y-auto bg-container-lowest shadow-[0_1px_8px_rgba(0,0,0,0.04)] lg:flex">
+      <aside className="sticky top-0 z-50 hidden h-screen w-72 shrink-0 flex-col justify-between overflow-y-auto bg-container-lowest shadow-xs lg:flex">
         <SidebarBody />
       </aside>
 
       {/* Mobile drawer */}
       {open && (
         <div className="fixed inset-0 z-[1200] lg:hidden" role="dialog" aria-modal="true" aria-label="Menu">
-          <button className="absolute inset-0 bg-slate/40" aria-label="Close menu" onClick={() => setOpen(false)} />
+          <button className="absolute inset-0 bg-scrim" aria-label="Close menu" onClick={() => setOpen(false)} />
           <div className="absolute inset-y-0 left-0 flex w-72 flex-col justify-between overflow-y-auto bg-container-lowest shadow-float">
             <button onClick={() => setOpen(false)} aria-label="Close menu" className="absolute right-3 top-4 rounded-lg p-1 hover:bg-container-low">
               <Icon name="close" />
@@ -195,7 +224,7 @@ function Shell({ children }: { children: React.ReactNode }) {
       )}
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-[1100] flex h-16 items-center justify-between gap-3 bg-container-lowest/90 px-4 shadow-[0_1px_8px_rgba(0,0,0,0.04)] backdrop-blur-xl md:px-6">
+        <header className="sticky top-0 z-[1100] flex h-16 items-center justify-between gap-3 bg-container-lowest/90 px-4 shadow-xs backdrop-blur-xl md:px-6">
           <button onClick={() => setOpen(true)} aria-label="Open menu" className="rounded-lg p-1.5 hover:bg-container-low lg:hidden">
             <Icon name="menu" />
           </button>
@@ -212,9 +241,7 @@ function Shell({ children }: { children: React.ReactNode }) {
               <Icon name="keyboard_arrow_down" className="text-[16px] text-outline" />
             </button>
             <FeedPill />
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary" aria-label="Account">
-              <Icon name="person" className="text-[18px] text-on-primary" />
-            </div>
+            <ProfileButton />
           </div>
         </header>
         {children}

@@ -14,6 +14,7 @@ import {
 import { lineShortName, pct, placeName, STATUS_STYLE } from "@/lib/format";
 import { positionAt, toMin } from "@/lib/geo";
 import { reportCategories, share } from "@/lib/mockTracking";
+import { recordReport } from "@/lib/profile";
 import { reporterId } from "@/lib/reporter";
 import { clearTrip, loadTrip, type SavedTrip, saveTrip, startTrip } from "@/lib/savedTrip";
 import type { Leg, RouteCard } from "@/lib/types";
@@ -228,7 +229,7 @@ function LiveTrip({ trip, onTrip }: { trip: SavedTrip; onTrip: (t: SavedTrip | n
               <span className="eyebrow text-tertiary">Pakka Check</span>
               <span className="mt-1 text-xl font-semibold transition-colors group-hover:text-tertiary">Report Issue</span>
             </div>
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-tertiary text-white transition-transform group-hover:scale-105">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-tertiary text-on-primary transition-transform group-hover:scale-105">
               <Icon name="report_problem" className="text-[22px]" />
             </div>
           </div>
@@ -378,7 +379,7 @@ function legendFor(legs: Leg[]) {
   for (const l of legs) {
     if (l.line_id && lines[l.line_id]) seen.set(lineShortName(l.line_id), lines[l.line_id].color);
     else if (l.mode === "walk") seen.set("Walk", "#8a94a6");
-    else seen.set(l.mode[0].toUpperCase() + l.mode.slice(1), "#334155");
+    else seen.set(l.mode[0].toUpperCase() + l.mode.slice(1), "#64748b");
   }
   return [...seen].map(([label, color]) => ({ label, color }));
 }
@@ -686,7 +687,7 @@ function ModalShell({ title, sub, icon, iconCls, onClose, children }: {
   }, [onClose]);
   return (
     <div className="fixed inset-0 z-[1300] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label={title}>
-      <button className="absolute inset-0 bg-[#2d3133]/40 backdrop-blur-sm" aria-label="Close" onClick={onClose} />
+      <button className="absolute inset-0 bg-scrim backdrop-blur-sm" aria-label="Close" onClick={onClose} />
       <div className="relative flex w-full max-w-lg flex-col gap-4 rounded-2xl bg-container-lowest p-6 shadow-xl">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-2">
@@ -725,6 +726,7 @@ function ReportModal({ target, onClose }: { target: { stop_id: string; line_id: 
         affected: { stop_ids: [target.stop_id], line_ids: target.line_id ? [target.line_id] : [], transfer_ids: [] },
       });
       setResult({ ok: true, out });
+      recordReport(out.event_id, `${c.label} near ${target.label}`);
       refresh();
     } catch {
       setResult({ ok: false, msg: "Couldn't reach Pakka Check — start the backend to send reports." });

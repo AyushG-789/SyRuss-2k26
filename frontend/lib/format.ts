@@ -43,7 +43,7 @@ export function lineShortName(lineId: string): string {
 
 export function legColor(leg: Leg): string {
   if (leg.line_id && lines[leg.line_id]) return lines[leg.line_id].color;
-  return leg.mode === "walk" ? "#8a94a6" : "#334155"; // walk grey, taxi/cab/auto slate
+  return leg.mode === "walk" ? "#8a94a6" : "#64748b"; // walk grey, taxi/cab/auto slate (mid-tone: visible on light and night maps)
 }
 
 export function placeName(id: string, traveller: Traveller, destinationLabel?: string): string {

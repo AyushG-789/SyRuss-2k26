@@ -1,47 +1,122 @@
 @import "tailwindcss";
 
 /*
- * TravelBuddy design system — from the "Marg Transit" DESIGN.md (light, emerald + amber).
- * Design tokens first; the older short names (bg-surface, text-muted, bg-brand …) are kept as
- * aliases so every existing component picks up the new look.
+ * TravelBuddy design system — Marg Transit layout, with two themes chosen in the profile panel:
+ *   light: warm ivory canvas, white cards, forest-green brand, champagne-gold accent
+ *   dark:  deep-forest canvas, forest cards, champagne-gold brand, warm-ivory text
+ * The theme is the `data-theme` attribute on <html> (set before first paint in layout.tsx).
+ * Components only use these tokens, so switching the attribute re-themes the whole app.
+ * Status colours keep their meaning in both themes: green = OK, amber = possible, red = confirmed.
  */
 :root {
+  color-scheme: light;
   /* surfaces */
-  --surface: #f5f7f9;
-  --surface-dim: #d8dadc;
-  --surface-container-lowest: #ffffff;
-  --surface-container-low: #f1f4f6;
-  --surface-container: #eaeef1;
-  --surface-container-high: #e3e8eb;
-  --surface-container-highest: #dbe1e5;
-  --on-surface: #15201b;
-  --on-surface-variant: #46534c;
-  --outline: #66746d;            /* AA on white for small text */
-  --outline-variant: #c3cfc8;
-  --hairline: #e3e8ec;
-  --hairline-soft: #eff3f5;
+  --surface: #f4f2e9;                    /* main background — warm ivory */
+  --surface-dim: #dde2d9;
+  --surface-container-lowest: #ffffff;   /* cards / panels */
+  --surface-container-low: #e8ede5;      /* hover surfaces — pale sage */
+  --surface-container: #e1e7dd;
+  --surface-container-high: #d8dfd4;
+  --surface-container-highest: #ccd5c8;
+  --on-surface: #202923;                 /* main text — dark charcoal-green */
+  --on-surface-variant: #646e65;         /* secondary text — muted sage grey (#737D73 darkened for AA) */
+  --outline: #737d73;
+  --outline-variant: #c5cdc2;
+  --hairline: #dde2d9;                   /* borders — soft grey-green */
+  --hairline-soft: #e8ede5;
+  --scrim: rgba(16, 29, 25, 0.45);
+  --inverse-surface: #101d19;
+  --inverse-on-surface: #f2f0e7;
   /* brand */
-  --primary: #006948;
-  --primary-container: #00855d;
+  --primary: #24483a;                    /* primary brand — forest green */
+  --primary-container: #2f5c4a;
   --on-primary: #ffffff;
-  --primary-fixed: #85f8c4;
-  --primary-fixed-dim: #68dba9;
-  --on-primary-fixed: #002114;
-  --primary-soft: #ecfdf5;
-  --primary-ink: #047857;
-  --secondary: #545f73;
-  --secondary-container: #d5e0f8;
-  --on-secondary-container: #586377;
-  --slate: #1e293b;
-  --tertiary: #8d4b00;
-  --tertiary-container: #b15f00;
-  --tertiary-fixed: #ffdcc3;
-  --amber-soft: #fffbeb;
-  --amber-ink: #b45309;
-  --error: #ba1a1a;
-  --error-container: #ffdad6;
-  --on-error-container: #93000a;
+  --primary-fixed: #d4e5d9;
+  --primary-fixed-dim: #8fc0a1;
+  --on-primary-fixed: #101d19;
+  --primary-soft: #e4eee6;
+  --primary-ink: #24563f;
+  --secondary: #4f5d55;
+  --secondary-container: #dfe6dc;
+  --on-secondary-container: #344339;
+  --secondary-fixed: #dfe6dc;
+  --on-secondary-fixed: #101d19;
+  --slate: #101d19;                      /* secondary brand — deep green (strong text) */
+  --tertiary: #9b7336;                   /* accent / highlights — champagne gold */
+  --tertiary-container: #b48a4b;
+  --tertiary-fixed: #f1e6d0;
+  --on-tertiary-fixed: #3b2a0e;
+  --amber-soft: #fbf1dc;
+  --amber-ink: #a35a00;
+  --error: #b3261e;
+  --error-container: #fadcd8;
+  --on-error-container: #8c1d18;
+  --good-ink: var(--primary-ink);
+  --map-tiles: none;
 
+  /* elevation: 1 resting card · 2 raised / hover · 3 floating panel / modal */
+  --shadow-rgb: 16, 29, 25;
+  --ring-hairline: 0 0 0 1px rgba(var(--shadow-rgb), 0.07);
+  --shadow-1: var(--ring-hairline), 0 1px 2px rgba(var(--shadow-rgb), 0.04), 0 2px 8px -2px rgba(var(--shadow-rgb), 0.05);
+  --shadow-2: var(--ring-hairline), 0 2px 4px rgba(var(--shadow-rgb), 0.05), 0 10px 24px -8px rgba(var(--shadow-rgb), 0.12);
+  --shadow-3: 0 0 0 1px rgba(var(--shadow-rgb), 0.05), 0 12px 32px -8px rgba(var(--shadow-rgb), 0.22), 0 4px 10px -4px rgba(var(--shadow-rgb), 0.08);
+  --shadow-sheet-up: 0 -4px 16px 0 rgba(var(--shadow-rgb), 0.08);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --surface: #101d19;                    /* main background — deep forest */
+  --surface-dim: #0b1512;
+  --surface-container-lowest: #1d3028;   /* cards / panels — forest green */
+  --surface-container-low: #26382f;      /* elevated surfaces — lighter forest */
+  --surface-container: #2b3e34;
+  --surface-container-high: #304438;     /* hover surfaces — deep sage */
+  --surface-container-highest: #3a5043;
+  --on-surface: #f2f0e7;                 /* main text — warm ivory */
+  --on-surface-variant: #a4b2a8;         /* secondary text — muted sage */
+  --outline: #8d9b91;
+  --outline-variant: #46594d;
+  --hairline: #35483d;                   /* borders — forest grey */
+  --hairline-soft: #2b3e34;
+  --scrim: rgba(0, 0, 0, 0.55);
+  --inverse-surface: #f2f0e7;
+  --inverse-on-surface: #101d19;
+  /* brand: champagne gold leads in the dark */
+  --primary: #d9b982;
+  --primary-container: #e5c995;
+  --on-primary: #101d19;
+  --primary-fixed: #3d3926;
+  --primary-fixed-dim: #d9b982;
+  --on-primary-fixed: #f4e4c1;
+  --primary-soft: #23402f;               /* soft tints stay green so "OK" still reads as OK */
+  --primary-ink: #93d3ab;
+  --secondary: #a4b2a8;
+  --secondary-container: #2e4238;
+  --on-secondary-container: #cbd8ce;
+  --secondary-fixed: #2e4238;
+  --on-secondary-fixed: #e4ece6;
+  --slate: #f2f0e7;
+  --tertiary: #e2c184;
+  --tertiary-container: #b48a4b;
+  --tertiary-fixed: #3b3220;
+  --on-tertiary-fixed: #f4e2bd;
+  --amber-soft: #3a2e15;
+  --amber-ink: #f3b95f;
+  --error: #d4483d;
+  --error-container: #4a201c;
+  --on-error-container: #ffb4ab;
+  /* map tiles: night version of the OpenStreetMap basemap */
+  --map-tiles: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.88) saturate(0.6);
+
+  --shadow-rgb: 0, 0, 0;
+  --ring-hairline: 0 0 0 1px rgba(255, 255, 255, 0.06);
+  --shadow-1: var(--ring-hairline), 0 1px 2px rgba(0, 0, 0, 0.25), 0 2px 8px -2px rgba(0, 0, 0, 0.3);
+  --shadow-2: var(--ring-hairline), 0 2px 4px rgba(0, 0, 0, 0.3), 0 10px 24px -8px rgba(0, 0, 0, 0.45);
+  --shadow-3: 0 0 0 1px rgba(255, 255, 255, 0.07), 0 12px 32px -8px rgba(0, 0, 0, 0.6), 0 4px 10px -4px rgba(0, 0, 0, 0.4);
+  --shadow-sheet-up: 0 -4px 16px 0 rgba(0, 0, 0, 0.4);
+}
+
+:root {
   /* aliases used by older components */
   --bg: var(--surface);
   --surface-1: var(--surface-container-lowest);
@@ -60,15 +135,8 @@
   --bad-soft: var(--error-container);
   --grey: var(--outline);
 
-  /* elevation: 1 resting card · 2 raised / hover · 3 floating panel / modal */
-  --ring-hairline: 0 0 0 1px rgba(16, 32, 26, 0.06);
-  --shadow-1: var(--ring-hairline), 0 1px 2px rgba(16, 32, 26, 0.04), 0 2px 8px -2px rgba(16, 32, 26, 0.05);
-  --shadow-2: var(--ring-hairline), 0 2px 4px rgba(16, 32, 26, 0.05), 0 10px 24px -8px rgba(16, 32, 26, 0.12);
-  --shadow-3: 0 0 0 1px rgba(16, 32, 26, 0.05), 0 12px 32px -8px rgba(16, 32, 26, 0.22), 0 4px 10px -4px rgba(16, 32, 26, 0.08);
-  --shadow-sheet-up: 0 -4px 16px 0 rgba(15, 23, 42, 0.08);
-
   /* focus + motion */
-  --focus-ring: 0 0 0 3px color-mix(in srgb, var(--primary) 28%, transparent);
+  --focus-ring: 0 0 0 3px color-mix(in srgb, var(--primary) 32%, transparent);
   --ease: cubic-bezier(0.2, 0, 0, 1);
   --dur: 160ms;
 }
@@ -101,6 +169,12 @@
   --color-tertiary: var(--tertiary);
   --color-tertiary-container: var(--tertiary-container);
   --color-tertiary-fixed: var(--tertiary-fixed);
+  --color-on-tertiary-fixed: var(--on-tertiary-fixed);
+  --color-secondary-fixed: var(--secondary-fixed);
+  --color-on-secondary-fixed: var(--on-secondary-fixed);
+  --color-inverse-surface: var(--inverse-surface);
+  --color-inverse-on-surface: var(--inverse-on-surface);
+  --color-scrim: var(--scrim);
   --color-amber-soft: var(--amber-soft);
   --color-amber-ink: var(--amber-ink);
   --color-error: var(--error);
@@ -169,7 +243,6 @@
 
 @layer base {
   html {
-    color-scheme: light;
     -webkit-text-size-adjust: 100%;
   }
 
@@ -183,8 +256,8 @@
   }
 
   ::selection {
-    background: color-mix(in srgb, var(--primary-fixed) 70%, white);
-    color: var(--on-primary-fixed);
+    background: color-mix(in srgb, var(--primary) 30%, transparent);
+    color: var(--on-surface);
   }
 
   /* Typography hierarchy: tighter, calmer headings that wrap evenly */
@@ -287,9 +360,9 @@
   .btn-primary {
     background: var(--primary);
     color: var(--on-primary);
-    box-shadow: 0 1px 2px rgba(0, 105, 72, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    box-shadow: 0 1px 2px color-mix(in srgb, var(--primary) 30%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.08);
   }
-  .btn-primary:hover { background: var(--primary-container); box-shadow: 0 4px 12px -4px rgba(0, 105, 72, 0.45); }
+  .btn-primary:hover { background: var(--primary-container); box-shadow: 0 4px 12px -4px color-mix(in srgb, var(--primary) 50%, transparent); }
   .btn-secondary {
     background: var(--surface-container-lowest);
     color: var(--slate);
@@ -352,3 +425,23 @@
 .leaflet-container {
   font-family: inherit;
 }
+
+/* Map in the active theme: night tiles in dark mode; controls, tooltips and attribution follow tokens */
+.leaflet-container { background: var(--surface-container); }
+.leaflet-tile-pane { filter: var(--map-tiles); }
+.leaflet-tooltip { background: var(--surface-container-lowest); }
+.leaflet-tooltip-top::before { border-top-color: var(--surface-container-lowest); }
+.leaflet-tooltip-bottom::before { border-bottom-color: var(--surface-container-lowest); }
+.leaflet-tooltip-left::before { border-left-color: var(--surface-container-lowest); }
+.leaflet-tooltip-right::before { border-right-color: var(--surface-container-lowest); }
+.leaflet-bar a, .leaflet-bar a:hover {
+  background: var(--surface-container-lowest);
+  color: var(--on-surface);
+  border-bottom-color: var(--hairline);
+}
+.leaflet-bar a:hover { background: var(--surface-container-low); }
+.leaflet-container .leaflet-control-attribution {
+  background: color-mix(in srgb, var(--surface-container-lowest) 80%, transparent);
+  color: var(--on-surface-variant);
+}
+.leaflet-container .leaflet-control-attribution a { color: var(--primary); }

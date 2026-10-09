@@ -9,6 +9,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { stations, submitReport, type ReportOut } from "@/lib/api";
 import { eventTitle, evidenceSummary, pct, STATUS_ORDER, STATUS_STYLE, TYPE_LABEL } from "@/lib/format";
 import { categories, corridors, defaultDescription, directions, location, page, radarLayers, reputation, sampleStats, voiceMemo } from "@/lib/mockReport";
+import { recordReport } from "@/lib/profile";
 import { reporterId } from "@/lib/reporter";
 import type { DisruptionEvent } from "@/lib/types";
 import { useLiveEvents, useRefreshLiveEvents } from "@/lib/useLiveEvents";
@@ -84,6 +85,7 @@ export default function ReportIncident() {
         affected: { stop_ids: [stationId], line_ids: [], transfer_ids: [] },
       });
       setResult({ ok: true, out });
+      recordReport(out.event_id, `${cat.label} at ${corridor}`);
       try { localStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
       refresh();
     } catch (err) {
@@ -274,7 +276,7 @@ export default function ReportIncident() {
                 <Icon name="radar" className="text-[20px] text-primary" />
                 <span className="text-lg font-bold">Live Sector Incident Radar</span>
               </div>
-              <span className="rounded-full bg-secondary-fixed px-2 py-0.5 text-micro font-semibold text-[#111c2d]">
+              <span className="rounded-full bg-secondary-fixed px-2 py-0.5 text-micro font-semibold text-on-secondary-fixed">
                 {backend ? `Demo clock ${live?.asOf}` : "Sample data"}
               </span>
             </div>
@@ -380,7 +382,7 @@ function VoiceMemo({ use, onUse }: { use: boolean; onUse: (v: boolean) => void }
             <span>{voiceMemo.length}</span><span>{voiceMemo.max}</span>
           </div>
         </div>
-        <div className="hidden items-center gap-1.5 rounded-md bg-secondary-container px-1 py-1 text-micro font-bold text-[#111c2d] sm:flex">
+        <div className="hidden items-center gap-1.5 rounded-md bg-secondary-container px-1 py-1 text-micro font-bold text-on-secondary-fixed sm:flex">
           <Icon name="graphic_eq" className="text-[14px]" /> {voiceMemo.rate}
         </div>
       </div>
@@ -493,6 +495,7 @@ function NearbyFeed({ events, backend }: { events: DisruptionEvent[]; backend: b
         type: ev.type, severity: ev.severity,
         affected: { stop_ids: ev.affected.stop_ids, line_ids: ev.affected.line_ids, transfer_ids: ev.affected.transfer_ids },
       });
+      recordReport(out.event_id, `Confirmed ${eventTitle(ev)}`);
       setConfirmed((c) => ({ ...c, [ev.event_id]: `Added · now ${pct(out.confidence)}` }));
       refresh();
     } catch {

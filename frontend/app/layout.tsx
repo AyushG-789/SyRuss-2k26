@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist_Mono, Plus_Jakarta_Sans } from "next/font/google";
 import AppShell from "@/components/AppShell";
+import { THEME_BOOT_SCRIPT } from "@/lib/theme";
 import "./globals.css";
 
 const jakarta = Plus_Jakarta_Sans({
@@ -33,8 +34,12 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${jakarta.variable} ${geistMono.variable} h-full antialiased`}
+      data-theme="light"
+      suppressHydrationWarning
     >
       <head>
+        {/* Apply the saved light / dark theme before first paint (see lib/theme.ts) */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
         {/* Icon font used by the design (Material Symbols Outlined) */}
         {/* "block" so icons never flash as their text names while the font loads */}
         {/* eslint-disable-next-line @next/next/no-page-custom-font, @next/next/google-font-display */}

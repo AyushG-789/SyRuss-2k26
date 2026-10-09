@@ -54,7 +54,7 @@ export const stationCards: Station[] = [
   },
   {
     id: "rail", kinds: ["rail"], name: "Andheri Suburban Rail", tag: "WR Zone", icon: "train", iconBox: "bg-secondary-fixed text-secondary",
-    tagCls: "bg-secondary text-white", codeCls: "bg-secondary-fixed text-[#111c2d]",
+    tagCls: "bg-secondary text-container-lowest", codeCls: "bg-secondary-fixed text-on-secondary-fixed",
     sub: [{ text: "Ground & Foot Over Bridge Grid" }, { text: "9 Operational Platforms", cls: "font-semibold text-secondary" }],
     walk: "5 mins (340m)",
     departures: [
@@ -71,7 +71,7 @@ export const stationCards: Station[] = [
   },
   {
     id: "bus", kinds: ["bus", "auto"], name: "BEST Bus Depot No. 4 (Andheri West)", tag: "BEST Municipal", icon: "directions_bus", iconBox: "bg-tertiary-fixed text-tertiary",
-    tagCls: "bg-tertiary text-white", codeCls: "bg-tertiary-fixed text-[#2f1500]",
+    tagCls: "bg-tertiary text-container-lowest", codeCls: "bg-tertiary-fixed text-on-tertiary-fixed",
     sub: [{ text: "SV Road Junction Terminal" }, { text: "18 Active City Routes", cls: "font-semibold text-tertiary" }],
     walk: "6 mins (420m)",
     departures: [
