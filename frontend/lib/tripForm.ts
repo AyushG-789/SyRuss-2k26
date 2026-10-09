@@ -51,8 +51,8 @@ export const EMPTY_FORM: FormState = {
   time: "17:00",
   hardDeadline: false,
   budget: "",
-  maxWalk: "15",
-  maxTransfers: "2",
+  maxWalk: "",        // "" = Any (no limit) until the traveller picks one
+  maxTransfers: "",
   priority: "balanced",
   modes: ["local", "metro", "bus", "taxi"],
   stepFree: false,

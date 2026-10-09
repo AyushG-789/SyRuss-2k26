@@ -36,7 +36,7 @@ export default function CompareView() {
   return (
     <main className="flex w-full flex-col gap-4 px-4 pb-16 pt-4 md:px-6">
       <header className="flex flex-col gap-1">
-        <span className="flex items-center gap-1 text-caption font-bold uppercase tracking-wider text-primary"><Icon name="compare_arrows" className="text-[16px]" /> {tr("eyebrow")}</span>
+        <span className="flex items-center gap-1 text-caption font-bold uppercase tracking-wider text-primary"><Icon name="compare_arrows" className="text-[18px]" /> {tr("eyebrow")}</span>
         <h1 className="text-2xl font-semibold">{tr("title")}</h1>
         <p className="max-w-3xl text-sm text-on-surface-variant">{r.method}</p>
       </header>
@@ -81,7 +81,7 @@ export default function CompareView() {
                   <Side s={x.travelbuddy} deadline={x.arrive_by} />
                   <td className="px-3 py-2.5 text-on-surface-variant">
                     {x.replans.length > 0 ? x.replans.map((rp) => (
-                      <p key={rp.at} className="flex items-start gap-1"><Icon name="alt_route" className="text-[16px] text-primary" /> {rp.at}: {rp.message}</p>
+                      <p key={rp.at} className="flex items-start gap-1"><Icon name="alt_route" className="text-[18px] text-primary" /> {rp.at}: {rp.message}</p>
                     )) : x.schedule_only.hit_by.length > 0 ? tr("hitBefore") : tr("noProblem")}
                   </td>
                 </tr>
@@ -122,7 +122,7 @@ function Stat({ icon, label, base, tb, better, note }: { icon: string; label: st
   const tr = useT(M);
   return (
     <div className="flex flex-col gap-2 rounded-2xl bg-container-lowest p-4 shadow-sm">
-      <span className="flex items-center gap-1 text-caption font-bold uppercase tracking-wider text-on-surface-variant"><Icon name={icon} className="text-[16px] text-primary" /> {label}</span>
+      <span className="flex items-center gap-1 text-caption font-bold uppercase tracking-wider text-on-surface-variant"><Icon name={icon} className="text-[18px] text-primary" /> {label}</span>
       <div className="flex items-end justify-between gap-2">
         <div>
           <span className="block text-micro font-bold uppercase text-outline">{tr("normalApp")}</span>

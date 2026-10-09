@@ -124,7 +124,7 @@ export default function JourneyPlanner() {
   return (
     <main className="flex w-full flex-col gap-4 px-4 pb-16 pt-4 md:px-6">
       {/* ---- Engine strip ---- */}
-      <section className="flex flex-col gap-2 rounded-2xl bg-container-low/70 px-5 py-3">
+      <section className="tb-hero flex flex-col gap-2 overflow-hidden rounded-2xl bg-container-low/70 px-5 py-3">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <span className="flex items-center gap-1 text-base font-medium uppercase tracking-wide text-primary">
             <Icon name="alt_route" /> {t("engine")}
@@ -140,13 +140,13 @@ export default function JourneyPlanner() {
           </span>
           <button type="button" onClick={() => { setForm((f) => ({ ...f, from: defaults.from, to: defaults.to })); setErrors([]); }}
             className="flex items-center gap-1 rounded-lg bg-container-lowest px-2 py-0.5 text-sm hover:bg-container">
-            <Icon name="history" className="text-[18px]" /> {t("restore")}
+            <Icon name="history" className="text-[20px]" /> {t("restore")}
           </button>
         </div>
       </section>
 
       {/* ---- Trip form: three columns on a wide (landscape) screen, one column on a phone ---- */}
-      <form onSubmit={submit} noValidate className="flex flex-col gap-5 rounded-2xl bg-container-lowest p-5 shadow-sm lg:p-6">
+      <form onSubmit={submit} noValidate className="tb-raised flex flex-col gap-5 rounded-2xl bg-container-lowest p-5 lg:p-6">
         <div className="flex items-start justify-between">
           <div>
             <p className="text-micro font-bold uppercase tracking-[0.12em] text-primary">{t("eyebrow")}</p>
@@ -170,7 +170,7 @@ export default function JourneyPlanner() {
                 <span className="font-semibold text-slate">{t("departurePoint")}</span>
                 <button type="button" onClick={() => set("from", "Andheri station")} title={t("myLocationTitle")}
                   className="flex items-center gap-1 font-semibold text-primary">
-                  <Icon name="my_location" className="text-[16px]" /> {t("myLocation")}
+                  <Icon name="my_location" className="text-[18px]" /> {t("myLocation")}
                 </button>
               </div>
               <PlacePicker value={form.from} onChange={(v) => set("from", v)}
@@ -199,7 +199,7 @@ export default function JourneyPlanner() {
                 <span className="text-on-surface-variant">{t("zone")}</span>
               </div>
               <PlacePicker value={form.to} onChange={(v) => set("to", v)}
-                placeholder={t("toPlaceholder")} label={t("toLabel")} lead={<span className="grid h-7 w-7 place-items-center rounded-full bg-error-container"><Icon name="location_on" className="text-[18px] text-error" /></span>} />
+                placeholder={t("toPlaceholder")} label={t("toLabel")} lead={<span className="grid h-7 w-7 place-items-center rounded-full bg-error-container"><Icon name="location_on" className="text-[20px] text-error" /></span>} />
             </div>
 
 
@@ -222,7 +222,7 @@ export default function JourneyPlanner() {
                 {quickChips.map((c) => (
                   <button key={c.label} type="button" onClick={() => set("to", c.place)}
                     className="flex items-center gap-1.5 rounded-lg bg-container-low px-3 py-1.5 text-body hover:bg-container">
-                    <Icon name={c.icon} className="text-[18px]" /> {c.label}
+                    <Icon name={c.icon} className="text-[20px]" /> {c.label}
                   </button>
                 ))}
               </div>
@@ -242,8 +242,8 @@ export default function JourneyPlanner() {
               <div className="grid grid-cols-3 rounded-xl bg-container-low p-1" role="radiogroup" aria-label={t("departureGroup")}>
                 {([["now", "departNow"], ["at", "departAt"], ["by", "arriveBy"]] as const).map(([d, l]) => (
                   <button key={d} type="button" role="radio" aria-checked={departure === d} onClick={() => chooseDeparture(d)}
-                    className={`flex items-center justify-center gap-1 rounded-lg py-2 text-body ${departure === d ? "bg-container-lowest text-primary shadow-sm" : "text-on-surface-variant"}`}>
-                    {departure === d && <span className="h-1.5 w-1.5 rounded-full bg-primary" />} {t(l)}
+                    className={`flex min-h-11 items-center justify-center gap-1 rounded-lg px-1.5 py-1.5 text-center text-small font-medium leading-tight ${departure === d ? "bg-container-lowest text-primary shadow-sm" : "text-on-surface-variant"}`}>
+                    {departure === d && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />} {t(l)}
                   </button>
                 ))}
               </div>
@@ -504,7 +504,7 @@ function ChoiceRow({ icon, label, value, onChange, options }: {
   return (
     <div className="flex flex-col gap-1.5 rounded-xl bg-container-low px-3 py-2.5">
       <span className="flex items-center gap-1.5 text-caption font-semibold text-on-surface-variant">
-        <Icon name={icon} className="text-[18px] text-primary" /> {label}
+        <Icon name={icon} className="text-[20px] text-primary" /> {label}
       </span>
       <div role="radiogroup" aria-label={label} className="grid gap-1" style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}>
         {options.map((o) => {
@@ -562,7 +562,7 @@ function MapLayers({ layers, onToggle }: { layers: Record<NetworkLayer, boolean>
             <button key={b.id} type="button" aria-pressed={on} onClick={() => onToggle(b.id)}
               className={`flex h-10 items-center gap-2 rounded-xl px-3 text-small font-semibold transition ${on ? "bg-container-lowest text-on-surface shadow-sm ring-2 ring-primary" : "bg-container-low text-on-surface-variant ring-1 ring-hairline hover:bg-container"}`}>
               <span className="grid h-7 w-7 place-items-center rounded-lg text-white" style={{ background: on ? colors[0] : "var(--outline)" }}>
-                <Icon name={b.icon} className="text-[18px]" />
+                <Icon name={b.icon} className="text-[20px]" />
               </span>
               {t(b.label)}
               <span className="flex gap-0.5" aria-hidden>
@@ -570,7 +570,7 @@ function MapLayers({ layers, onToggle }: { layers: Record<NetworkLayer, boolean>
                   ? <span key={c} className="w-4 border-t-2 border-dashed" style={{ borderColor: c, opacity: on ? 1 : 0.4 }} />
                   : <span key={c} className="h-1.5 w-3 rounded-full" style={{ background: c, opacity: on ? 1 : 0.4 }} />))}
               </span>
-              <Icon name={on ? "visibility" : "visibility_off"} className="text-[16px] opacity-70" />
+              <Icon name={on ? "visibility" : "visibility_off"} className="text-[18px] opacity-70" />
             </button>
           );
         })}

@@ -121,7 +121,7 @@ function Header() {
                 {t("signIn")}
               </button>
               <button type="button" onClick={() => openAuth("signup")} className="btn-primary hidden !min-h-10 !px-4 md:inline-flex">
-                <Icon name="person_add" className="text-[18px]" /> {t("createAccount")}
+                <Icon name="person_add" className="text-[20px]" /> {t("createAccount")}
               </button>
             </>
           )}
@@ -134,6 +134,14 @@ function Header() {
 }
 
 /* ---------------------------------------------------------------- hero */
+
+/** Moves the hero spotlight with the mouse. Sets CSS variables only, so React does not re-render. */
+function followPointer(e: React.PointerEvent<HTMLElement>) {
+  if (e.pointerType !== "mouse") return;
+  const box = e.currentTarget.getBoundingClientRect();
+  e.currentTarget.style.setProperty("--mx", `${e.clientX - box.left}px`);
+  e.currentTarget.style.setProperty("--my", `${e.clientY - box.top}px`);
+}
 
 function Hero() {
   const t = useT(M);
@@ -148,7 +156,9 @@ function Hero() {
     : maybe ? t("nMaybe", { n: maybe }) : t("allClear");
 
   return (
-    <section className="relative overflow-hidden py-8 lg:py-20">
+    <section className="relative overflow-hidden py-8 lg:py-20" onPointerMove={followPointer}>
+      {/* soft spotlight that follows the mouse (desktop only, see .tb-spotlight) */}
+      <div className="tb-spotlight" aria-hidden />
       {/* soft background tint (very light, both themes) */}
       <div className="pointer-events-none absolute -top-40 left-1/2 h-[28rem] w-[56rem] max-w-[140%] -translate-x-1/2 rounded-full bg-primary-soft opacity-70 blur-3xl" aria-hidden />
       <div className="relative mx-auto flex max-w-7xl flex-col gap-8 px-4 md:px-6">
@@ -167,9 +177,9 @@ function Hero() {
           </h1>
           <p className="max-w-2xl text-body leading-relaxed text-on-surface-variant sm:text-subtitle">{t("heroSub")}</p>
           <div className="flex flex-wrap items-center justify-center gap-3 pt-1">
-            <Link href="/home" className={`${goldBtn} inline-flex`}>{t("getStarted")} <Icon name="arrow_forward" className="text-[18px]" /></Link>
+            <Link href="/home" className={`${goldBtn} inline-flex`}>{t("getStarted")} <Icon name="arrow_forward" className="text-[20px]" /></Link>
             <a href="#features" className="btn-secondary !min-h-12 !px-6">
-              <Icon name="explore" className="text-[18px] text-primary" /> {t("seeFeatures")}
+              <Icon name="explore" className="text-[20px] text-primary" /> {t("seeFeatures")}
             </a>
           </div>
           <NewHere />
@@ -184,7 +194,7 @@ function Hero() {
             <div className="absolute inset-x-0 bottom-0 z-[500] h-1/2 bg-gradient-to-t from-surface/85 to-transparent" aria-hidden />
             <div className="absolute inset-x-4 bottom-16 z-[510] hidden flex-wrap items-center justify-between gap-2 sm:flex md:bottom-20">
               <span className="inline-flex items-center gap-2 rounded-full bg-container-lowest/90 px-4 py-1.5 text-caption font-semibold shadow-sm backdrop-blur">
-                <Icon name="train" className="text-[16px] text-primary" /> {t("mapLabel")}
+                <Icon name="train" className="text-[18px] text-primary" /> {t("mapLabel")}
               </span>
               <span className="inline-flex items-center gap-2 rounded-full bg-container-lowest/90 px-4 py-1.5 text-caption font-semibold shadow-sm backdrop-blur">
                 <span className={`h-2.5 w-2.5 rounded-full ${confirmed ? "bg-error" : maybe ? "bg-tertiary" : "bg-primary"}`} />
@@ -202,7 +212,7 @@ function Hero() {
                 <span className="chip bg-primary-soft text-primary-ink"><span className="h-1.5 w-1.5 rounded-full bg-primary" /> {t("live")}</span>
               </span>
               <span className="flex items-center gap-1.5 pt-1 text-subtitle font-bold">
-                Andheri <Icon name="arrow_forward" className="text-[18px] text-tertiary" /> BKC
+                Andheri <Icon name="arrow_forward" className="text-[20px] text-tertiary" /> BKC
               </span>
               <span className="text-small text-on-surface-variant">{t("tryRouteSub")}</span>
               <span className="text-caption text-outline">{t("tryRouteHint")}</span>
@@ -223,11 +233,11 @@ function Hero() {
             <Link href="/home" className="card card-interactive flex flex-col gap-1.5 p-4">
               <span className="flex items-center justify-between">
                 <span className="eyebrow">{t("liveTitle")}</span>
-                <Icon name="verified_user" className="text-[18px] text-primary" />
+                <Icon name="verified_user" className="text-[20px] text-primary" />
               </span>
               <span className="pt-1 text-subtitle font-bold">{offline ? t("sampleData") : statusText}</span>
               <span className="text-small text-on-surface-variant">{t("liveChecked")}</span>
-              <span className="flex items-center gap-1 text-caption font-semibold text-primary">{t("liveSeeAll")} <Icon name="arrow_forward" className="text-[14px]" /></span>
+              <span className="flex items-center gap-1 text-caption font-semibold text-primary">{t("liveSeeAll")} <Icon name="arrow_forward" className="text-[16px]" /></span>
             </Link>
           </div>
         </div>
@@ -314,7 +324,7 @@ function Features() {
                 <span className="text-body leading-relaxed text-on-surface-variant">{t(f.d)}</span>
               </span>
               <span className={`mt-auto flex items-center gap-1 text-small font-semibold ${TONE[f.tone].text}`}>
-                {t(f.a)} <Icon name="arrow_forward" className="text-[16px] transition-transform group-hover:translate-x-0.5" />
+                {t(f.a)} <Icon name="arrow_forward" className="text-[18px] transition-transform group-hover:translate-x-0.5" />
               </span>
             </Link>
           ))}
@@ -346,7 +356,7 @@ function HowItWorks() {
           </Step>
           <Step n={3} icon="navigation" cls={TONE.secondary.box} title={t("s3t")} text={t("s3d")}>
             <span className="flex items-center gap-1.5 text-small font-semibold text-primary">
-              <Icon name="verified" className="text-[18px]" /> {t("s3ex")}
+              <Icon name="verified" className="text-[20px]" /> {t("s3ex")}
             </span>
           </Step>
         </ol>
@@ -390,7 +400,7 @@ function About() {
         <div className="flex flex-col items-center gap-8 rounded-3xl bg-container p-6 shadow-sm lg:flex-row lg:p-14">
           <div className="flex flex-1 flex-col gap-4">
             <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-primary-soft px-4 py-1.5 text-caption font-semibold text-primary-ink">
-              <Icon name="favorite" className="text-[16px]" /> {t("aboutPill")}
+              <Icon name="favorite" className="text-[18px]" /> {t("aboutPill")}
             </span>
             <h2 className="text-title font-bold sm:text-display">{t("aboutTitle")}</h2>
             <p className="text-body leading-relaxed text-on-surface-variant sm:text-subtitle">{t("aboutText")}</p>
@@ -443,22 +453,22 @@ function Cta() {
       <Reveal className="mx-auto max-w-7xl px-4 md:px-6">
         <div className="flex flex-col items-center gap-4 rounded-3xl bg-primary px-6 py-12 text-center text-on-primary shadow-lg lg:py-20">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-on-primary/10 px-4 py-1.5 text-caption font-semibold">
-            <Icon name="bolt" className="text-[16px]" /> {t("ctaPill")}
+            <Icon name="bolt" className="text-[18px]" /> {t("ctaPill")}
           </span>
           <h2 className="max-w-2xl text-title font-bold sm:text-display lg:text-[2.5rem] lg:leading-[3rem]">{t("ctaTitle")}</h2>
           <p className="max-w-xl text-body opacity-85 sm:text-subtitle">{t("ctaSub")}</p>
           <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
             <Link href="/home" className="inline-flex min-h-12 items-center gap-2 rounded-xl bg-on-primary px-6 text-small font-semibold text-primary shadow-md transition hover:-translate-y-0.5">
-              {t("getStarted")} <Icon name="arrow_forward" className="text-[18px]" />
+              {t("getStarted")} <Icon name="arrow_forward" className="text-[20px]" />
             </Link>
             <Link href="/plan" className="inline-flex min-h-12 items-center gap-2 rounded-xl px-6 text-small font-semibold ring-1 ring-on-primary/40 transition hover:bg-on-primary/10">
-              <Icon name="route" className="text-[18px]" /> {t("ctaPlan")}
+              <Icon name="route" className="text-[20px]" /> {t("ctaPlan")}
             </Link>
           </div>
           <NewHere onDark />
           <ul className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 pt-3 text-caption opacity-85">
             {(["ctaC1", "ctaC2", "ctaC3"] as Key[]).map((k) => (
-              <li key={k} className="flex items-center gap-1"><Icon name="check_circle" className="text-[16px]" /> {t(k)}</li>
+              <li key={k} className="flex items-center gap-1"><Icon name="check_circle" className="text-[18px]" /> {t(k)}</li>
             ))}
           </ul>
         </div>
@@ -503,7 +513,7 @@ function Footer() {
           ))}
         </div>
         <div className="flex flex-col items-center justify-between gap-2 border-t border-inverse-on-surface/15 pt-5 text-caption opacity-75 sm:flex-row">
-          <span className="flex items-center gap-1.5"><Icon name="location_city" className="text-[18px]" /> {t("copyright")}</span>
+          <span className="flex items-center gap-1.5"><Icon name="location_city" className="text-[20px]" /> {t("copyright")}</span>
           <span>{t("madeFor")}</span>
         </div>
       </div>

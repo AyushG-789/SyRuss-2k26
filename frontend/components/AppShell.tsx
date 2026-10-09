@@ -5,13 +5,14 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useId, useRef, useState } from "react";
 import { getProfile, initials, OPEN_EVENT, type ProfileSection, setAppLanguage, useProfile } from "@/lib/profile";
 import { LANGS, setActiveLang, useLang, useT } from "@/lib/i18n";
 import { M } from "@/lib/i18n/messages/AppShell";
 import { applyTheme } from "@/lib/theme";
 import { LiveEventsProvider, useLiveEvents } from "@/lib/useLiveEvents";
 import ChatAssistant from "./ChatAssistant";
+import Collapse from "./Collapse";
 import Icon from "./Icon";
 import AuthHost from "./AuthDialog";
 import LiveClock from "./LiveClock";
@@ -62,11 +63,33 @@ function NavList({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <nav className="mt-2 flex flex-col gap-1 px-4" aria-label={t("main")}>
       {NAV.map(item)}
-      <p className="mt-4 px-4 eyebrow text-outline">{t("trust")}</p>
-      {TRUST.map(item)}
-      <p className="mt-4 px-4 eyebrow text-outline">{t("presenter")}</p>
-      {PRESENTER.map(item)}
+      <NavGroup title={t("trust")} items={TRUST} path={path} render={item} />
+      <NavGroup title={t("presenter")} items={PRESENTER} path={path} render={item} />
     </nav>
+  );
+}
+
+/** A fold-out group in the side menu (tap the title to show or hide its pages). It opens by itself
+ *  when you are on one of its pages. */
+function NavGroup({ title, items, path, render }: {
+  title: string; items: NavItem[]; path: string; render: (n: NavItem) => React.ReactNode;
+}) {
+  const here = items.some((n) => n.match(path));
+  const [open, setOpen] = useState(here);
+  const [wasHere, setWasHere] = useState(here);
+  if (here !== wasHere) { setWasHere(here); if (here) setOpen(true); }
+  const id = useId();
+  return (
+    <div className="mt-3 flex flex-col">
+      <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-controls={id}
+        className="flex min-h-11 items-center justify-between rounded-xl px-4 py-2 text-left hover:bg-container-high">
+        <span className="eyebrow text-outline">{title}</span>
+        <Icon name="expand_more" className={`text-[22px] text-on-surface-variant transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
+      </button>
+      <Collapse open={open} id={id}>
+        <div className="flex flex-col gap-1 pt-1">{items.map(render)}</div>
+      </Collapse>
+    </div>
   );
 }
 
@@ -224,7 +247,7 @@ export function LanguageMenu({ small = false }: { small?: boolean }) {
           : "h-12 gap-2 pl-3 pr-2.5 text-body sm:min-w-[8.75rem] sm:pl-3.5"}`}>
         <Icon name="translate" className={`${small ? "text-[20px]" : "text-[24px]"} text-primary`} />
         <span lang={current.html} className="flex-1 whitespace-nowrap text-left">{current.label}</span>
-        <Icon name="expand_more" className={`hidden ${small ? "text-[18px]" : "text-[22px]"} text-outline transition-transform duration-200 sm:inline ${open ? "rotate-180" : ""}`} />
+        <Icon name="expand_more" className={`hidden ${small ? "text-[20px]" : "text-[22px]"} text-outline transition-transform duration-200 sm:inline ${open ? "rotate-180" : ""}`} />
       </button>
       {open && (
         <div role="menu" aria-label={t("language")} className={`anim-pop absolute right-0 ${small ? "top-12" : "top-14"} z-10 w-52 overflow-hidden rounded-xl bg-container-lowest p-1 shadow-float`}>
@@ -233,7 +256,7 @@ export function LanguageMenu({ small = false }: { small?: boolean }) {
               onClick={() => { setAppLanguage(l.value); setOpen(false); }}
               className={`flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-body hover:bg-container-low ${l.value === lang ? "font-bold text-primary" : ""}`}>
               <span>{l.label} <span className="text-caption font-normal text-on-surface-variant">{l.value === "en" ? "" : l.english}</span></span>
-              {l.value === lang && <Icon name="check" className="text-[18px]" />}
+              {l.value === lang && <Icon name="check" className="text-[20px]" />}
             </button>
           ))}
         </div>

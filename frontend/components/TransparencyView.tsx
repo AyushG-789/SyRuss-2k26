@@ -46,7 +46,7 @@ export default function TransparencyView() {
   return (
     <main className="flex w-full flex-col gap-4 px-4 pb-16 pt-4 md:px-6">
       <header className="flex flex-col gap-1">
-        <span className="flex items-center gap-1 text-caption font-bold uppercase tracking-wider text-primary"><Icon name="visibility" className="text-[16px]" /> {tr("eyebrow")}</span>
+        <span className="flex items-center gap-1 text-caption font-bold uppercase tracking-wider text-primary"><Icon name="visibility" className="text-[18px]" /> {tr("eyebrow")}</span>
         <h1 className="text-2xl font-semibold">{tr("title")}</h1>
         <p className="max-w-3xl text-sm text-on-surface-variant">
           {tr("intro")} <b>{t.as_of}</b>.
@@ -82,10 +82,10 @@ export default function TransparencyView() {
           </div>
           <h3 className="mt-1 text-small font-bold uppercase tracking-wider text-on-surface-variant">{tr("antiGaming")}</h3>
           <ul className="flex flex-col gap-1 text-small">
-            <li className="flex gap-2"><Icon name="person_off" className="text-[18px] text-error" /> {tr("anti1", { days: anti.new_account_max_age_days ?? 1, rep: anti.low_reputation ?? 0.2, w: anti.untrusted_weight ?? 0.05 })}</li>
-            <li className="flex gap-2"><Icon name="content_copy" className="text-[18px] text-error" /> {tr("anti2", { n: anti.burst?.min_reports ?? 3, min: anti.burst?.window_min ?? 10, w: anti.burst?.weight ?? 0.05 })}</li>
-            <li className="flex gap-2"><Icon name="repeat_one" className="text-[18px] text-error" /> {tr("anti3")}</li>
-            <li className="flex gap-2"><Icon name="gavel" className="text-[18px] text-primary" /> {tr("anti4")}</li>
+            <li className="flex gap-2"><Icon name="person_off" className="text-[20px] text-error" /> {tr("anti1", { days: anti.new_account_max_age_days ?? 1, rep: anti.low_reputation ?? 0.2, w: anti.untrusted_weight ?? 0.05 })}</li>
+            <li className="flex gap-2"><Icon name="content_copy" className="text-[20px] text-error" /> {tr("anti2", { n: anti.burst?.min_reports ?? 3, min: anti.burst?.window_min ?? 10, w: anti.burst?.weight ?? 0.05 })}</li>
+            <li className="flex gap-2"><Icon name="repeat_one" className="text-[20px] text-error" /> {tr("anti3")}</li>
+            <li className="flex gap-2"><Icon name="gavel" className="text-[20px] text-primary" /> {tr("anti4")}</li>
           </ul>
           <h3 className="mt-1 text-small font-bold uppercase tracking-wider text-on-surface-variant">{tr("lifetimes")}</h3>
           <div className="flex flex-wrap gap-1.5">

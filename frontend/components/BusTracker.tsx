@@ -123,7 +123,7 @@ export default function BusTracker({
               disabled={loading}
               className="flex items-center gap-1.5 rounded-xl border border-outline-variant bg-container-lowest px-3 py-1.5 text-xs font-semibold text-on-surface hover:bg-container-high transition-colors disabled:opacity-50"
             >
-              <Icon name="refresh" className={`text-[16px] ${loading ? "animate-spin" : ""}`} />
+              <Icon name="refresh" className={`text-[18px] ${loading ? "animate-spin" : ""}`} />
               <span>Refresh</span>
             </button>
           </div>
@@ -199,16 +199,16 @@ export default function BusTracker({
         {/* Live GPS Status Notice */}
         <div className="mt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 rounded-xl bg-amber-500/10 border border-amber-500/30 px-4 py-3 text-xs text-amber-900 dark:text-amber-200">
           <div className="flex items-center gap-2">
-            <Icon name="info" className="text-[18px] text-amber-600 dark:text-amber-400 shrink-0" />
+            <Icon name="info" className="text-[20px] text-amber-600 dark:text-amber-400 shrink-0" />
             <div>
               <span className="font-bold">Scheduled Arrival Estimates · Live GPS Unavailable</span>
-              <p className="text-[11px] opacity-90 mt-0.5">
+              <p className="text-micro opacity-90 mt-0.5">
                 Planned times from how often each route usually runs. BEST bus GPS is not connected yet, so these are a guide, not live.
               </p>
             </div>
           </div>
           {lastRefreshed && (
-            <span className="text-[10px] opacity-80 shrink-0">Updated: {lastRefreshed}</span>
+            <span className="text-micro opacity-80 shrink-0">Updated: {lastRefreshed}</span>
           )}
         </div>
       </div>
@@ -265,7 +265,7 @@ export default function BusTracker({
                   </div>
                 </div>
 
-                <div className="mt-4 flex items-center justify-between border-t border-outline-variant/60 pt-3 text-[11px] text-on-surface-variant">
+                <div className="mt-4 flex items-center justify-between border-t border-outline-variant/60 pt-3 text-micro text-on-surface-variant">
                   <span>Scheduled departure</span>
                   <span className="rounded-full bg-container-high px-2 py-0.5 font-bold text-on-surface">
                     {bus.status_note}

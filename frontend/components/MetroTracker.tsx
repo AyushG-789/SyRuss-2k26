@@ -150,7 +150,7 @@ export default function MetroTracker({
               disabled={loading}
               className="flex items-center gap-1.5 rounded-xl border border-outline-variant bg-container-lowest px-3 py-1.5 text-xs font-semibold text-on-surface hover:bg-container-high transition-colors disabled:opacity-50"
             >
-              <Icon name="refresh" className={`text-[16px] ${loading ? "animate-spin" : ""}`} />
+              <Icon name="refresh" className={`text-[18px] ${loading ? "animate-spin" : ""}`} />
               <span>Refresh</span>
             </button>
           </div>
@@ -176,7 +176,7 @@ export default function MetroTracker({
               >
                 <span className={`h-3 w-3 rounded-full ${key === "METRO1" ? "bg-blue-500" : "bg-cyan-500"}`} />
                 <span>{line.name}</span>
-                <span className="text-[11px] font-normal opacity-80">({line.operator})</span>
+                <span className="text-micro font-normal opacity-80">({line.operator})</span>
               </button>
             );
           })}
@@ -246,13 +246,13 @@ export default function MetroTracker({
         {/* Notice Pill */}
         <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-container-high/60 px-4 py-2.5 text-xs text-on-surface-variant border border-outline-variant/50">
           <div className="flex items-center gap-2">
-            <Icon name="info" className="text-[16px] text-primary" />
+            <Icon name="info" className="text-[18px] text-primary" />
             <span className="font-medium text-on-surface">
               High-Frequency Transit Headway: Peak Every 4–5 min · Off-Peak Every 6–8 min
             </span>
           </div>
           {lastRefreshed && (
-            <span className="text-[11px]">Last updated: <span className="font-semibold text-on-surface">{lastRefreshed}</span></span>
+            <span className="text-micro">Last updated: <span className="font-semibold text-on-surface">{lastRefreshed}</span></span>
           )}
         </div>
       </div>
@@ -312,7 +312,7 @@ export default function MetroTracker({
                   <span className="font-bold tabular-nums text-on-surface">
                     {train.display_time_12h}
                   </span>
-                  <span className="text-[11px] text-on-surface-variant">
+                  <span className="text-micro text-on-surface-variant">
                     {train.frequency_note}
                   </span>
                 </div>
