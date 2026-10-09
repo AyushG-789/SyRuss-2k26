@@ -6,11 +6,11 @@ import asyncio
 import contextlib
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from .api import admin, chat, events, insights, journeys, plan, reports, voice
-from .clock import clock, fmt_hhmm
+from .clock import HEADER, clock, fmt_hhmm, request_clock, reset_request_clock
 from .config import settings
 from .data_loader import load_seed
 
@@ -37,6 +37,16 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.middleware("http")
+async def demo_clock_from_browser(request: Request, call_next):
+    """Use the demo clock the browser sends (X-Demo-Clock), so every server copy agrees on the time."""
+    token = request_clock(request.headers.get(HEADER))
+    try:
+        return await call_next(request)
+    finally:
+        reset_request_clock(token)
+
 
 app.include_router(admin.router)
 app.include_router(chat.router)

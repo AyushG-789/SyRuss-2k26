@@ -55,7 +55,9 @@ class InjectIn(BaseModel):
 def _state() -> dict:
     now = clock.now()
     return {"now": fmt_hhmm(now), "iso": now.isoformat(timespec="seconds"), "speed": clock.speed,
-            "mode": store.mode}
+            "mode": store.mode,
+            # The browser keeps this and sends it back as X-Demo-Clock (see app/clock.py).
+            "anchor": clock.state().encode()}
 
 
 @router.get("/clock")
