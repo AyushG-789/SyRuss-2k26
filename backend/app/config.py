@@ -1,28 +1,66 @@
 """Settings loaded from the repo-root .env file (see .env.example)."""
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+def _find_data_dir() -> Path:
+    """Resolve the directory containing seed data across local and deployed environments."""
+    env_dir = os.environ.get("TRAVELBUDDY_DATA_DIR") or os.environ.get("DATA_DIR")
+    if env_dir:
+        p = Path(env_dir).resolve()
+        if (p / "network" / "lines.yaml").is_file():
+            return p
+
+    config_path = Path(__file__).resolve()
+    candidates = [
+        # 1. When packaged for Vercel deployment (backend/data or /var/task/data):
+        config_path.parents[1] / "data",
+        config_path.parents[0] / "data",
+        Path.cwd() / "data",
+        # 2. In local repo development (repo-level data):
+        config_path.parents[2] / "data",
+        config_path.parents[1].parent / "data",
+        Path.cwd().parent / "data",
+    ]
+    for candidate in candidates:
+        if (candidate / "network" / "lines.yaml").is_file():
+            return candidate.resolve()
+
+    return (config_path.parents[2] / "data").resolve()
 
 
 def _find_repo_root() -> Path:
     """Find the repository root locally and in Vercel deployments."""
+    config_path = Path(__file__).resolve()
     candidates = [
-        Path(__file__).resolve().parents[2],
-        Path(__file__).resolve().parents[1],
+        config_path.parents[2],
+        config_path.parents[1],
         Path.cwd(),
     ]
     for candidate in candidates:
-        if (candidate / "data" / "network" / "lines.yaml").is_file():
-            return candidate
-    # Preserve the existing default so a missing data directory
-    # produces a clear file-not-found error.
-    return Path(__file__).resolve().parents[2]
+        if (candidate / ".env").is_file() or (candidate / "data" / "network" / "lines.yaml").is_file():
+            return candidate.resolve()
+    return config_path.parents[2].resolve()
 
 
 REPO_ROOT = _find_repo_root()
 
+
+def _default_cache_dir() -> Path:
+    if os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
+        return Path("/tmp/.cache")
+    return REPO_ROOT / "backend" / ".cache"
+
+
+def _default_database_url() -> str:
+    if os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
+        return "sqlite:////tmp/travelbuddy.db"
+    return f"sqlite:///{REPO_ROOT / 'backend' / 'travelbuddy.db'}"
 
 
 class Settings(BaseSettings):
@@ -51,9 +89,9 @@ class Settings(BaseSettings):
     official_mode: str = "mock"      # mock | live
     weather_mode: str = "mock"       # mock | live
 
-    data_dir: Path = REPO_ROOT / "data"
-    cache_dir: Path = REPO_ROOT / "backend" / ".cache"
-    database_url: str = f"sqlite:///{REPO_ROOT / 'backend' / 'travelbuddy.db'}"
+    data_dir: Path = Field(default_factory=_find_data_dir)
+    cache_dir: Path = Field(default_factory=_default_cache_dir)
+    database_url: str = Field(default_factory=_default_database_url)
     cors_origins: list[str] = ["http://localhost:3000"]
 
     @property

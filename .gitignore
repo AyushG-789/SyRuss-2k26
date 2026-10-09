@@ -13,6 +13,7 @@ backend/*.db
 # generated data (rebuild with scripts/)
 data/osm/
 data/gtfs/
+backend/data/
 
 # os / editors
 .DS_Store
