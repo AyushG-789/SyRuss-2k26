@@ -158,14 +158,20 @@ class JourneyStore:
             return j
 
     # ---- Monitor ---------------------------------------------------------------------------
-    def check(self, now: datetime | None = None) -> list[Journey]:
-        """Re-check every unfinished journey. Returns the journeys that got a NEW proposal or notice."""
+    def check(self, now: datetime | None = None, journey_id: str | None = None) -> list[Journey]:
+        """Re-check unfinished journeys (all, or just `journey_id`). Returns those with a NEW proposal or notice.
+
+        Each browser keeps its own demo clock, so a request checks only the journey it is about:
+        a viewer whose clock is later must not mark someone else's trip finished (that dropped the
+        pending proposal, so the other rider's countdown restarted and Accept got a 409).
+        """
         now = now or clock.now()
         live = active_events(now)
         confirmed = [e for e in live if e.status == "confirmed"]
         changed = []
         with self._lock:
-            for j in self._journeys.values():
+            targets = [self._journeys[journey_id]] if journey_id in self._journeys else [] if journey_id else self._journeys.values()
+            for j in targets:
                 at = fmt_hhmm(now)
                 j.status = _status(j.card, at)
                 j.live_hits = self._live_hits(j, live, at)
@@ -189,7 +195,8 @@ class JourneyStore:
             for h in hs:
                 ev = by_id[h.event_id]
                 out.append(LegHit(leg_idx=start + i, event_id=ev.event_id, status=ev.status,
-                                  title=event_title(ev, stations, lines, transfers), confidence=ev.confidence,
+                                  title=event_title(ev, stations, lines, transfers, j.traveller.language),
+                                  confidence=ev.confidence,
                                   blocked=h.blocked, delay_min=h.delay_min))
         return out
 
