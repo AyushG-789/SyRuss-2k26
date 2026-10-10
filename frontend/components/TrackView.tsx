@@ -6,7 +6,7 @@
 // Sample-only parts (Share link, SOS) are clearly labelled.
 
 import Link from "next/link";
-import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, type RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   decideReplan, getClock, getJourney, getPlan, lines, stations, submitReport, travellers, updateClock,
   type ClockState, type Journey, type LegHit, type ReportOut,
@@ -63,7 +63,7 @@ function useDemoClock(): [ClockState | null, (c: ClockState) => void] {
 }
 
 /** The saved journey from the backend: status, problems on each leg, replan proposal. */
-function useJourney(id: string | null | undefined): [Journey | null, (j: Journey) => void, boolean] {
+function useJourney(id: string | null | undefined, fast = false): [Journey | null, (j: Journey) => void, boolean] {
   const [journey, setJourney] = useState<Journey | null>(null);
   const [lost, setLost] = useState(false); // the server restarted / was reset and no longer knows this trip
   useEffect(() => {
@@ -74,9 +74,10 @@ function useJourney(id: string | null | undefined): [Journey | null, (j: Journey
         .then((j) => { if (alive) { setJourney(j); setLost(false); } })
         .catch((e: Error) => { if (alive && e.message.includes("404")) setLost(true); });
     tick();
-    const t = setInterval(tick, 3000);
+    // While the demo clock plays, a problem can be "possible" for only a few real seconds: check every second.
+    const t = setInterval(tick, fast ? 1000 : 3000);
     return () => { alive = false; clearInterval(t); };
-  }, [id]);
+  }, [id, fast]);
   return [id && !lost ? journey : null, setJourney, lost];
 }
 
@@ -99,8 +100,26 @@ function LiveTrip({ trip, onTrip }: { trip: SavedTrip; onTrip: (t: SavedTrip | n
   const tc = useT(COMMON);
   const [modal, setModal] = useState<Modal>(null);
   const [clock, setClock] = useDemoClock();
-  const [journey, setJourney, lost] = useJourney(trip.journeyId);
+  const [journey, setJourney, lost] = useJourney(trip.journeyId, (clock?.speed ?? 0) > 0);
   const live = useLiveEvents();
+
+  // A new alert (heads-up or better route) pauses a playing demo clock, so nobody misses it on stage.
+  const [autoPaused, setAutoPaused] = useState<number | null>(null); // the speed to resume at
+  const [keptAuto, setKeptAuto] = useState(false); // the 20 s ran out and the route was kept
+  const pauseForAlert = useRef<() => void>(() => undefined);
+  useEffect(() => {
+    pauseForAlert.current = () => {
+      if (!clock || clock.speed <= 0) return;
+      const prev = clock.speed;
+      updateClock({ speed: 0 }).then((c) => { setClock(c); setAutoPaused(prev); }).catch(() => undefined);
+    };
+  });
+  const proposalId = journey?.proposal?.proposal_id;
+  useEffect(() => { if (proposalId) pauseForAlert.current(); }, [proposalId]);
+  const resume = () => {
+    if (autoPaused === null) return;
+    updateClock({ speed: autoPaused }).then((c) => { setClock(c); setAutoPaused(null); }).catch(() => undefined);
+  };
 
   // The backend's copy wins: after an accepted replan the card changes there.
   const card: RouteCard = journey?.card ?? trip.card;
@@ -204,7 +223,30 @@ function LiveTrip({ trip, onTrip }: { trip: SavedTrip; onTrip: (t: SavedTrip | n
 
       {/* ---- Replan proposal / notice ---- */}
       {journey?.proposal && (
-        <ReplanBanner journey={journey} name={name} onDecided={setJourney} />
+        <ReplanBanner key={journey.proposal.event_ids.join("+")} journey={journey} name={name} onDecided={(j, auto) => {
+          setJourney(j);
+          resume(); // the trip carries on from here, on the route the rider chose
+          if (auto) { setKeptAuto(true); setTimeout(() => setKeptAuto(false), 8000); }
+        }} />
+      )}
+      {!journey?.proposal && keptAuto && (
+        <div className="anim-in mb-2 flex items-start gap-2 rounded-xl bg-container p-3 text-small" role="status">
+          <Icon name="timer_off" className="text-[20px] text-primary" /> {t("keptAuto")}
+        </div>
+      )}
+      {trip.journeyId && phase !== "arrived" && (
+        <HeadsUp journeyId={trip.journeyId} hits={hits} legs={legs} name={name} skip={journey?.proposal?.event_ids ?? []}
+          onShow={pauseForAlert} paused={autoPaused !== null && clock?.speed === 0} onResume={resume} />
+      )}
+      {autoPaused !== null && clock?.speed === 0 && (
+        <div className="anim-in mb-2 flex flex-wrap items-center gap-2 rounded-xl bg-container p-2.5 text-small">
+          <Icon name="pause_circle" className="text-[20px] text-primary" />
+          <span className="min-w-0 flex-1">{t("alertPaused")}</span>
+          <button type="button" onClick={resume}
+            className="flex min-h-9 items-center gap-1 rounded-lg bg-primary px-3 text-caption font-bold text-on-primary hover:bg-primary-container">
+            <Icon name="play_arrow" className="text-[18px]" /> {t("resumeClock")}
+          </button>
+        </div>
       )}
       {!journey?.proposal && journey?.notice && (
         <div key={journey.notice} className="anim-in mb-2 flex items-start gap-2 rounded-xl bg-tertiary-fixed p-3 text-small text-tertiary">
@@ -650,27 +692,119 @@ function RouteProblems({ hits, connected, journeyId }: { hits: LegHit[]; connect
   );
 }
 
-function ReplanBanner({ journey, name, onDecided }: { journey: Journey; name: (id: string) => string; onDecided: (j: Journey) => void }) {
+/** Pop-up (bottom of the screen, so the top bar and Emergency stay visible) for a POSSIBLE problem
+ *  on a part of the trip still ahead: a precaution only. Each problem
+ *  is shown once per trip (remembered in this browser). Once Pakka Check confirms it, the replan
+ *  banner above takes over, so the heads-up for it goes away. */
+function HeadsUp({ journeyId, hits, legs, name, skip, onShow, paused, onResume }: {
+  journeyId: string; hits: LegHit[]; legs: Leg[]; name: (id: string) => string;
+  /** Problems the replan banner is already about (e.g. after the demo clock was moved back). */
+  skip: string[];
+  /** Called once each time a new heads-up appears (pauses a playing demo clock). */
+  onShow: RefObject<() => void>;
+  paused: boolean;
+  onResume: () => void;
+}) {
+  const t = useT(M);
+  const key = `travelbuddy.headsUp.${journeyId}`;
+  const [seen, setSeen] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem(key) ?? "[]"); } catch { return []; }
+  });
+  const waiting = [...new Map(hits.filter((h) => h.status === "possible" && !seen.includes(h.event_id) && !skip.includes(h.event_id))
+    .map((h) => [h.event_id, h])).values()];
+  const h = waiting[0];
+  const shownId = h?.event_id;
+  useEffect(() => { if (shownId) onShow.current(); }, [shownId, onShow]);
+  if (!h) return null;
+  function dismiss() {
+    const next = [...seen, h.event_id];
+    setSeen(next);
+    try { localStorage.setItem(key, JSON.stringify(next)); } catch { /* private mode: show again next time */ }
+  }
+  const leg = legs[h.leg_idx];
+  return (
+    <div role="alert" key={h.event_id}
+      className="anim-in fixed inset-x-4 bottom-24 z-[1250] flex flex-col gap-3 rounded-2xl border-l-4 border-tertiary bg-container-lowest p-4 shadow-float ring-1 ring-hairline sm:inset-x-auto sm:right-6 sm:w-[30rem]">
+      <div className="flex items-start gap-3">
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-tertiary-fixed text-tertiary">
+          <Icon name="warning" className="text-[22px]" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-body font-bold">{t("headsUpTitle")}</p>
+          <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-small">
+            <span className="font-semibold">{h.title}</span>
+            <span className="rounded-md bg-tertiary-fixed px-2 py-0.5 text-micro font-bold text-tertiary">
+              {STATUS_STYLE.possible.label} · {t("pctSure", { pct: pct(h.confidence) })}
+            </span>
+          </p>
+          {leg && <p className="mt-1 text-small text-on-surface-variant">{t("headsUpWhere", { step: legVerb(leg, name) })}</p>}
+          <p className="mt-1 text-small text-on-surface-variant">{t("headsUpWatch")}</p>
+        </div>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <button type="button" onClick={dismiss}
+          className="min-h-10 rounded-xl bg-primary px-4 text-small font-semibold text-on-primary hover:bg-primary-container">{t("gotIt")}</button>
+        <Link href={`/events/${h.event_id}`} className="flex min-h-10 items-center rounded-xl bg-container px-4 text-small font-semibold hover:bg-container-high">{t("seeDetails")}</Link>
+        {paused && (
+          <button type="button" onClick={onResume} className="flex min-h-10 items-center gap-1 rounded-xl bg-container px-3 text-small font-semibold hover:bg-container-high">
+            <Icon name="play_arrow" className="text-[20px] text-primary" /> {t("resumeClock")}
+          </button>
+        )}
+        {waiting.length > 1 && <span className="ml-auto text-caption text-on-surface-variant">{t("headsUpMore", { n: waiting.length - 1 })}</span>}
+      </div>
+    </div>
+  );
+}
+
+/** Seconds the rider has to choose; then the original route is kept automatically. */
+const AUTO_KEEP_S = 20;
+
+function ReplanBanner({ journey, name, onDecided }: {
+  journey: Journey; name: (id: string) => string;
+  /** `auto` = nobody chose within AUTO_KEEP_S, so the route was kept for them. */
+  onDecided: (j: Journey, auto: boolean) => void;
+}) {
   const t = useT(M);
   const p = journey.proposal!;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Countdown in real seconds (not demo time). Mounted once per set of problems (keyed by their
+  // event ids), so a re-issued proposal for the same problem doesn't restart it.
+  const [leftMs, setLeftMs] = useState(AUTO_KEEP_S * 1000);
+  const decided = useRef(false);
+  const decideNow = useRef<(accept: boolean, auto: boolean) => void>(() => undefined);
+  useEffect(() => {
+    const end = Date.now() + AUTO_KEEP_S * 1000;
+    const id = setInterval(() => {
+      if (decided.current) { clearInterval(id); return; }
+      const ms = Math.max(0, end - Date.now());
+      setLeftMs(ms);
+      if (ms === 0) { clearInterval(id); decideNow.current(false, true); }
+    }, 250);
+    return () => clearInterval(id);
+  }, []);
   // Only the part that changes (legs already done are kept as they were).
   // (compared by route, not times: a delay on the ride you're on shifts its times but isn't "new")
   const same = (a?: Leg, b?: Leg) => !!a && !!b && a.mode === b.mode && a.line_id === b.line_id && a.from_id === b.from_id && a.to_id === b.to_id;
   const firstNew = p.new_card.legs.findIndex((l, k) => !same(l, journey.card.legs[k]));
   const newLegs = firstNew < 0 ? p.new_card.legs : p.new_card.legs.slice(firstNew);
-  async function decide(accept: boolean) {
+  async function decide(accept: boolean, auto = false) {
+    decided.current = true; // stops the countdown
     setBusy(true);
     setError(null);
     try {
-      onDecided(await decideReplan(journey.journey_id, accept));
+      onDecided(await decideReplan(journey.journey_id, accept), auto);
     } catch {
-      setError(translate(M, "replanError"));
+      // The proposal may already be gone (decided in another tab, or the trip moved on): refresh
+      // the trip and carry on instead of showing an error.
+      const fresh = await getJourney(journey.journey_id).catch(() => null);
+      if (fresh && !fresh.proposal) onDecided(fresh, auto);
+      else { decided.current = false; setError(translate(M, "replanError")); }
     } finally {
       setBusy(false);
     }
   }
+  useEffect(() => { decideNow.current = decide; });
   return (
     <div className="anim-in mb-2 flex flex-col gap-3 rounded-xl border-2 border-error bg-container-lowest p-4 shadow-md" role="alert">
       <div className="flex items-start gap-2">
@@ -688,16 +822,41 @@ function ReplanBanner({ journey, name, onDecided }: { journey: Journey; name: (i
         </span>
         <span className="rounded-md bg-container px-2 py-1 font-bold">{p.delta.inr > 0 ? t("costMore", { amt: p.delta.inr }) : p.delta.inr < 0 ? t("costLess", { amt: -p.delta.inr }) : t("sameFare")}</span>
       </div>
-      <div className="flex gap-2">
-        <button onClick={() => decide(true)} disabled={busy} className="rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-on-primary hover:bg-primary-container disabled:opacity-50">
+      <div className="flex flex-wrap items-center gap-2">
+        <button onClick={() => decide(true)} disabled={busy} className="min-h-10 rounded-xl bg-primary px-4 text-small font-semibold text-on-primary hover:bg-primary-container disabled:opacity-50">
           {t("switchRoute")}
         </button>
-        <button onClick={() => decide(false)} disabled={busy} className="rounded-xl bg-container px-4 py-2 text-xs font-semibold hover:bg-container-high disabled:opacity-50">
+        <button onClick={() => decide(false)} disabled={busy} className="min-h-10 rounded-xl bg-container px-4 text-small font-semibold hover:bg-container-high disabled:opacity-50">
           {t("keepRoute")}
         </button>
+        {!busy && <AutoKeepTimer ms={leftMs} total={AUTO_KEEP_S * 1000} />}
       </div>
       {error && <p className="text-caption text-error">{error}</p>}
     </div>
+  );
+}
+
+/** The 20-second "auto-keep" countdown: a ring that drains around the seconds left, the same
+ *  height as the buttons beside it. Turns gold under 10 s and red (gently pulsing) under 5 s. */
+function AutoKeepTimer({ ms, total }: { ms: number; total: number }) {
+  const t = useT(M);
+  const s = Math.ceil(ms / 1000);
+  const r = 14;
+  const c = 2 * Math.PI * r;
+  const tone = s <= 5 ? "text-error" : s <= 10 ? "text-tertiary" : "text-primary";
+  return (
+    <span role="timer" aria-label={t("autoKeepAria", { n: s })} title={t("autoKeepAria", { n: s })}
+      className={`flex h-10 shrink-0 items-center gap-1.5 rounded-xl bg-current/8 py-1 pl-1 pr-3 ring-1 ring-current/30 ${tone}`}>
+      <span className={`relative grid h-8 w-8 place-items-center ${s <= 5 ? "motion-safe:animate-pulse" : ""}`}>
+        <svg viewBox="0 0 32 32" className="absolute inset-0 h-full w-full -rotate-90" aria-hidden>
+          <circle cx="16" cy="16" r={r} fill="var(--surface-container-lowest)" stroke="currentColor" strokeOpacity="0.2" strokeWidth="3" />
+          <circle cx="16" cy="16" r={r} fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"
+            strokeDasharray={c} strokeDashoffset={c * (1 - ms / total)} style={{ transition: "stroke-dashoffset 250ms linear" }} />
+        </svg>
+        <span className="relative text-small font-extrabold tabular-nums leading-none">{s}</span>
+      </span>
+      <span className="text-caption font-bold">{t("autoKeep")}</span>
+    </span>
   );
 }
 

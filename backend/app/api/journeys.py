@@ -20,7 +20,7 @@ def save_journey(body: JourneyIn) -> Journey:
     if not body.card.legs:
         raise HTTPException(status_code=422, detail="card has no legs")
     j = journeys.save(body.traveller, body.card)
-    journeys.check()  # a problem may already be confirmed on this route
+    journeys.check(journey_id=j.journey_id)  # a problem may already be confirmed on this route
     return journeys.get(j.journey_id)
 
 
@@ -33,7 +33,7 @@ def list_journeys() -> list[Journey]:
 @router.get("/journeys/{journey_id}", response_model=Journey)
 def get_journey(journey_id: str) -> Journey:
     """Journey + current card + pending proposal (polling fallback for the socket)."""
-    journeys.check()
+    journeys.check(journey_id=journey_id)
     j = journeys.get(journey_id)
     if not j:
         raise HTTPException(status_code=404, detail="journey not found")

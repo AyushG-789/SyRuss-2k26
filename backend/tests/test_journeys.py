@@ -189,3 +189,32 @@ def test_journey_lists_live_problems_per_leg():
     set_clock("17:15")
     fob = [h for h in get(j["journey_id"])["live_hits"] if h["event_id"] == "E_DADAR_FOB"]
     assert fob[0]["status"] == "confirmed" and "foot-overbridge" in fob[0]["title"]
+
+
+def test_live_problem_titles_use_the_travellers_language():
+    # The heads-up pop-up shows these titles, so a Hindi rider must get them in Hindi.
+    set_clock("16:35")
+    tr3 = {**SEED.travellers["TR3"], "language": "hi"}
+    j = save(tr3, plan_card(tr3, uses_dadar_fob))
+    set_clock("17:14")                       # FOB closure "possible": what the heads-up is for
+    fob = [h for h in get(j["journey_id"])["live_hits"] if h["event_id"] == "E_DADAR_FOB"]
+    assert fob and fob[0]["status"] == "possible"
+    # place names stay as in the data; the kind of problem is translated ("बंद" = closed)
+    assert "बंद" in fob[0]["title"] and "closure" not in fob[0]["title"]
+
+
+def test_another_viewers_later_clock_does_not_drop_my_proposal():
+    # Each browser has its own demo clock. Viewer B looking at their trip at 18:30 must not mark
+    # A's trip finished (that dropped A's pending proposal: countdown restarted, Accept got a 409).
+    _, a = tr3_via_dadar()
+    _, b = tr3_via_dadar()
+    set_clock("17:15")
+    first = get(a["journey_id"])["proposal"]
+    assert first is not None
+    set_clock("18:30")                       # B's clock: B's trip is over
+    assert get(b["journey_id"])["status"] == "completed"
+    set_clock("17:15")                       # back to A
+    again = get(a["journey_id"])["proposal"]
+    assert again is not None and again["proposal_id"] == first["proposal_id"]
+    res = client.post(f"/journeys/{a['journey_id']}/replan/accept")
+    assert res.status_code == 200 and res.json()["proposal"] is None
