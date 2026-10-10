@@ -1,4 +1,6 @@
 @import "tailwindcss";
+/* Tailwind `dark:` follows the app's own theme switch (data-theme on <html>), not the OS setting. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 /*
  * TravelBuddy design system — Marg Transit layout, with two themes chosen in the profile panel:

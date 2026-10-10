@@ -14,7 +14,7 @@ import urllib.request
 from datetime import datetime
 from typing import Any
 
-from ..clock import clock, fmt_hhmm, parse_hhmm
+from ..clock import fmt_hhmm, real_ist_now
 from ..config import settings
 
 logger = logging.getLogger(__name__)
@@ -270,7 +270,7 @@ def _get_timetable_board_fallback(station_code: str) -> dict[str, Any]:
 
     stn_id = matched_station["id"]
     stn_name = matched_station.get("name", code)
-    now_dt = clock.now()
+    now_dt = real_ist_now()
     now_hhmm = fmt_hhmm(now_dt)
     now_mins = now_dt.hour * 60 + now_dt.minute
 
@@ -435,7 +435,7 @@ def get_station_live_board(station_code: str) -> dict[str, Any]:
                 "data_source": "railradar",
                 "note": "Live telemetry from RailRadar",
                 "trains": trains_clean,
-                "as_of": fmt_hhmm(clock.now()),
+                "as_of": fmt_hhmm(real_ist_now()),
             }
             _set_cache(cache_key, normalized)
             return normalized
@@ -465,7 +465,7 @@ def get_exceptions_summary() -> dict[str, Any]:
             "partially_cancelled": 0,
             "diverted": 0,
             "rescheduled": 0,
-            "updated_at": fmt_hhmm(clock.now()),
+            "updated_at": fmt_hhmm(real_ist_now()),
             "data_source": "sample",
         }
         return fallback

@@ -12,6 +12,7 @@ import {
   type MetroArrivalEstimate,
   type MetroArrivalsResponse,
 } from "@/lib/api";
+import DelayPanel, { DelayDot } from "./DelayPanel";
 import Icon from "./Icon";
 import { useKolkataClock } from "./LiveClock";
 
@@ -293,8 +294,11 @@ export default function MetroTracker({
                     <span className="rounded bg-primary/10 px-2.5 py-0.5 text-xs font-black text-primary">
                       {train.platform}
                     </span>
-                    <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-black tabular-nums text-primary">
-                      {train.countdown_str}
+                    <span className="flex shrink-0 items-center gap-1.5">
+                      <DelayDot live={train.is_live} delayMin={0} />
+                      <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-black tabular-nums text-primary">
+                        {train.countdown_str}
+                      </span>
                     </span>
                   </div>
 
@@ -306,6 +310,7 @@ export default function MetroTracker({
                       {train.direction_label}
                     </p>
                   </div>
+                  <DelayPanel live={train.is_live} delayMin={0} scheduled={train.scheduled_time} mode="metro" />
                 </div>
 
                 <div className="mt-4 flex items-center justify-between border-t border-outline-variant/60 pt-3 text-xs">

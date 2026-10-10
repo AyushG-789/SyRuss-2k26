@@ -11,62 +11,62 @@
 
 stations:
   # ---- Western Railway ----
-  - {id: churchgate,     name: Churchgate,     mode: local, lat: 18.9355, lon: 72.8272, step_free: false, aliases: [CCG]}
-  - {id: marine_lines,   name: Marine Lines,   mode: local, lat: 18.9458, lon: 72.8237, step_free: false}
-  - {id: charni_road,    name: Charni Road,    mode: local, lat: 18.9518, lon: 72.8182, step_free: false}
-  - {id: grant_road,     name: Grant Road,     mode: local, lat: 18.9634, lon: 72.8158, step_free: false}
-  - {id: mumbai_central, name: Mumbai Central, mode: local, lat: 18.9696, lon: 72.8193, step_free: false, aliases: [BCT, MMCT, Bombay Central]}
-  - {id: mahalaxmi,      name: Mahalaxmi,      mode: local, lat: 18.9825, lon: 72.8242, step_free: false}
-  - {id: lower_parel,    name: Lower Parel,    mode: local, lat: 18.9957, lon: 72.8303, step_free: false}
-  - {id: prabhadevi,     name: Prabhadevi,     mode: local, lat: 19.0075, lon: 72.8359, step_free: false, aliases: [Elphinstone Road, Elphinstone]}
-  - {id: dadar_wr,       name: Dadar (Western), mode: local, lat: 19.0192, lon: 72.8428, step_free: false, aliases: [Dadar West, Dadar WR, Dadar, DDR]}
-  - {id: matunga_road,   name: Matunga Road,   mode: local, lat: 19.0278, lon: 72.8467, step_free: false}
-  - {id: mahim,          name: Mahim Junction, mode: local, lat: 19.0407, lon: 72.8466, step_free: false, aliases: [Mahim]}
-  - {id: bandra,         name: Bandra,         mode: local, lat: 19.0550, lon: 72.8402, step_free: false, aliases: [BA, Bandra West]}
-  - {id: khar_road,      name: Khar Road,      mode: local, lat: 19.0682, lon: 72.8400, step_free: false, aliases: [Khar]}
-  - {id: santacruz,      name: Santacruz,      mode: local, lat: 19.0815, lon: 72.8418, step_free: false, aliases: [Santa Cruz]}
-  - {id: vile_parle,     name: Vile Parle,     mode: local, lat: 19.0999, lon: 72.8440, step_free: false, aliases: [Parle]}
-  - {id: andheri_wr,     name: Andheri,        mode: local, lat: 19.1197, lon: 72.8464, step_free: false, aliases: [Andheri station, ADH, Andheri West]}
-  - {id: jogeshwari,     name: Jogeshwari,     mode: local, lat: 19.1361, lon: 72.8489, step_free: false}
-  - {id: ram_mandir,     name: Ram Mandir,     mode: local, lat: 19.1510, lon: 72.8501, step_free: false}
-  - {id: goregaon,       name: Goregaon,       mode: local, lat: 19.1649, lon: 72.8495, step_free: false}
-  - {id: malad,          name: Malad,          mode: local, lat: 19.1867, lon: 72.8486, step_free: false}
-  - {id: kandivali,      name: Kandivali,      mode: local, lat: 19.2041, lon: 72.8517, step_free: false}
-  - {id: borivali,       name: Borivali,       mode: local, lat: 19.2291, lon: 72.8574, step_free: false, aliases: [BVI, Borivali West]}
+  - {id: churchgate,     name: Churchgate, code: CCG,     mode: local, lat: 18.9355, lon: 72.8272, step_free: false, aliases: [CCG]}
+  - {id: marine_lines,   name: Marine Lines, code: MEL,   mode: local, lat: 18.9458, lon: 72.8237, step_free: false}
+  - {id: charni_road,    name: Charni Road, code: CYR,    mode: local, lat: 18.9518, lon: 72.8182, step_free: false}
+  - {id: grant_road,     name: Grant Road, code: GTR,     mode: local, lat: 18.9634, lon: 72.8158, step_free: false}
+  - {id: mumbai_central, name: Mumbai Central, code: MMCT, mode: local, lat: 18.9696, lon: 72.8193, step_free: false, aliases: [BCT, MMCT, Bombay Central]}
+  - {id: mahalaxmi,      name: Mahalaxmi, code: MX,      mode: local, lat: 18.9825, lon: 72.8242, step_free: false}
+  - {id: lower_parel,    name: Lower Parel, code: PL,    mode: local, lat: 18.9957, lon: 72.8303, step_free: false}
+  - {id: prabhadevi,     name: Prabhadevi, code: PBHD,     mode: local, lat: 19.0075, lon: 72.8359, step_free: false, aliases: [Elphinstone Road, Elphinstone]}
+  - {id: dadar_wr,       name: Dadar (Western), code: DDR, mode: local, lat: 19.0192, lon: 72.8428, step_free: false, aliases: [Dadar West, Dadar WR, Dadar, DDR]}
+  - {id: matunga_road,   name: Matunga Road, code: MRU,   mode: local, lat: 19.0278, lon: 72.8467, step_free: false}
+  - {id: mahim,          name: Mahim Junction, code: MM, mode: local, lat: 19.0407, lon: 72.8466, step_free: false, aliases: [Mahim]}
+  - {id: bandra,         name: Bandra, code: BA,         mode: local, lat: 19.0550, lon: 72.8402, step_free: false, aliases: [BA, Bandra West]}
+  - {id: khar_road,      name: Khar Road, code: KHAR,      mode: local, lat: 19.0682, lon: 72.8400, step_free: false, aliases: [Khar]}
+  - {id: santacruz,      name: Santacruz, code: STC,      mode: local, lat: 19.0815, lon: 72.8418, step_free: false, aliases: [Santa Cruz]}
+  - {id: vile_parle,     name: Vile Parle, code: VLP,     mode: local, lat: 19.0999, lon: 72.8440, step_free: false, aliases: [Parle]}
+  - {id: andheri_wr,     name: Andheri, code: ADH,        mode: local, lat: 19.1197, lon: 72.8464, step_free: false, aliases: [Andheri station, ADH, Andheri West]}
+  - {id: jogeshwari,     name: Jogeshwari, code: JOS,     mode: local, lat: 19.1361, lon: 72.8489, step_free: false}
+  - {id: ram_mandir,     name: Ram Mandir, code: RMAR,     mode: local, lat: 19.1510, lon: 72.8501, step_free: false}
+  - {id: goregaon,       name: Goregaon, code: GMN,       mode: local, lat: 19.1649, lon: 72.8495, step_free: false}
+  - {id: malad,          name: Malad, code: MDD,          mode: local, lat: 19.1867, lon: 72.8486, step_free: false}
+  - {id: kandivali,      name: Kandivali, code: KILE,      mode: local, lat: 19.2041, lon: 72.8517, step_free: false}
+  - {id: borivali,       name: Borivali, code: BVI,       mode: local, lat: 19.2291, lon: 72.8574, step_free: false, aliases: [BVI, Borivali West]}
 
   # ---- Central Railway (main + harbour) ----
-  - {id: csmt,           name: CSMT,           mode: local, lat: 18.9405, lon: 72.8358, step_free: false, aliases: [VT, Victoria Terminus, Chhatrapati Shivaji Maharaj Terminus, CST, CSMT]}
-  - {id: masjid,         name: Masjid,         mode: local, lat: 18.9523, lon: 72.8382, step_free: false, aliases: [Masjid Bunder]}
-  - {id: sandhurst_road, name: Sandhurst Road, mode: local, lat: 18.9609, lon: 72.8394, step_free: false}
-  - {id: byculla,        name: Byculla,        mode: local, lat: 18.9766, lon: 72.8328, step_free: false}
-  - {id: chinchpokli,    name: Chinchpokli,    mode: local, lat: 18.9872, lon: 72.8327, step_free: false}
-  - {id: currey_road,    name: Currey Road,    mode: local, lat: 18.9937, lon: 72.8329, step_free: false}
-  - {id: parel,          name: Parel,          mode: local, lat: 19.0095, lon: 72.8377, step_free: false}
-  - {id: dadar_cr,       name: Dadar (Central), mode: local, lat: 19.0174, lon: 72.8430, step_free: false, aliases: [Dadar East, Dadar CR, Dadar TT, Dadar, DDR]}
-  - {id: matunga,        name: Matunga,        mode: local, lat: 19.0274, lon: 72.8501, step_free: false}
-  - {id: sion,           name: Sion,           mode: local, lat: 19.0465, lon: 72.8633, step_free: false}
-  - {id: kurla,          name: Kurla,          mode: local, lat: 19.0653, lon: 72.8794, step_free: false, aliases: [CLA]}
-  - {id: vidyavihar,     name: Vidyavihar,     mode: local, lat: 19.0795, lon: 72.8971, step_free: false}
-  - {id: ghatkopar,      name: Ghatkopar,      mode: local, lat: 19.0857, lon: 72.9084, step_free: false, aliases: [GC, Ghatkopar Central]}
-  - {id: vikhroli,       name: Vikhroli,       mode: local, lat: 19.1115, lon: 72.9280, step_free: false}
-  - {id: kanjurmarg,     name: Kanjurmarg,     mode: local, lat: 19.1287, lon: 72.9280, step_free: false, aliases: [Kanjur Marg, Kanjur]}
-  - {id: bhandup,        name: Bhandup,        mode: local, lat: 19.1428, lon: 72.9377, step_free: false}
-  - {id: nahur,          name: Nahur,          mode: local, lat: 19.1546, lon: 72.9467, step_free: false}
-  - {id: mulund,         name: Mulund,         mode: local, lat: 19.1721, lon: 72.9567, step_free: false}
-  - {id: thane,          name: Thane,          mode: local, lat: 19.1865, lon: 72.9758, step_free: false, aliases: [TNA]}
-  - {id: dockyard_road,  name: Dockyard Road,  mode: local, lat: 18.9675, lon: 72.8445, step_free: false}
-  - {id: reay_road,      name: Reay Road,      mode: local, lat: 18.9776, lon: 72.8441, step_free: false}
-  - {id: cotton_green,   name: Cotton Green,   mode: local, lat: 18.9872, lon: 72.8439, step_free: false}
-  - {id: sewri,          name: Sewri,          mode: local, lat: 18.9988, lon: 72.8544, step_free: false}
-  - {id: vadala_road,    name: Wadala Road,    mode: local, lat: 19.0162, lon: 72.8588, step_free: false, coord_source: approx, aliases: [Vadala, Wadala]}
-  - {id: gtb_nagar,      name: GTB Nagar,      mode: local, lat: 19.0380, lon: 72.8643, step_free: false, aliases: [Guru Tegh Bahadur Nagar]}
-  - {id: chunabhatti,    name: Chunabhatti,    mode: local, lat: 19.0518, lon: 72.8691, step_free: false, aliases: [Chuna Bhatti]}
-  - {id: kurla_hb,       name: Kurla (Harbour platforms), mode: local, lat: 19.0656, lon: 72.8790, step_free: false, aliases: [Kurla harbour]}
-  - {id: tilak_nagar,    name: Tilak Nagar,    mode: local, lat: 19.0658, lon: 72.8905, step_free: false}
-  - {id: chembur,        name: Chembur,        mode: local, lat: 19.0626, lon: 72.9011, step_free: false}
-  - {id: govandi,        name: Govandi,        mode: local, lat: 19.0554, lon: 72.9151, step_free: false}
-  - {id: mankhurd,       name: Mankhurd,       mode: local, lat: 19.0482, lon: 72.9317, step_free: false}
-  - {id: vashi,          name: Vashi,          mode: local, lat: 19.0633, lon: 72.9988, step_free: false}
+  - {id: csmt,           name: CSMT, code: CSMT,           mode: local, lat: 18.9405, lon: 72.8358, step_free: false, aliases: [VT, Victoria Terminus, Chhatrapati Shivaji Maharaj Terminus, CST, CSMT]}
+  - {id: masjid,         name: Masjid, code: MSD,         mode: local, lat: 18.9523, lon: 72.8382, step_free: false, aliases: [Masjid Bunder]}
+  - {id: sandhurst_road, name: Sandhurst Road, code: SNRD, mode: local, lat: 18.9609, lon: 72.8394, step_free: false}
+  - {id: byculla,        name: Byculla, code: BY,        mode: local, lat: 18.9766, lon: 72.8328, step_free: false}
+  - {id: chinchpokli,    name: Chinchpokli, code: CHG,    mode: local, lat: 18.9872, lon: 72.8327, step_free: false}
+  - {id: currey_road,    name: Currey Road, code: CRD,    mode: local, lat: 18.9937, lon: 72.8329, step_free: false}
+  - {id: parel,          name: Parel, code: PR,          mode: local, lat: 19.0095, lon: 72.8377, step_free: false}
+  - {id: dadar_cr,       name: Dadar (Central), code: DR, mode: local, lat: 19.0174, lon: 72.8430, step_free: false, aliases: [Dadar East, Dadar CR, Dadar TT, Dadar, DDR]}
+  - {id: matunga,        name: Matunga, code: MTN,        mode: local, lat: 19.0274, lon: 72.8501, step_free: false}
+  - {id: sion,           name: Sion, code: SIN,           mode: local, lat: 19.0465, lon: 72.8633, step_free: false}
+  - {id: kurla,          name: Kurla, code: CLA,          mode: local, lat: 19.0653, lon: 72.8794, step_free: false, aliases: [CLA]}
+  - {id: vidyavihar,     name: Vidyavihar, code: VVH,     mode: local, lat: 19.0795, lon: 72.8971, step_free: false}
+  - {id: ghatkopar,      name: Ghatkopar, code: GC,      mode: local, lat: 19.0857, lon: 72.9084, step_free: false, aliases: [GC, Ghatkopar Central]}
+  - {id: vikhroli,       name: Vikhroli, code: VK,       mode: local, lat: 19.1115, lon: 72.9280, step_free: false}
+  - {id: kanjurmarg,     name: Kanjurmarg, code: KJRD,     mode: local, lat: 19.1287, lon: 72.9280, step_free: false, aliases: [Kanjur Marg, Kanjur]}
+  - {id: bhandup,        name: Bhandup, code: BND,        mode: local, lat: 19.1428, lon: 72.9377, step_free: false}
+  - {id: nahur,          name: Nahur, code: NHU,          mode: local, lat: 19.1546, lon: 72.9467, step_free: false}
+  - {id: mulund,         name: Mulund, code: MLND,         mode: local, lat: 19.1721, lon: 72.9567, step_free: false}
+  - {id: thane,          name: Thane, code: TNA,          mode: local, lat: 19.1865, lon: 72.9758, step_free: false, aliases: [TNA]}
+  - {id: dockyard_road,  name: Dockyard Road, code: DKRD,  mode: local, lat: 18.9675, lon: 72.8445, step_free: false}
+  - {id: reay_road,      name: Reay Road, code: RRD,      mode: local, lat: 18.9776, lon: 72.8441, step_free: false}
+  - {id: cotton_green,   name: Cotton Green, code: CTGN,   mode: local, lat: 18.9872, lon: 72.8439, step_free: false}
+  - {id: sewri,          name: Sewri, code: SVE,          mode: local, lat: 18.9988, lon: 72.8544, step_free: false}
+  - {id: vadala_road,    name: Wadala Road, code: VDLR,    mode: local, lat: 19.0162, lon: 72.8588, step_free: false, coord_source: approx, aliases: [Vadala, Wadala]}
+  - {id: gtb_nagar,      name: GTB Nagar, code: GTBN,      mode: local, lat: 19.0380, lon: 72.8643, step_free: false, aliases: [Guru Tegh Bahadur Nagar]}
+  - {id: chunabhatti,    name: Chunabhatti, code: CHF,    mode: local, lat: 19.0518, lon: 72.8691, step_free: false, aliases: [Chuna Bhatti]}
+  - {id: kurla_hb,       name: Kurla (Harbour platforms), code: CLA, mode: local, lat: 19.0656, lon: 72.8790, step_free: false, aliases: [Kurla harbour]}
+  - {id: tilak_nagar,    name: Tilak Nagar, code: TKNG,    mode: local, lat: 19.0658, lon: 72.8905, step_free: false}
+  - {id: chembur,        name: Chembur, code: CMBR,        mode: local, lat: 19.0626, lon: 72.9011, step_free: false}
+  - {id: govandi,        name: Govandi, code: GV,        mode: local, lat: 19.0554, lon: 72.9151, step_free: false}
+  - {id: mankhurd,       name: Mankhurd, code: MNKD,       mode: local, lat: 19.0482, lon: 72.9317, step_free: false}
+  - {id: vashi,          name: Vashi, code: VSH,          mode: local, lat: 19.0633, lon: 72.9988, step_free: false}
 
   # ---- Metro Line 1 ----
   - {id: versova,        name: Versova,        mode: metro, lat: 19.1303, lon: 72.8214, step_free: true}

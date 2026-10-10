@@ -6,13 +6,14 @@
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
-from ..clock import clock, fmt_hhmm
+from ..clock import fmt_hhmm, real_ist_now
 from ..config import settings
 from ..data_loader import load_seed
 from ..feeds.railway import get_station_live_board
@@ -35,6 +36,91 @@ def _format_12h(time_str: str) -> str:
         return f"{h12}:{mm:02d} {period}"
     except Exception:
         return time_str
+
+
+def board_now() -> datetime:
+    """Real Mumbai time (IST). The station boards show today's real schedule, so they never use the
+    demo clock (that one replays the 4:30–6:30 pm demo story for routes and Pakka Check)."""
+    return real_ist_now()
+
+
+def wait_text(mins: int) -> str:
+    """'6 min', or '2 h 10 min' for a long wait (first train of the morning)."""
+    if mins < 60:
+        return f"{mins} min"
+    h, m = divmod(mins, 60)
+    return f"{h} h {m} min" if m else f"{h} h"
+
+
+@dataclass
+class Service:
+    """How a line runs right now: its frequency, or (outside service hours) when the first one comes."""
+    headway: int
+    running: bool
+    now_mins: int
+    wait: int = 0                 # minutes until the first service (when not running)
+    first: str | None = None      # "04:00" (when not running)
+
+    def offset(self, i: int, shift: int = 0, min_gap: int = 2) -> int:
+        """Minutes until the i-th next departure (i = 1, 2, …)."""
+        if self.running:
+            o = self.headway * i - (self.now_mins % self.headway) + shift
+            return o + self.headway if o < min_gap else o
+        return self.wait + self.headway * (i - 1) + shift
+
+
+def _hhmm_of(value) -> str | None:
+    """'10:22' or '2026-10-10T10:31:00+05:30' -> '10:22' / '10:31' (None if missing)."""
+    if not value:
+        return None
+    text = str(value)
+    if "T" in text:
+        text = text.split("T", 1)[1]
+    parts = text.split(":")
+    if len(parts) < 2 or not parts[0][-2:].isdigit() or not parts[1][:2].isdigit():
+        return None
+    return f"{int(parts[0][-2:]):02d}:{int(parts[1][:2]):02d}"
+
+
+def _shift_hhmm(hhmm: str, minutes: int) -> str:
+    h, m = (int(x) for x in hhmm.split(":"))
+    total = (h * 60 + m + minutes) % 1440
+    return f"{total // 60:02d}:{total % 60:02d}"
+
+
+def _destination_from_name(train_name: str) -> str | None:
+    """'Virar - Churchgate Local' -> 'Churchgate'."""
+    if " - " not in train_name:
+        return None
+    return train_name.split(" - ", 1)[1].replace(" Local", "").replace(" Fast", "").strip() or None
+
+
+def _direction(seed, here_lines: list[str], here: str, dest_id: str | None, dest_name: str) -> str:
+    """'up' = towards the city end of the line (Churchgate / CSMT), using our line maps."""
+    for lid in here_lines:
+        stations = seed.lines[lid]["stations"]
+        if dest_id in stations and here in stations:
+            return "up" if stations.index(dest_id) < stations.index(here) else "down"
+    name = dest_name.lower()
+    return "up" if any(w in name for w in ("churchgate", "csmt", "mumbai central", "parel", "dadar")) else "down"
+
+
+def service(line: dict, now_mins: int, default_headway: int) -> Service:
+    """Pick the frequency band for `now_mins` from the line's `headway_min` ("HH:MM-HH:MM": minutes).
+    Outside every band the line isn't running: plan from the start of the next band instead."""
+    bands = []
+    for band, hw in (line.get("headway_min") or {}).items():
+        start, end = band.split("-")
+        sh, sm = (int(x) for x in start.split(":"))
+        eh, em = (int(x) for x in end.split(":"))
+        bands.append((sh * 60 + sm, eh * 60 + em, int(hw)))
+    if not bands:
+        return Service(default_headway, True, now_mins)
+    for start, end, hw in bands:
+        if start <= now_mins < end:
+            return Service(hw, True, now_mins)
+    start, _, hw = min(bands, key=lambda b: (b[0] - now_mins) % 1440)
+    return Service(hw, False, now_mins, wait=(start - now_mins) % 1440, first=f"{start // 60:02d}:{start % 60:02d}")
 
 
 # ================================================================================================
@@ -62,6 +148,7 @@ class LocalTrainDeparture(BaseModel):
     status: str
     is_live: bool
     data_source: str
+    speed_known: bool = True      # False when the live feed doesn't say fast or slow
 
 
 class LocalTrainsResponse(BaseModel):
@@ -167,9 +254,10 @@ def get_upcoming_local_trains(
     stn_name = matched_stn["name"]
     stn_code = matched_stn.get("code")
 
-    now_dt = clock.now()
+    now_dt = board_now()
     now_mins = now_dt.hour * 60 + now_dt.minute
     now_hhmm = fmt_hhmm(now_dt)
+    closed_lines = 0  # lines outside their service hours right now (night)
 
     # Determine which suburban lines serve this station
     available_lines = ["WR_SLOW", "WR_FAST", "CR_SLOW", "CR_FAST", "HARBOUR"]
@@ -198,52 +286,60 @@ def get_upcoming_local_trains(
             is_live = True
             data_source = "railradar"
             source_note = "Live RailRadar telemetry"
+            by_code = {str(st.get("code")).upper(): st_id for st_id, st in seed.stations.items() if st.get("code")}
+            here_lines = [lid for lid in available_lines if lid in seed.lines and sid in seed.lines[lid]["stations"]]
             for t in live_board.get("trains", []):
-                dep = t.get("scheduled_departure") or t.get("expected_departure")
+                sched = _hhmm_of(t.get("scheduled_departure"))
+                expected = _hhmm_of(t.get("expected_departure"))
+                dep = expected or sched
                 if not dep:
-                    continue
-                try:
-                    dh, dm = (int(x) for x in dep.split(":"))
-                    t_mins = dh * 60 + dm
-                    diff = t_mins - now_mins
-                    if diff < -30:
-                        diff += 1440
-                    if diff < 0:
-                        continue
-                except Exception:
-                    diff = 0
-
-                tr_type = t.get("train_type", "Local")
-                fast_slow: Literal["Fast", "Slow"] = "Fast" if "Fast" in tr_type or "SF" in tr_type else "Slow"
-                tr_dir: Literal["up", "down"] = "up" if any(w in (t.get("destination", "").lower()) for w in ["churchgate", "csmt", "mumbai central"]) else "down"
-
+                    continue  # ends here (arrival only)
+                dh, dm = (int(x) for x in dep.split(":"))
+                diff = dh * 60 + dm - now_mins
+                if diff < -720:
+                    diff += 1440
+                if diff < 0:
+                    continue  # already left
+                delay = int(t.get("delay_minutes") or 0)
+                name = str(t.get("train_name") or "")
+                is_fast = "fast" in name.lower() or "fast" in str(t.get("train_type") or "").lower()
+                dest_code = str(t.get("destination") or "").upper()
+                dest_id = by_code.get(dest_code)
+                dest_name = seed.stations[dest_id]["name"] if dest_id else _destination_from_name(name) or dest_code or "Destination"
+                tr_dir = _direction(seed, here_lines, sid, dest_id, dest_name)
                 if direction and tr_dir != direction.lower():
                     continue
 
                 clock_12h = _format_12h(dep)
-                countdown_str = f"{diff} min" if diff > 0 else "Due"
+                cd = "Due" if diff == 0 else wait_text(diff)
+                platform = str(t.get("platform") or "").strip()
                 trains_list.append(LocalTrainDeparture(
                     train_number=str(t.get("train_number") or ""),
-                    train_name=t.get("train_name") or f"{t.get('destination')} Local",
+                    train_name=name or f"{dest_name} Local",
                     line_id=line_id or "SUBURBAN",
                     line_name=line_id or "Mumbai Suburban Railway",
-                    fast_slow=fast_slow,
+                    fast_slow="Fast" if is_fast else "Slow",
+                    speed_known=is_fast,  # the feed only marks fast trains; others may be either
                     direction=tr_dir,
-                    direction_label="UP (Southbound / Terminus)" if tr_dir == "up" else "DOWN (Northbound / Outbound)",
-                    source=t.get("source") or "Origin",
-                    destination=t.get("destination") or "Destination",
-                    scheduled_departure=dep,
-                    expected_departure=t.get("expected_departure") or dep,
+                    direction_label=f"{'UP' if tr_dir == 'up' else 'DOWN'} (Towards {dest_name})",
+                    source=str(t.get("source") or "Origin"),
+                    destination=dest_name,
+                    scheduled_departure=sched or _shift_hhmm(dep, -delay),
+                    expected_departure=dep,
                     departure_clock_12h=clock_12h,
-                    countdown_min=max(0, diff),
-                    countdown_str=countdown_str,
-                    combined_display=f"{clock_12h} · {countdown_str}",
-                    platform=t.get("platform") or "PF 1",
-                    delay_minutes=t.get("delay_minutes", 0),
-                    status=t.get("status", "live"),
+                    countdown_min=diff,
+                    countdown_str=cd,
+                    combined_display=f"{clock_12h} · {cd}",
+                    platform=f"PF {platform}" if platform else "PF –",
+                    delay_minutes=delay,
+                    status=str(t.get("status") or "live"),
                     is_live=True,
                     data_source="railradar",
                 ))
+
+    if is_live and not trains_list:  # the feed answered but listed nothing still to come
+        is_live, data_source = False, "timetable"
+        source_note = "Planned times from how often trains usually run (no live feed)"
 
     # If live trains were not retrieved (or unconfigured), plan departures from the usual frequency.
     # Train numbers come only from the live feed; planned trains have none.
@@ -258,15 +354,11 @@ def get_upcoming_local_trains(
             is_fast = "FAST" in lid
             fast_slow_val: Literal["Fast", "Slow"] = "Fast" if is_fast else "Slow"
 
-            # Determine headway at current time
-            headway = 6
-            for band, hw in line.get("headway_min", {}).items():
-                start_str, end_str = band.split("-")
-                sh, sm = (int(x) for x in start_str.split(":"))
-                eh, em = (int(x) for x in end_str.split(":"))
-                if (sh * 60 + sm) <= now_mins < (eh * 60 + em):
-                    headway = hw
-                    break
+            # How the line runs right now (real time): frequency, or the first train of the morning
+            run = service(line, now_mins, 6)
+            headway = run.headway
+            if not run.running:
+                closed_lines += 1
 
             # Calculate cumulative run times
             run_mins = line.get("run_minutes", [2] * (total_stns - 1))
@@ -282,15 +374,13 @@ def get_upcoming_local_trains(
 
                 for i in range(1, 6):
                     # Deterministic departure offset based on headway
-                    offset = (headway * i) - (now_mins % headway)
-                    if offset < 2:
-                        offset += headway
+                    offset = run.offset(i)
                     dep_min = (now_mins + offset) % 1440
                     dh = dep_min // 60
                     dm = dep_min % 60
                     dep_str = f"{dh:02d}:{dm:02d}"
                     clock_12h = _format_12h(dep_str)
-                    cd_str = f"{offset} min"
+                    cd_str = wait_text(offset)
 
                     pf = "PF 1" if is_fast else ("PF 3" if "WR" in lid else "PF 1")
                     trains_list.append(LocalTrainDeparture(
@@ -323,15 +413,13 @@ def get_upcoming_local_trains(
                 src_name = seed.stations.get(stations_seq[0], {}).get("name", "Origin")
 
                 for i in range(1, 6):
-                    offset = (headway * i) - (now_mins % headway) + 1
-                    if offset < 2:
-                        offset += headway
+                    offset = run.offset(i, shift=1)
                     dep_min = (now_mins + offset) % 1440
                     dh = dep_min // 60
                     dm = dep_min % 60
                     dep_str = f"{dh:02d}:{dm:02d}"
                     clock_12h = _format_12h(dep_str)
-                    cd_str = f"{offset} min"
+                    cd_str = wait_text(offset)
 
                     pf = "PF 2" if is_fast else ("PF 4" if "WR" in lid else "PF 2")
                     trains_list.append(LocalTrainDeparture(
@@ -368,7 +456,7 @@ def get_upcoming_local_trains(
         as_of=now_hhmm,
         is_live=is_live,
         data_source=data_source,
-        note=source_note,
+        note=source_note if not closed_lines else "Not running right now (night hours). Showing the first services of the morning, planned from the usual timetable.",
         trains=trains_list[:limit],
     )
 
@@ -403,9 +491,10 @@ def get_bus_arrivals(
     sid = matched_stop["id"]
     stop_name = matched_stop["name"]
 
-    now_dt = clock.now()
+    now_dt = board_now()
     now_mins = now_dt.hour * 60 + now_dt.minute
     now_hhmm = fmt_hhmm(now_dt)
+    closed_lines = 0  # lines outside their service hours right now (night)
 
     # Find bus lines passing through this stop
     bus_lines = []
@@ -431,23 +520,21 @@ def get_bus_arrivals(
         
         # Route name clean
         r_name = line.get("name", "BEST Route")
-        # Headway (default 12 mins)
-        headway = 12
-        for band, hw in line.get("headway_min", {}).items():
-            headway = hw
-            break
+        # How the route runs right now (real time): frequency, or the first bus of the morning
+        run = service(line, now_mins, 12)
+        headway = run.headway
+        if not run.running:
+            closed_lines += 1
 
         # Calculate arrivals for next 3 cycles
         for step in (1, 2, 3):
-            countdown = (headway * step) - (now_mins % headway)
-            if countdown < 1:
-                countdown += headway
+            countdown = run.offset(step, min_gap=1)
             arr_min = (now_mins + countdown) % 1440
             ah = arr_min // 60
             am = arr_min % 60
             time_24h = f"{ah:02d}:{am:02d}"
             time_12h = _format_12h(time_24h)
-            cd_str = f"{countdown} min"
+            cd_str = wait_text(countdown)
 
             buses.append(BusArrivalEstimate(
                 route_id=line["id"],
@@ -473,7 +560,7 @@ def get_bus_arrivals(
         as_of=now_hhmm,
         buses=buses[:limit],
         live_feed_status="unavailable",
-        note="Planned times from how often each route usually runs. BEST bus GPS is not connected yet.",
+        note="Planned times from how often each route usually runs. BEST bus GPS is not connected yet." + ("" if not closed_lines else " " + "Not running right now (night hours). Showing the first services of the morning, planned from the usual timetable."),
     )
 
 
@@ -508,9 +595,10 @@ def get_metro_arrivals(
     sid = matched_stn["id"]
     stn_name = matched_stn["name"]
 
-    now_dt = clock.now()
+    now_dt = board_now()
     now_mins = now_dt.hour * 60 + now_dt.minute
     now_hhmm = fmt_hhmm(now_dt)
+    closed_lines = 0  # lines outside their service hours right now (night)
 
     # Allowed metro lines
     metro_line_ids = ["METRO1", "METRO3"]
@@ -539,31 +627,24 @@ def get_metro_arrivals(
         total_stns = len(stns)
 
         # Headway determination
-        headway = 5
-        frequency_note = "Every 5–6 min"
-        for band, hw in line.get("headway_min", {}).items():
-            start_str, end_str = band.split("-")
-            sh, sm = (int(x) for x in start_str.split(":"))
-            eh, em = (int(x) for x in end_str.split(":"))
-            if (sh * 60 + sm) <= now_mins < (eh * 60 + em):
-                headway = hw
-                frequency_note = f"Every {hw} min ({band})"
-                break
+        run = service(line, now_mins, 5)
+        headway = run.headway
+        frequency_note = f"Every {headway} min" if run.running else f"Not running now · first train {_format_12h(run.first)}"
+        if not run.running:
+            closed_lines += 1
 
         # Direction 1: Up (Towards terminal 0)
         if idx > 0 and (direction is None or direction.lower() == "up"):
             dest_id = stns[0]
             dest_name = seed.stations.get(dest_id, {}).get("name", "Terminal")
             for i in range(1, 5):
-                offset = (headway * i) - (now_mins % headway)
-                if offset < 2:
-                    offset += headway
+                offset = run.offset(i)
                 arr_min = (now_mins + offset) % 1440
                 ah = arr_min // 60
                 am = arr_min % 60
                 time_24h = f"{ah:02d}:{am:02d}"
                 time_12h = _format_12h(time_24h)
-                cd_str = f"{offset} min"
+                cd_str = wait_text(offset)
 
                 trains.append(MetroArrivalEstimate(
                     line_id=lid,
@@ -590,15 +671,13 @@ def get_metro_arrivals(
             dest_id = stns[-1]
             dest_name = seed.stations.get(dest_id, {}).get("name", "Terminal")
             for i in range(1, 5):
-                offset = (headway * i) - (now_mins % headway) + 1
-                if offset < 2:
-                    offset += headway
+                offset = run.offset(i, shift=1)
                 arr_min = (now_mins + offset) % 1440
                 ah = arr_min // 60
                 am = arr_min % 60
                 time_24h = f"{ah:02d}:{am:02d}"
                 time_12h = _format_12h(time_24h)
-                cd_str = f"{offset} min"
+                cd_str = wait_text(offset)
 
                 trains.append(MetroArrivalEstimate(
                     line_id=lid,
@@ -629,7 +708,7 @@ def get_metro_arrivals(
         line_name=line_name,
         as_of=now_hhmm,
         trains=trains[:limit],
-        note="Metro arrivals generated from official MMRCL / MMMOCL headways and timetable bands.",
+        note="Metro times planned from how often each line runs at this hour." + ("" if not closed_lines else " " + "Not running right now (night hours). Showing the first services of the morning, planned from the usual timetable."),
     )
 
 
