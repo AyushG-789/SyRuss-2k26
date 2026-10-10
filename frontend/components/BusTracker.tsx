@@ -12,6 +12,7 @@ import {
   type BusArrivalEstimate,
   type BusArrivalsResponse,
 } from "@/lib/api";
+import DelayPanel, { DelayDot } from "./DelayPanel";
 import Icon from "./Icon";
 import { useKolkataClock } from "./LiveClock";
 
@@ -250,8 +251,11 @@ export default function BusTracker({
                       {bus.operator}
                     </span>
                     {/* Clock time + Countdown (e.g. 4:18 PM · 6 min) */}
-                    <span className="rounded-full bg-container-high px-2.5 py-0.5 text-xs font-black tabular-nums text-on-surface">
-                      {bus.combined_display}
+                    <span className="flex shrink-0 items-center gap-1.5">
+                      <DelayDot live={bus.is_live} delayMin={0} />
+                      <span className="rounded-full bg-container-high px-2.5 py-0.5 text-xs font-black tabular-nums text-on-surface">
+                        {bus.combined_display}
+                      </span>
                     </span>
                   </div>
 
@@ -263,6 +267,7 @@ export default function BusTracker({
                       {bus.route_name}
                     </p>
                   </div>
+                  <DelayPanel live={bus.is_live} delayMin={0} scheduled={bus.scheduled_time} mode="bus" />
                 </div>
 
                 <div className="mt-4 flex items-center justify-between border-t border-outline-variant/60 pt-3 text-micro text-on-surface-variant">

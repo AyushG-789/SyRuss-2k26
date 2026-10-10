@@ -12,6 +12,7 @@ import {
   type LocalTrainDeparture,
   type LocalTrainsResponse,
 } from "@/lib/api";
+import DelayPanel, { DelayDot } from "./DelayPanel";
 import Icon from "./Icon";
 import { useKolkataClock } from "./LiveClock";
 
@@ -388,14 +389,14 @@ export default function LocalTrainsTracker({
                     {/* Top row: Badges + Countdown */}
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex flex-wrap items-center gap-1.5">
-                        {/* Fast / Slow badge */}
-                        <span
+                        {/* Fast / Slow badge (the live feed only marks fast trains, so "unknown" shows nothing) */}
+                        {train.speed_known !== false && <span
                           className={`rounded px-2 py-0.5 text-micro font-black uppercase tracking-wider text-white ${
                             isFast ? "bg-[#B71C1C]" : "bg-amber-600"
                           }`}
                         >
                           {isFast ? "⚡ FAST" : "SLOW"}
-                        </span>
+                        </span>}
 
                         {/* Direction badge */}
                         <span className="rounded bg-container-high px-2 py-0.5 text-micro font-bold text-on-surface-variant">
@@ -408,9 +409,12 @@ export default function LocalTrainsTracker({
                         </span>
                       </div>
 
-                      {/* Countdown badge */}
-                      <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-black tabular-nums text-primary">
-                        {train.countdown_str}
+                      {/* Countdown + running-status icon */}
+                      <span className="flex shrink-0 items-center gap-1.5">
+                        <DelayDot live={train.is_live} delayMin={train.delay_minutes} />
+                        <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-black tabular-nums text-primary">
+                          {train.countdown_str}
+                        </span>
                       </span>
                     </div>
 
@@ -425,32 +429,9 @@ export default function LocalTrainsTracker({
                     </div>
                   </div>
 
-                  {/* Timings & Delay */}
-                  <div className="mt-4 flex items-center justify-between border-t border-outline-variant/60 pt-3 text-xs">
-                    <div>
-                      <span className="text-on-surface-variant">Scheduled: </span>
-                      <span className="font-bold text-on-surface tabular-nums">
-                        {train.departure_clock_12h || train.scheduled_departure}
-                      </span>
-                      {train.expected_departure && train.expected_departure !== train.scheduled_departure && (
-                        <span className="ml-1 text-on-surface-variant">
-                          (Exp: {train.expected_departure})
-                        </span>
-                      )}
-                    </div>
-
-                    <div>
-                      {train.delay_minutes > 0 ? (
-                        <span className="rounded bg-red-100 px-2 py-0.5 text-micro font-bold text-red-700 dark:bg-red-950 dark:text-red-300">
-                          +{train.delay_minutes} min delay
-                        </span>
-                      ) : (
-                        <span className="rounded bg-emerald-100 px-2 py-0.5 text-micro font-bold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
-                          Right time
-                        </span>
-                      )}
-                    </div>
-                  </div>
+                  {/* Running status: how late or early, from the live feed */}
+                  <DelayPanel live={train.is_live} delayMin={train.delay_minutes}
+                    scheduled={train.scheduled_departure} expected={train.expected_departure} mode="train" />
                 </div>
               );
             })}

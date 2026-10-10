@@ -123,15 +123,20 @@ export interface LiveEvents {
   asOf?: string;
 }
 
+/** Stations nearby (station search, local / metro / bus boards, RailRadar) always use real IST
+ *  time, so these requests never carry the demo clock. */
+const REAL_TIME_PATHS = ["/transit/", "/railway/", "/stations/"];
+
 async function fetchJson<T>(path: string, timeoutMs: number): Promise<T> {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  const realTime = REAL_TIME_PATHS.some((p) => path.startsWith(p));
 
   try {
     const res = await fetch(`${API_URL}${path}`, {
       signal: ctrl.signal,
       cache: "no-store",
-      headers: clockHeader(),
+      headers: realTime ? {} : clockHeader(),
     });
 
     if (!res.ok) {
@@ -602,6 +607,16 @@ export async function getVoiceTTS(text: string, language?: string): Promise<Voic
 }
 
 // ---- Railway Live Feed & Status (RailRadar Integration) -------------------------------------
+/** Real Mumbai time (IST), whatever time zone the device is set to. The station boards always
+ *  show the real schedule, never the demo clock. */
+function istNow(): { nowMins: number; nowHHMM: string } {
+  const parts = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })
+    .formatToParts(new Date());
+  const h = Number(parts.find((p) => p.type === "hour")?.value ?? 0);
+  const m = Number(parts.find((p) => p.type === "minute")?.value ?? 0);
+  return { nowMins: h * 60 + m, nowHHMM: `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}` };
+}
+
 export interface RailwayServiceStatus {
   configured: boolean;
   status: "connected" | "unconfigured" | "error";
@@ -649,6 +664,8 @@ export const getStationLiveBoard = (stationCode: string) =>
 // ---- Real-time Transit Tracker: Local Trains, BEST Bus, Mumbai Metro -----------------------
 
 export interface LocalTrainDeparture {
+  /** false when the live feed doesn't say whether it's fast or slow */
+  speed_known?: boolean;
   train_number: string;
   train_name: string;
   line_id: string;
@@ -778,9 +795,7 @@ export async function getUpcomingLocalTrains(
     // Offline / Mock Timetable Fallback
     const stn = stations[stationId];
     const stnName = stn?.name ?? stationId;
-    const now = new Date();
-    const nowMins = now.getHours() * 60 + now.getMinutes();
-    const nowHHMM = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
+    const { nowMins, nowHHMM } = istNow();
 
     const lineKeys = lineId
       ? [lineId]
@@ -899,9 +914,7 @@ export async function getBusArrivals(
   } catch {
     const stn = stations[stopId];
     const stopName = stn?.name ?? stopId;
-    const now = new Date();
-    const nowMins = now.getHours() * 60 + now.getMinutes();
-    const nowHHMM = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
+    const { nowMins, nowHHMM } = istNow();
 
     const buses: BusArrivalEstimate[] = [];
     const busLines = Object.entries(lines).filter(([lid, l]) => l.mode === "bus" && (!routeId || lid === routeId));
@@ -964,9 +977,7 @@ export async function getMetroArrivals(
   } catch {
     const stn = stations[stationId];
     const stnName = stn?.name ?? stationId;
-    const now = new Date();
-    const nowMins = now.getHours() * 60 + now.getMinutes();
-    const nowHHMM = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
+    const { nowMins, nowHHMM } = istNow();
 
     const metroLineKeys = lineId ? [lineId] : ["METRO1", "METRO3"];
     const trains: MetroArrivalEstimate[] = [];

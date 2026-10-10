@@ -16,6 +16,7 @@ import time
 from contextvars import ContextVar
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from .config import settings
 
@@ -31,6 +32,15 @@ def parse_hhmm(value: str, on: date | None = None) -> datetime:
 
 def fmt_hhmm(value: datetime) -> str:
     return value.strftime("%H:%M")
+
+
+IST = ZoneInfo("Asia/Kolkata")
+
+
+def real_ist_now() -> datetime:
+    """The real time in Mumbai (IST), naive. NOT the demo clock: Stations nearby (local / metro /
+    bus boards, RailRadar) always show today's real schedule. Everything else uses `clock.now()`."""
+    return datetime.now(IST).replace(tzinfo=None)
 
 
 @dataclass(frozen=True)
